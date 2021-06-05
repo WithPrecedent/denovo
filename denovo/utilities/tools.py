@@ -5,10 +5,42 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
-
+    how_soon_is_now (Callable): converts a current date and time to a str in the
+        format described in the 'TIME_FORMAT' module-level attribute.
+    fetch (Callable): lazy loader that accepts import and file paths to load
+        individual items from them.
+    beautify (Callable): provides a pretty str representation for an object. The
+        function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
+        the values for new lines and length of an indentation.
+    delistify (Callable): converts a list to a str, if it is passed a list.
+    instancify (Callable): converts a class to an instance or adds kwargs to a
+        passed instance as attributes.
+    listify (Callable): converts passed item to a list.
+    namify (Callable): returns hashable name for passed item.
+    numify (Callable): attempts to convert passed item to a numerical type.
+    pathlibify (Callable): converts a str to a pathlib object or leaves it as
+        a pathlib object.
+    snakify (Callable): converts string to snakecase.
+    tuplify (Callable): converts a passed item to a tuple.
+    typify (Callable): converts a str type to other common types, if possible.
+    add_prefix (Callable): adds a str prefix to each item in a list (or list-
+        like item) or each key in a dict (or dict-like item).
+    add_suffix (Callable): adds a str suffix to each item in a list (or list-
+        like item) or each key in a dict (or dict-like item).
+    deduplicate (Callable): removes duplicate items from a list or list-like 
+        item.
+    divide_string (Callable): divides a str and returns a tuple of str based on
+        the first or last appearance of the divider (but drops the divider from 
+        the returned str).
+    drop_prefix (Callable): removes a str prefix to each item in a list (or 
+        list-like item) or each key in a dict (or dict-like item).
+    drop_suffix (Callable): removes a str suffix to each item in a list (or 
+        list-like item) or each key in a dict (or dict-like item).  
+    is_iterable (Callable): returns whether an item is iterable but not a str.
+    is_nested (Callable): returns whether a dict or dict-like item is nested.
+    is_property (Callable): returns whether an attribute is actually a property.
+    
 ToDo:
-
 
 """
 from __future__ import annotations
@@ -20,17 +52,33 @@ import pathlib
 import re
 import sys
 import textwrap
-import typing
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Set, Tuple, Type, Union)
 
-import more_itertools
+""" Module-Level Attributes """
 
+DIVIDER: str = '_'
+INDENT: str = '    '
+NEW_LINE: str = '\n'
+TIME_FORMAT: str = '%Y-%m-%d_%H-%M'
 
-NEW_LINE = '\n'
-INDENT = '    '
+""" General Tools """
 
+def how_soon_is_now(prefix: str = None) -> str:
+    """Creates a string from current date and time.
+
+    Args:
+        prefix: any additional prefix to add to the returned str.
+        
+    Returns:
+        str: with current date and time in Y/M/D/H/M format.
+
+    """
+    if prefix is None:
+        prefix = ''
+    time_string = datetime.datetime.now().strftime(TIME_FORMAT)
+    return f'{prefix}_{time_string}'
 
 """ Importing Tools """
 
@@ -56,7 +104,7 @@ def fetch(module: str,
         Any: imported python object from 'module'.
         
     """
-    if file_path:
+    if file_path is not None:
         try:
             spec = importlib.util.spec_from_file_location(module, file_path)
             imported = importlib.util.module_from_spec(spec)
@@ -75,30 +123,63 @@ def fetch(module: str,
 
 """ Conversion Tools """
 
-# def deannotate(annotation: Any) -> tuple[Any]:
-#     """Returns type annotations as a tuple.
-    
-#     This allows even complicated annotations with Union to be converted to a
-#     form that fits with an isinstance call.
+def beautify(item: object, 
+             package: str = None, 
+             exclude: List[str] = None,
+             include_privates: bool = False) -> str:
+    """Flexible tool to make prettier str represtentations of objects.
 
-#     Args:
-#         annotation (Any): type annotation.
+    Args:
+        item (object): object to provide a str representation for.
+        package (str): name of the package that the item is from. This is 
+            entirely optional and defaults to None.
 
-#     Returns:
-#         tuple[Any]: base level of stored type in an annotation
-    
-#     """
-#     origin = typing.get_origin(annotation)
-#     args = typing.get_args(annotation)
-#     if origin is Union:
-#         return tuple(deannotate(a)[0] for a in args)
-#     elif origin is None:
-#         return annotation
-#     else:
-#         return typing.get_args(annotation)
+    Returns:
+        str: pretty str representation of the object.
+        
+    """
+    package = package or ''
+    exclude = exclude or []
+    representation = [NEW_LINE]
+    representation.append(f'{package} {item.__class__.__name__}')
+    print('test start rep', representation)
+    attributes = item.__dict__
+    if not include_privates:
+        attributes = [a for a in attributes if not a.startswith('_')]
+    attributes = [a for a in attributes if a not in exclude]
+    for attribute in attributes:
+        new_line = f'{INDENT}{attribute}:'
+        contents = getattr(item, attribute)
+        if isinstance(contents, dict):
+            for key, value in contents.items():
+                
+                representation.append(textwrap.indent(f'{key}: {value}', 
+                                                      INDENT))
+        elif isinstance(contents, (list, tuple, set)):
+            
+            items = []
+            for key in contents:
+                items.append(f'{str(key)}')
+            items = ', '.join(items)
+            new_line = ' '.join([new_line, items])
+            representation.append(new_line)
+        else:
+            representation.append(f'{INDENT}{attribute}: {str(contents)}')
+    print('test representation end', representation)
+    return NEW_LINE.join(representation)
             
 def delistify(item: Any, default_value: Any = None) -> Any:
-    """Converts a list to a str.
+    """Converts 'item' to a str from a list, if it is a list.
+    
+    Args:
+        item (Any): item to convert to a str from a list if it is a list.
+        default_value (Any): value to return if 'item' is equivalent to a null
+            value when passed. Defaults to None.
+        
+    Returns:
+        Any: str, if item was a list, None or the default value if a null value
+            was passed, or the item as it was passed if there previous two 
+            conditions don't appply.
 
     """
     if item is None:
@@ -112,7 +193,7 @@ def delistify(item: Any, default_value: Any = None) -> Any:
         return item
     
 def instancify(item: Union[Type, object], **kwargs) -> object:
-    """Converts 'item' to a class instance with 'kwargs' as parameters.
+    """Returns 'item' as an instance with 'kwargs' as parameters/attributes.
     
     If 'item' is already an instance, kwargs are added as attributes to the
     existing 'item'.
@@ -124,7 +205,8 @@ def instancify(item: Union[Type, object], **kwargs) -> object:
         TypeError: if 'item' is neither a class nor instance.
         
     Returns:
-        object: a class instance with 'kwargs' as attributes.
+        object: a class instance with 'kwargs' as attributes or passed as 
+            parameters (if 'item' is a class).
         
     """         
     if inspect.isclass(item):
@@ -254,39 +336,6 @@ def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
     else:
         raise TypeError('path must be str or pathlib.Path type')
 
-def representify(item: Any, package: str = 'denovo') -> str:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        str: [description]
-    """
-    representation = [f'{NEW_LINE}{package} {item.__class__.__name__}']
-    representation.append(f'name: {item.name}')
-    attributes = [a for a in item.__dict__ if not a.startswith('_')]
-    attributes.remove('name')
-    if hasattr(item, 'identification'):
-        representation.append(f'identification: {item.identification}')
-        attributes.remove('identification')
-    for attribute in attributes:
-        stored = getattr(item, attribute)
-        if isinstance(stored, dict):
-            for key, value in stored.items():
-                representation.append(
-                    textwrap.indent(f'{key}: {value}', INDENT))
-        elif isinstance(stored, (list, tuple, set)):
-            line = [f'{attribute}:']
-            for key in stored:
-                line.append(f'{str(key)}')
-            representation.append(' '.join(line))
-        # elif isinstance(stored, str):
-        #     representation.append(item)
-        else:
-            representation.append(str(stored))
-    return NEW_LINE.join(representation)     
-
 def snakify(item: str) -> str:
     """Converts a capitalized str to snake case.
 
@@ -299,36 +348,6 @@ def snakify(item: str) -> str:
     """
     item = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', item)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', item).lower()
-
-def stringify(item: Union[str, Sequence],
-              default_null: bool = False,
-              default_empty: bool = False) -> str:
-    """Converts one item list to a string (if not already a string).
-
-    Args:
-        item (str, list): item to be transformed into a string.
-        default_null (boolean): whether to return None (True) or ['none']
-            (False).
-
-    Returns:
-        item (str): either the original str, a string pulled from a
-            one-item list, or the original list.
-
-    """
-    if item is None:
-        if default_null:
-            return None
-        elif default_empty:
-            return []
-        else:
-            return ['none']
-    elif isinstance(item, str):
-        return item
-    else:
-        try:
-            return item[0]
-        except TypeError:
-            return item
 
 def tuplify(item: Any, default_value: Any = None) -> Tuple[Any]:
     """Returns passed item as a tuple (if not already a tuple).
@@ -430,18 +449,6 @@ def add_suffix(item: Union[Mapping[str, Any], Sequence[str]],
     except AttributeError:
         return [item + '_' + suffix for item in item]
 
-def datetime_string(prefix: str = None) -> str:
-    """Creates a string from current date and time.
-
-    Returns:
-        str with current date and time in Y/M/D/H/M format.
-
-    """
-    if prefix is None:
-        prefix = ''
-    time_string = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
-    return f'{prefix}_{time_string}'
-
 def deduplicate(item: MutableSequence) -> MutableSequence:
     """Deduplicates list or other mutable sequence."""
     if isinstance(item, list):
@@ -450,26 +457,42 @@ def deduplicate(item: MutableSequence) -> MutableSequence:
         contents = list(dict.fromkeys(item))
         return item.__class__(contents)
 
-def divide_string(item: str, divider: str = None) -> tuple[str, str]:
-    """[summary]
+def divide_string(item: str, 
+                  divider: str = None,
+                  return_last: bool = True,
+                  raise_error: bool = False) -> tuple[str, str]:
+    """Divides a str into 2 parts based on divider.
 
     Args:
-        key (str): [description]
+        item (str): string to be divided.
+        divider (str): str to divide 'item' upon. Defaults to None, in which
+            case the function will use 'DIVIDER' as 'divider'.
+        return_last (bool): whether to split 'item' upon the first (False) or
+            last appearance of 'divider'.
+        raise_error (bool): whether to raise an error if 'divider' is not in 
+            'item' or to return a tuple containing 'item' twice.
 
-    Returns:
+    Raises:
+        ValueError: if 'divider' is not in 'item' and 'raise_error' is True.
         
-        tuple[str, str]: [description]
+    Returns:
+        tuple[str, str]: parts of 'item' on either side of 'divider' unless
+            'divider' is not in 'item'.
         
     """
     if divider is None:
-        divider = '_'
+        divider = DIVIDER
     if divider in item:
-        suffix = item.split(divider)[-1]
+        if return_last:
+            suffix = item.split(divider)[-1]
+        else:
+            suffix = item.split(divider)[0]
         prefix = item[:-len(suffix) - 1]
+    elif raise_error:
+        raise ValueError(f'{divider} is not in {item}')
     else:
         prefix = suffix = item
     return prefix, suffix
-
 
 def drop_prefix(item: Union[Mapping[str, Any], Sequence[str]],
                 prefix: str) -> Union[Mapping[str, Any], Sequence[str]]:
@@ -505,7 +528,7 @@ def drop_suffix(item: Union[Mapping[str, Any], Sequence[str]],
     except AttributeError:
         return [item.rstrip(suffix) for item in item]
 
-def is_item(item: Any) -> bool:
+def is_iterable(item: Any) -> bool:
     """Returns if 'item' is iterable but is NOT a str type.
 
     Args:
@@ -545,4 +568,3 @@ def is_property(item: Any, instance: object) -> bool:
     return (isinstance(item, str) 
                 and hasattr(instance.__class__, item) 
                 and isinstance(getattr(type(instance), item), property))
-

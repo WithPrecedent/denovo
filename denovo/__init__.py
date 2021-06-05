@@ -24,8 +24,8 @@ __author__ = 'Corey Rayburn Yung'
 
 import importlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
-    Type, Union)
+                    Mapping, MutableMapping, MutableSequence, Optional, 
+                    Sequence, Set, Tuple, Type, Union)
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 
@@ -54,6 +54,11 @@ the lazy importation system used throughout denovo.
 
 """
 deferred: Dict[str, str] = {
+    'utilities': 'utilities',
+    'decorators': 'utilities.decorators',
+    'memory': 'utilities.memory',
+    'testing': 'utilities.testing',
+    'tools': 'utilities.tools',
     'Bunch': 'core.containers.Bunch',
     'Proxy': 'core.containers.Proxy',
     'Manifest': 'core.containers.Manifest',

@@ -16,8 +16,8 @@ import importlib.util
 import json
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
-    Type, Union)
+                    Mapping, MutableMapping, MutableSequence, Optional, 
+                    Sequence, Set, Tuple, Type, Union)
 
 import denovo
 

@@ -53,8 +53,8 @@ import copy
 import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
-    Type, Union)
+                    Mapping, MutableMapping, MutableSequence, Optional, 
+                    Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 

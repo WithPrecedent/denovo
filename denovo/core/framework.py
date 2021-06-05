@@ -26,8 +26,8 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
-    Type, Union)
+                    Mapping, MutableMapping, MutableSequence, Optional, 
+                    Sequence, Set, Tuple, Type, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
