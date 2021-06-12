@@ -309,11 +309,11 @@ class Manifest(Bunch, collections.abc.MutableSequence):
             if include is None:
                 contents = self.contents
             else:
-                include = more_itertools.always_iterable(include) 
+                include = list(more_itertools.always_iterable(include))
                 contents = [i for i in self.contents if i in include]
             if exclude is not None:
-                exclude = more_itertools.always_iterable(exclude)
-                contents = [i for i in self.contents if i not in include]
+                exclude = list(more_itertools.always_iterable(exclude))
+                contents = [i for i in contents if i not in exclude]
             new_manifest = copy.deepcopy(self)
             new_manifest.contents = contents
         return new_manifest
@@ -366,7 +366,7 @@ class Hybrid(Manifest):
     A Hybrid inherits the differences between a Manifest and an ordinary python 
     list.
     
-    A Hybrid differs from a Manifest in 2 significant ways:
+    A Hybrid differs from a Manifest in 3 significant ways:
         1) It only stores hashable items or objects with 'name' attributes or 
             properties that contain hashable items.
         2) Hybrid has an interface of both a dict and a list, but stores a list. 
@@ -379,6 +379,12 @@ class Hybrid(Manifest):
             a result, Hybrid should only be used if a high volume of access 
             calls is not anticipated. Ordinarily, the loss of lookup speed 
             should have negligible effect on overall performance.
+        3) Hybrids should not store int types. This ensures that when, for 
+            example, a 'hybrid[3]' is called, the item at that index is 
+            returned. If int types are stored, that call would create 
+            uncertainty as to whether an index or item should be returned. By
+            design, int types are assumed to be calls to return the item at that
+            index.
 
     Args:
         contents (MutableSequence[Any]): items to store in a list. Defaults to 
@@ -391,34 +397,6 @@ class Hybrid(Manifest):
     default_factory: Any = None
         
     """ Public Methods """
-
-    # def append(self, item: List[Any], **kwargs) -> None:
-    #     """Appends 'item' to 'contents'.
-        
-    #     Args:
-    #         items (List[Any]): items to append to 'contents'.
-
-    #     """
-    #     self.contents.append(item, **kwargs)
-    #     return self    
-
-    # def clear(self) -> None:
-    #     """Removes all items from 'contents'."""
-    #     self.contents = []
-    #     return self
-
-    # def extend(self, item: Any, **kwargs) -> None:
-    #     """Extends 'items' to 'contents'.
-        
-    #     Args:
-    #         items (Any): instance(s) to add to the 'contents' attribute.
-
-    #     Raises:
-    #         TypeError: if 'item' does not have a name attribute.
-            
-    #     """
-    #     self.contents.extend(item, **kwargs)
-    #     return self  
 
     def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Returns value in 'contents' or value in 'default_factory' attribute.
@@ -457,29 +435,29 @@ class Hybrid(Manifest):
         """
         return tuple([self._hashify(item = c) for c in self.contents])
         
-    def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
-        """Pops item(s) from 'contents'.
+    # def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
+    #     """Pops item(s) from 'contents'.
 
-        Args:
-            key (Union[Any, int]): index or key for value in 'contents'.
+    #     Args:
+    #         key (Union[Any, int]): index or key for value in 'contents'.
                 
-        Returns:
-            Union[Any, Sequence[Any]]: item(s) popped from 'contents'.
+    #     Returns:
+    #         Union[Any, Sequence[Any]]: item(s) popped from 'contents'.
             
-        """
-        popped = self[key]
-        del self[key]
-        return popped
+    #     """
+    #     popped = self[key]
+    #     del self[key]
+    #     return popped
         
-    def remove(self, key: Union[Any, int]) -> None:
-        """Removes item(s) from 'contents'.
+    # def remove(self, key: Union[Any, int]) -> None:
+    #     """Removes item(s) from 'contents'.
 
-        Args:
-            key (Union[Any, int]): index or key for value in 'contents'.
+    #     Args:
+    #         key (Union[Any, int]): index or key for value in 'contents'.
             
-        """
-        del self[key]
-        return self
+    #     """
+    #     del self[key]
+    #     return self
      
     def setdefault(self, value: Any) -> None:
         """Sets default value to return when 'get' method is used.
@@ -574,13 +552,14 @@ class Hybrid(Manifest):
         if isinstance(key, int):
             return self.contents[key]
         else:
-            matches = [c for c in self.contents if self._hashify(c) == key]
+            matches = [i for i, c in enumerate(self.contents)
+                       if self._hashify(c) == key]
             if len(matches) == 0:
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
             elif len(matches) == 1:
                 return matches[0]
             else:
-                return self.__class__(contents = matches)
+                return matches
             
     def __setitem__(self, key: Union[Any, int], value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.

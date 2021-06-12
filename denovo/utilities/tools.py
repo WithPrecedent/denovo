@@ -7,8 +7,6 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     how_soon_is_now (Callable): converts a current date and time to a str in the
         format described in the 'TIME_FORMAT' module-level attribute.
-    fetch (Callable): lazy loader that accepts import and file paths to load
-        individual items from them.
     beautify (Callable): provides a pretty str representation for an object. The
         function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
         the values for new lines and length of an indentation.
@@ -69,57 +67,17 @@ def how_soon_is_now(prefix: str = None) -> str:
     """Creates a string from current date and time.
 
     Args:
-        prefix: any additional prefix to add to the returned str.
+        prefix: a prefix to add to the returned str.
         
     Returns:
-        str: with current date and time in Y/M/D/H/M format.
+        str: with current date and time in 'TIME_FORMAT' format.
 
     """
-    if prefix is None:
-        prefix = ''
     time_string = datetime.datetime.now().strftime(TIME_FORMAT)
-    return f'{prefix}_{time_string}'
-
-""" Importing Tools """
-
-def fetch(module: str, 
-          item: str, 
-          file_path: Union[str, pathlib.Path] = None) -> Any:
-    """Lazily loads 'item' from 'module'.
-    
-    If 'file_path' is passed, the function will import a module at that location
-    to 'module' and attempt to load 'item' from it.
-
-    Args:
-        module (str): name of module holding object that is sought.
-        item (str): name of object sought.
-        file_path (pathlib.Path, str): file path where the python module is
-            located. Defaults to None.
-            
-    Raises:
-        AttributeError: if 'item' is not found in 'module'.
-        ImportError: if no module is found at 'file_path'.
-
-    Returns:
-        Any: imported python object from 'module'.
-        
-    """
-    if file_path is not None:
-        try:
-            spec = importlib.util.spec_from_file_location(module, file_path)
-            imported = importlib.util.module_from_spec(spec)
-            sys.modules[module] = imported
-            spec.loader.exec_module(imported)
-        except (ImportError, AttributeError):
-            raise ImportError(f'failed to load {module} from {file_path}')
-        try:
-            return getattr(imported, item)
-        except AttributeError:
-            raise AttributeError(f'failed to load {item} from {imported}')
-    try:
-        return getattr(importlib.import_module(module), item)
-    except (ImportError, AttributeError):
-        raise AttributeError(f'failed to load {item} from {module}')
+    if prefix is None:
+        return f'{prefix}_{time_string}'
+    else:
+        return time_string
 
 """ Conversion Tools """
 
@@ -494,7 +452,7 @@ def divide_string(item: str,
         prefix = suffix = item
     return prefix, suffix
 
-def drop_prefix(item: Union[Mapping[str, Any], Sequence[str]],
+def drop_prefix(item: Union[str, Mapping[str, Any], Sequence[str]],
                 prefix: str) -> Union[Mapping[str, Any], Sequence[str]]:
     """Drops prefix from each item in a list or keys in a dict.
 
@@ -506,12 +464,19 @@ def drop_prefix(item: Union[Mapping[str, Any], Sequence[str]],
         list or dict with prefixes dropped.
 
     """
-    try:
-        return {k.rstrip(prefix): v for k, v in item.items()}
-    except AttributeError:
-        return [item.rstrip(prefix) for item in item]
+    if isinstance(item, str):
+        if item.startswith(prefix):
+            return item[len(prefix):]
+        else:
+            return item
+    else:
+        try:
+            return {drop_prefix(item = k, prefix = prefix): v 
+                    for k, v in item.items()}
+        except AttributeError:
+            return [drop_prefix(item = i, prefix = prefix) for i in item]
     
-def drop_suffix(item: Union[Mapping[str, Any], Sequence[str]],
+def drop_suffix(item: Union[str, Mapping[str, Any], Sequence[str]],
                 suffix: str) -> Union[Mapping[str, Any], Sequence[str]]:
     """Drops suffix from each item in a list or keys in a dict.
 
@@ -523,10 +488,17 @@ def drop_suffix(item: Union[Mapping[str, Any], Sequence[str]],
         list or dict with suffixes dropped.
 
     """
-    try:
-        return {k.rstrip(suffix): v for k, v in item.items()}
-    except AttributeError:
-        return [item.rstrip(suffix) for item in item]
+    if isinstance(item, str):
+        if item.endswith(suffix):
+            return item[len(suffix):]
+        else:
+            return item
+    else:
+        try:
+            return {drop_suffix(item = k, suffix = suffix): v 
+                    for k, v in item.items()}
+        except AttributeError:
+            return [drop_suffix(item = i, suffix = suffix) for i in item]
 
 def is_iterable(item: Any) -> bool:
     """Returns if 'item' is iterable but is NOT a str type.
