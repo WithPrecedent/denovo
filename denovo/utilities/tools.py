@@ -50,6 +50,7 @@ import pathlib
 import re
 import sys
 import textwrap
+import types
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Set, Tuple, Type, Union)
@@ -540,3 +541,15 @@ def is_property(item: Any, instance: object) -> bool:
     return (isinstance(item, str) 
                 and hasattr(instance.__class__, item) 
                 and isinstance(getattr(type(instance), item), property))
+
+""" Introspection Tools """
+
+def get_functions(module: types.ModuleType) -> List[str]:
+    """Returns list of string names of functions in a module."""
+    return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
+            if m[1].__module__ == module.__name__]
+    
+def get_classes(module: types.ModuleType) -> List[Type]:
+    """Returns list of string names of classes in a module."""
+    return [m[0] for m in inspect.getmembers(module, inspect.isclass)
+            if m[1].__module__ == module.__name__]

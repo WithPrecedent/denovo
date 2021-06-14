@@ -3,9 +3,14 @@ test_containers: tests classes in denovo.containers
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+ToDo:
+    test_catalog: complete tests
+    test_proxy
+    test_library
+    
 """
 import dataclasses
-import sys
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Set, Tuple, Type, Union)
@@ -65,6 +70,25 @@ def test_hybrid():
     assert hybrid.values() == tuple([test_class])
     return
 
+def test_lexicon():
+    alt_created = denovo.Lexicon.fromkeys(keys = ['a', 'b', 'c'], 
+                                          value = 'tree')
+    assert alt_created['a'] == 'tree'
+    lexicon = denovo.Lexicon(contents = {'a': 'b', 'c': 'd'}, 
+                             default_factory = 'Nada')
+    assert lexicon.get('f') == 'Nada'
+    assert lexicon['a'] == 'b'
+    lexicon.add({'e': 'f'})
+    assert lexicon['e'] == 'f'
+    subset = lexicon.subset(include = ['a', 'e'])
+    assert subset.keys() == tuple(['a', 'e'])
+    assert subset.values() == tuple(['b', 'f'])
+    return
+
+def test_catalog():
+    catalog = denovo.Catalog()
+    return
+ 
 if __name__ == '__main__':
     denovo.testing.testify(module_to_test = denovo.containers, 
                            testing_module = __name__)

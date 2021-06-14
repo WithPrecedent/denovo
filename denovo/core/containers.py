@@ -45,6 +45,11 @@ import denovo
 Keys: Type = Union[Hashable, Sequence[Hashable]]
 Kinds: Type = collections.defaultdict(set)    
  
+ALL_KEYS: List[Any] = ['all', 'All', ['all'], ['All']]
+DEFAULT_KEYS: List[Any] = ['default', 'defaults', 'Default', 'Defaults', 
+                           ['default'], ['defaults'], ['Default'], ['Defaults']]
+NONE_KEYS: List[Any] = ['none', 'None', ['none'], ['None']]
+
 
 @dataclasses.dataclass
 class Proxy(collections.abc.Container):
@@ -422,7 +427,7 @@ class Hybrid(Manifest):
                 eliminate any duplicate keys, which are permitted by Hybrid.
             
         """
-        return tuple(zip(self.keys, self.values))
+        return tuple(zip(self.keys(), self.values()))
 
     def keys(self) -> Tuple(Any):
         """Emulates python dict 'keys' method.
@@ -434,31 +439,7 @@ class Hybrid(Manifest):
             
         """
         return tuple([self._hashify(item = c) for c in self.contents])
-        
-    # def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
-    #     """Pops item(s) from 'contents'.
 
-    #     Args:
-    #         key (Union[Any, int]): index or key for value in 'contents'.
-                
-    #     Returns:
-    #         Union[Any, Sequence[Any]]: item(s) popped from 'contents'.
-            
-    #     """
-    #     popped = self[key]
-    #     del self[key]
-    #     return popped
-        
-    # def remove(self, key: Union[Any, int]) -> None:
-    #     """Removes item(s) from 'contents'.
-
-    #     Args:
-    #         key (Union[Any, int]): index or key for value in 'contents'.
-            
-    #     """
-    #     del self[key]
-    #     return self
-     
     def setdefault(self, value: Any) -> None:
         """Sets default value to return when 'get' method is used.
         
@@ -602,10 +583,12 @@ class Hybrid(Manifest):
 class Lexicon(Bunch, collections.abc.MutableMapping):
     """Basic denovo dict replacement.
     
-    A Lexicon differs from an ordinary python list only in ways inherited
-    from Bunch by requiring 'add' and 'subset' methods, storing data in 
-    'contents', and allowing the '+' operator to join Lexicons with other lists 
-    and Lexicons).
+    A Lexicon differs from an ordinary python dict in ways inherited from Bunch 
+    by requiring 'add' and 'subset' methods, storing data in 'contents', and 
+    allowing the '+' operator to join Lexicons with other lists and Lexicons).
+    In addition, it differs in 1 other significant way:
+        1) When returning 'keys', 'values' and 'items', this class returns them
+            as tuples instead of KeysView, ValuesView, and ItemsView.
     
     Args:
         contents (MutableMapping[Hashable, Any]]): stored dictionary. Defaults 
@@ -671,6 +654,38 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
                     return self.default_factory()
                 except TypeError:
                     return self.default_factory
+                
+    def items(self) -> tuple[tuple[Any]]:
+        """Emulates python dict 'items' method.
+        
+        Returns:
+            tuple[tuple[Any, Any]: an iterable equivalent to dict.items(). A 
+                Hybrid cannot actually create an ItemsView because that would 
+                eliminate any duplicate keys, which are permitted by Hybrid.
+            
+        """
+        return tuple(zip(self.keys(), self.values()))
+
+    def keys(self) -> Tuple(Any):
+        """Returns 'contents' keys as a tuple.
+        
+        Returns:
+            tuple[Any]: an iterable equivalent to dict.keys(). A Hybrid cannot
+                actually create an KeysView because that would eliminate any
+                duplicate keys, which are permitted by Hybrid.
+            
+        """
+        return tuple(self.contents.keys())
+
+    def setdefault(self, value: Any) -> None:
+        """Sets default value to return when 'get' method is used.
+        
+        Args:
+            value (Any): default value to return.
+            
+        """
+        self.default_factory = value 
+        return self
                
     def subset(self, include: Keys = None, exclude: Keys = None) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
@@ -693,15 +708,26 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             if include is None:
                 contents = self.contents
             else:
-                include = more_itertools.always_iterable(include) 
+                include = list(more_itertools.always_iterable(include)) 
                 contents = {k: self.contents[k] for k in include}
             if exclude is not None:
-                exclude = more_itertools.always_iterable(exclude)
+                exclude = list(more_itertools.always_iterable(exclude))
                 contents = {k: v for k, v in contents.items() 
                             if k not in exclude}
             new_lexicon = copy.deepcopy(self)
             new_lexicon.contents = contents
         return new_lexicon
+      
+    def values(self) -> tuple[Any]:
+        """Returns 'contents' values as a tuple.
+        
+        Returns:
+            tuple[Any]: an iterable equivalent to dict.values(). A Hybrid cannot
+                actually create an ValuesView because that would eliminate any
+                duplicate keys, which are permitted by Hybrid.
+            
+        """
+        return tuple(self.contents.values())
 
     """ Dunder Methods """
 
@@ -782,11 +808,6 @@ class Catalog(Lexicon):
     default_factory: Any = None
     default: Sequence[Any] = 'all'
     always_return_list: bool = False
-    _all_keys: ClassVar[List[Any]] = ['all', 'All', ['all'], ['All']]
-    _default_keys: ClassVar[List[Any]] = ['default', 'defaults', 'Default', 
-                                          'Defaults', ['default'], ['defaults'], 
-                                          ['Default'], ['Defaults']]
-    _none_keys: ClassVar[List[Any]] = ['none', 'None', ['none'], ['None']]
 
     """ Dunder Methods """
 
@@ -804,17 +825,17 @@ class Catalog(Lexicon):
 
         """
         # Returns a list of all values if the 'all' key is sought.
-        if key in self._all_keys:
+        if key in ALL_KEYS:
             return list(self.contents.values())
         # Returns a list of values for keys listed in 'default' attribute.
-        elif key in self._default_keys:
+        elif key in DEFAULT_KEYS:
             try:
                 return self[self.default]
             except KeyError:
                 matches = {k: self.contents[k] for k in self.default}
                 return list(matches.values())
         # Returns an empty list if a null value is sought.
-        elif key in self._none_keys:
+        elif key in NONE_KEYS:
             return []
         # Returns list of matching values if 'key' is list-like.        
         elif isinstance(key, Sequence) and not isinstance(key, str):
@@ -839,7 +860,7 @@ class Catalog(Lexicon):
                 in 'contents'.
 
         """
-        if key in self._default_keys:
+        if key in DEFAULT_KEYS:
             self.default = more_itertools.always_iterable(value)
         else:
             try:
