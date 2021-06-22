@@ -24,39 +24,56 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 import denovo
 
 
-SPACE: str = ' '
-TAB: int = 2
-INDENT: str = SPACE * TAB
+WHITESPACE: str = ' '
+OFFSET: int = 2
+INDENT: str = WHITESPACE * OFFSET
 NEW_LINE: str = '\n'
 WIDTH: int = 40
 
 
+designer = textwrap.TextWrapper()
+
+
 @dataclasses.dataclass
-class RepresentationFormat(object):
+class Designer(object):
     
-    kind: Union[Type, Tuple[Type]]
-    start: str = ''
-    end: str = ''
-    comma_separated: bool = True
+    package: str = ''
+    whitespace: str = ' '
+    tab: int = 2
+    line_break: str = '\n'
+    width: int = 40
+    textwrapper: textwrap.TextWrapper = None
+    brackets: MutableMapping[str, Tuple[str, str]] = dataclasses.field(
+        default_factory = lambda: {'dict': tuple('{', '}'),
+                                   'list': tuple('[', ']'),
+                                   'set': tuple('{', '}'),
+                                   'string': tuple('', ''),
+                                   'tuple': tuple('(', ')')})
+    
+    """ Initialization Methods """
     
     def __post_init__(self) -> None:
-        self.offset = len(self.start) + 2
-                                                       
+        self.textwrapper = self.textwrapper or self._build_textwrapper()
+        self.package = self.package or __package__ or ''
     
-formats: Dict = {}
-formats['dict'] = RepresentationFormat(kind = Mapping,
-                                       start = '{',
-                                       end = '}')
-formats['list'] = RepresentationFormat(kind = MutableSequence,
-                                       start = '[',
-                                       end = ']')
-formats['set'] = RepresentationFormat(kind = Set,
-                                      start = '{',
-                                      end = '}')
-formats['string'] = RepresentationFormat(kind = str)
-formats['tuple'] = RepresentationFormat(kind = Sequence,
-                                        start = '(',
-                                        end = ')')
+    """ Properties """
+    
+    @property
+    def offset(self) -> str:
+        return self.whitespace * self.tab
+    
+    """ Public Methods """
+    
+    def beautify(self, 
+                 item: object,
+                 package: str = None, 
+                 exclude: MutableSequence[str] = None,
+                 include_private: bool = False) -> object:
+        package = package or self.package or ''
+        return beautify(item = item, 
+                        package = package, 
+                        exclude = exclude, 
+                        include_private = include_private)
 
     
 def beautify(item: object, 
@@ -176,23 +193,23 @@ def _calculate_offset(indents: int,
     if first_line:
         return indents * INDENT
     else:
-        return indents * INDENT + (len(attribute) + len(format.offset)) * SPACE
+        return indents * INDENT + (len(attribute) + len(format.offset)) * WHITESPACE
 
 def _first_line(attribute: str,
                 contents: str,
                 offset: int,
                 kind: RepresentationFormat) -> str:
-    return f'{SPACE * offset}{attribute}: {kind.start}{contents},'
+    return f'{WHITESPACE * offset}{attribute}: {kind.start}{contents},'
 
 def _middle_line(indents: int,
                  contents: str,
                  kind: RepresentationFormat) -> str:
-    return f'{INDENT * indents}{SPACE * (len(kind.start) + len(attribute) + 2)}{contents},'
+    return f'{INDENT * indents}{WHITESPACE * (len(kind.start) + len(attribute) + 2)}{contents},'
 
 def _last_line(indents: int,
                  contents: str,
                  kind: RepresentationFormat) -> str:
-    return (f'{INDENT * indents}{SPACE * (len(end_bracket) + 2)}'
+    return (f'{INDENT * indents}{WHITESPACE * (len(end_bracket) + 2)}'
             f'{contents}{end_bracket}')
   
 
