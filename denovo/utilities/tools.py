@@ -7,9 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     how_soon_is_now (Callable): converts a current date and time to a str in the
         format described in the 'TIME_FORMAT' module-level attribute.
-    beautify (Callable): provides a pretty str representation for an object. The
-        function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
-        the values for new lines and length of an indentation.
+
     delistify (Callable): converts a list to a str, if it is passed a list.
     instancify (Callable): converts a class to an instance or adds kwargs to a
         passed instance as attributes.
@@ -34,21 +32,24 @@ Contents:
         list-like item) or each key in a dict (or dict-like item).
     drop_suffix (Callable): removes a str suffix to each item in a list (or 
         list-like item) or each key in a dict (or dict-like item).  
+        
     is_iterable (Callable): returns whether an item is iterable but not a str.
     is_nested (Callable): returns whether a dict or dict-like item is nested.
     is_property (Callable): returns whether an attribute is actually a property.
     
+    beautify (Callable): provides a pretty str representation for an object. The
+        function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
+        the values for new lines and length of an indentation.
+        
 ToDo:
 
 """
 from __future__ import annotations
 import collections.abc
 import datetime
-import importlib
 import inspect
 import pathlib
 import re
-import sys
 import textwrap
 import types
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
@@ -76,81 +77,12 @@ def how_soon_is_now(prefix: str = None) -> str:
     """
     time_string = datetime.datetime.now().strftime(TIME_FORMAT)
     if prefix is None:
-        return f'{prefix}_{time_string}'
+        return f'{prefix}{DIVIDER}{time_string}'
     else:
         return time_string
 
 """ Conversion Tools """
 
-def beautify(item: object, 
-             package: str = None, 
-             exclude: List[str] = None,
-             include_privates: bool = False) -> str:
-    """Flexible tool to make prettier str represtentations of objects.
-
-    Args:
-        item (object): object to provide a str representation for.
-        package (str): name of the package that the item is from. This is 
-            entirely optional and defaults to None.
-
-    Returns:
-        str: pretty str representation of the object.
-        
-    """
-    package = package or ''
-    exclude = exclude or []
-    representation = [NEW_LINE]
-    representation.append(f'{package} {item.__class__.__name__}')
-    print('test start rep', representation)
-    attributes = item.__dict__
-    if not include_privates:
-        attributes = [a for a in attributes if not a.startswith('_')]
-    attributes = [a for a in attributes if a not in exclude]
-    for attribute in attributes:
-        new_line = f'{INDENT}{attribute}:'
-        contents = getattr(item, attribute)
-        if isinstance(contents, dict):
-            for key, value in contents.items():
-                
-                representation.append(textwrap.indent(f'{key}: {value}', 
-                                                      INDENT))
-        elif isinstance(contents, (list, tuple, set)):
-            
-            items = []
-            for key in contents:
-                items.append(f'{str(key)}')
-            items = ', '.join(items)
-            new_line = ' '.join([new_line, items])
-            representation.append(new_line)
-        else:
-            representation.append(f'{INDENT}{attribute}: {str(contents)}')
-    print('test representation end', representation)
-    return NEW_LINE.join(representation)
-            
-def delistify(item: Any, default_value: Any = None) -> Any:
-    """Converts 'item' to a str from a list, if it is a list.
-    
-    Args:
-        item (Any): item to convert to a str from a list if it is a list.
-        default_value (Any): value to return if 'item' is equivalent to a null
-            value when passed. Defaults to None.
-        
-    Returns:
-        Any: str, if item was a list, None or the default value if a null value
-            was passed, or the item as it was passed if there previous two 
-            conditions don't appply.
-
-    """
-    if item is None:
-        if default_value is None or default_value in ['None', 'none']:
-            return None
-        else:
-            return default_value
-    elif isinstance(item, MutableSequence):
-        return ', '.join(item)
-    else:
-        return item
-    
 def instancify(item: Union[Type, object], **kwargs) -> object:
     """Returns 'item' as an instance with 'kwargs' as parameters/attributes.
     
@@ -158,7 +90,8 @@ def instancify(item: Union[Type, object], **kwargs) -> object:
     existing 'item'.
 
     Args:
-        item (Any): item to create an instance out of.
+        item (Union[Type, object])): class to make an instance out of by passing
+            kwargs or an instance to add kwargs to as attributes.
 
     Raises:
         TypeError: if 'item' is neither a class nor instance.
@@ -200,12 +133,12 @@ def listify(item: Any, default_value: Any = None) -> List[Any]:
             return None
         else:
             return default_value
-    elif isinstance(item, list) and not isinstance(item, str):
+    elif isinstance(item, MutableSequence) and not isinstance(item, str):
         return item
     else:
         return [item]
 
-def namify(self, item: Any) -> str:
+def namify(self, item: Any) -> Hashable:
     """Returns hashable representation of 'item'.
 
     This function returns a hashable name for an item in the following priority
@@ -213,16 +146,17 @@ def namify(self, item: Any) -> str:
         1) If 'item' is a str, it is returned.
         2) If 'item' has a 'name' attribute with a hashable value, that is 
             returned.
-        3) str() for 'item.
-        4) Snakecase '__name__' attribute of 'item'.
-        5) Snakecase '__name__' attribute of the '__class__' attribute of 
+        3) hash() for 'item'.
+        4) str() for 'item'.
+        5) Snakecase '__name__' attribute of 'item'.
+        6) Snakecase '__name__' attribute of the '__class__' attribute of 
             'item'.
         
     Args:
         item (Any): item to convert to a str type.
 
     Returns:
-        str: the str used to represent a item.
+        Hashable: a hashable represetnation of 'item.'
         
     """        
     if isinstance(item, str):
@@ -259,7 +193,7 @@ def numify(item: str, raise_error: bool = False) -> Union[int, float, str]:
             'raise_error' is True.
             
     Returns
-        item (int, float, str) converted to numeric type, if possible.
+        Union[int, float, str]: converted to numeric type, if possible.
 
     """
     try:
@@ -274,11 +208,11 @@ def numify(item: str, raise_error: bool = False) -> Union[int, float, str]:
             else:
                 return item
 
-def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
+def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
     """Converts string 'path' to pathlib.Path object.
 
     Args:
-        path (Union[str, pathlib.Path]): either a string representation of a
+        item (Union[str, pathlib.Path]): either a string representation of a
             path or a pathlib.Path object.
 
     Returns:
@@ -288,12 +222,12 @@ def pathlibify(path: Union[str, pathlib.Path]) -> pathlib.Path:
         TypeError if 'path' is neither a str or pathlib.Path type.
 
     """
-    if isinstance(path, str):
-        return pathlib.Path(path)
-    elif isinstance(path, pathlib.Path):
-        return path
+    if isinstance(item, str):
+        return pathlib.Path(item)
+    elif isinstance(item, pathlib.Path):
+        return item
     else:
-        raise TypeError('path must be str or pathlib.Path type')
+        raise TypeError('item must be str or pathlib.Path type')
 
 def snakify(item: str) -> str:
     """Converts a capitalized str to snake case.
@@ -307,7 +241,38 @@ def snakify(item: str) -> str:
     """
     item = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', item)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', item).lower()
+         
+def stringify(item: Any, default_value: Any = None) -> Any:
+    """Converts 'item' to a str from a sequence.
+    
+    Args:
+        item (Any): item to convert to a str from a list if it is a list.
+        default_value (Any): value to return if 'item' is equivalent to a null
+            value when passed. Defaults to None.
+    
+    Raises:
+        TypeError: if 'item' is not a str or list-like object.
+        
+    Returns:
+        Any: str, if item was a list, None or the default value if a null value
+            was passed, or the item as it was passed if there previous two 
+            conditions don't appply.
 
+    """
+    if item is None:
+        if default_value is None:
+            return ''
+        elif default_value in ['None', 'none']: 
+            return None
+        else:
+            return default_value
+    elif isinstance(item, str):
+        return item
+    elif isinstance(item, Sequence):
+        return ', '.join(item)
+    else:
+        raise TypeError('item must be str or a sequence')
+    
 def tuplify(item: Any, default_value: Any = None) -> Tuple[Any]:
     """Returns passed item as a tuple (if not already a tuple).
 
@@ -325,18 +290,18 @@ def tuplify(item: Any, default_value: Any = None) -> Tuple[Any]:
     """
     if item is None:
         if default_value is None:
-            return ()
+            return tuple()
         elif default_value in ['None', 'none']:
             return None
         else:
             return default_value
-    elif isinstance(item, tuple) and not isinstance(item, str):
+    elif isinstance(item, tuple):
         return item
     else:
         return tuple(item)
         
 def typify(item: str) -> Union[Sequence, int, float, bool, str]:
-    """Converts stingsr to appropriate, supported datatypes.
+    """Converts stings to appropriate, supported datatypes.
 
     The method converts strings to list (if ', ' is present), int, float,
     or bool datatypes based upon the content of the string. If no
@@ -501,6 +466,23 @@ def drop_suffix(item: Union[str, Mapping[str, Any], Sequence[str]],
         except AttributeError:
             return [drop_suffix(item = i, suffix = suffix) for i in item]
 
+""" Introspection Tools """
+    
+def get_classes(module: types.ModuleType) -> List[Type]:
+    """Returns list of string names of classes in a module."""
+    return [m[0] for m in inspect.getmembers(module, inspect.isclass)
+            if m[1].__module__ == module.__name__]
+    
+def get_functions(module: types.ModuleType) -> List[str]:
+    """Returns list of string names of functions in a module."""
+    return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
+            if m[1].__module__ == module.__name__]
+
+def get_modules(folder: Union[str, pathlib.Path]) -> List[pathlib.Path]:  
+    """Returns list of pathlib Paths of modules in 'folder'."""
+    folder = pathlibify(item = folder)  
+    return list(folder.glob('*/*.py'))
+
 def is_iterable(item: Any) -> bool:
     """Returns if 'item' is iterable but is NOT a str type.
 
@@ -539,17 +521,5 @@ def is_property(item: Any, instance: object) -> bool:
 
     """
     return (isinstance(item, str) 
-                and hasattr(instance.__class__, item) 
-                and isinstance(getattr(type(instance), item), property))
-
-""" Introspection Tools """
-
-def get_functions(module: types.ModuleType) -> List[str]:
-    """Returns list of string names of functions in a module."""
-    return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
-            if m[1].__module__ == module.__name__]
-    
-def get_classes(module: types.ModuleType) -> List[Type]:
-    """Returns list of string names of classes in a module."""
-    return [m[0] for m in inspect.getmembers(module, inspect.isclass)
-            if m[1].__module__ == module.__name__]
+            and hasattr(instance.__class__, item) 
+            and isinstance(getattr(type(instance), item), property))

@@ -60,6 +60,7 @@ importables: Dict[str, str] = {
     'decorators': 'utilities.decorators',
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
+    'representation': 'utilities.representation',
     'testing': 'utilities.testing',
     'tools': 'utilities.tools',
     'containers': 'core.containers',
@@ -69,6 +70,7 @@ importables: Dict[str, str] = {
     'Hybrid': 'core.containers.Hybrid',
     'Lexicon': 'core.containers.Lexicon',
     'Catalog': 'core.containers.Catalog',
+    'quirks': 'core.quirks',
     'Settings': 'core.configuration.Settings',
     'Filer': 'core.configuration.Filer',
     'FileFormat': 'core.configuration.FileFormat',
@@ -82,7 +84,7 @@ importables: Dict[str, str] = {
     'Project': 'project.interface.Project'}
 
 def __getattr__(name: str) -> Any:
-    """Lazily imports modules and items within them.
+    """Lazily imports modules and items within them as package attributes.
     
     Args:
         name (str): name of denovo module or item being sought.
@@ -91,6 +93,7 @@ def __getattr__(name: str) -> Any:
         Any: a module or item stored within a module.
         
     """
+    package = __package__ or __name__
     return lazy.importify(name = name, 
-                          package = __name__, 
+                          package = package, 
                           importables = importables)

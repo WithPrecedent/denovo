@@ -4,7 +4,7 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-This module uses labels like 'testify' and 'Testifier' for executing unit tests.
+This module uses labels like 'testify' and 'Testimony' for executing unit tests.
 This is consistent with other tools in denovo which use the "-ify" suffix to
 create novel, but easily understood, names for various actions. However, in this
 instance, those labels might create confusion with the Testify testing framework
@@ -20,7 +20,7 @@ Contents:
         the passed 'testables' argument.
     testify (Callable): generates list of testable items in a module and 
         performs all unit tests on that module.
-    Testifier (Type, Callable): a callable class which allows for automated 
+    Testimony (Type, Callable): a callable class which allows for automated 
         testing across an entire package.
     
 ToDo:
@@ -38,6 +38,62 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
                     Sequence, Set, Tuple, Type, Union)
 
 import denovo
+
+
+def get_testers(package: object, 
+                folder: Union[str, pathlib.Path], 
+                prefix: str = 'test_') -> List[pathlib.Path]:
+    """[summary]
+
+    Args:
+        package (object): [description]
+        folder (Union[str, pathlib.Path]): [description]
+        prefix (str): [description]
+
+    Returns:
+        List[pathlib.Path]: [description]
+        
+    """
+    name = package.__package__
+    testers = denovo.tools.get_modules(folder = folder)
+    print('test testers', testers)
+    testers = [t for t in testers if t.name.startswith(prefix)]
+    testers = [t for t in testers if t.stem != f'{prefix}{name}']
+    return testers
+
+def run_testers(testers: MutableSequence[pathlib.Path],
+                package: object,
+                prefix: str) -> None:
+    """[summary]
+
+    Args:
+        testers (MutableSequence[pathlib.Path]): [description]
+        package (object): [description]
+        prefix (str): [description]
+        
+    """
+    for tester in testers:
+        target = tester.stem
+        module = denovo.tools.drop_prefix(item = target, prefix = prefix)
+        target_module = getattr(package, module)
+        imported = denovo.lazy.from_path(name = target, file_path = tester)
+        testify(target_module = target_module, testing_module = imported) 
+    return
+
+def testify(target_module: types.ModuleType,
+            testing_module: Union[types.ModuleType, str]) -> None:
+    """[summary]
+
+    Args:
+        target_module (types.ModuleType): [description]
+        testing_module (Union[types.ModuleType, str]): [description]
+        
+    """
+    testables = get_testables(module = target_module)
+    if isinstance(testing_module, str):
+        testing_module = sys.modules[testing_module]
+    run_tests(testables = testables, module = testing_module)
+    return
 
 def get_testables(module: types.ModuleType, 
                   prefix: str = 'test',
@@ -78,38 +134,37 @@ def run_tests(module: types.ModuleType,
             pass
     return
 
-def testify(module_to_test: types.ModuleType,
-            testing_module: Union[types.ModuleType, str]) -> None:
-    """[summary]
-
-    Args:
-        module_to_test (types.ModuleType): [description]
-        testing_module (Union[types.ModuleType, str]): [description]
-        
-    """
-    testables = get_testables(module = module_to_test)
-    if isinstance(testing_module, str):
-        testing_module = sys.modules[testing_module]
-    run_tests(testables = testables, module = testing_module)
-    return
-
 
 @dataclasses.dataclass
-class Testifier(object):
-    """
+class Testimony(object):
+    """Unit tester for a python package.
+    
+    Args:
+
+        
     """
     folder: Union[str, pathlib.Path]
-    package: str = 'denovo'
-    prefix: str = 'test'
+    package: object = denovo
+    prefix: str = 'test_'
     report: Union[str, pathlib.Path] = None
     
     """ Initialization Methods """
     
     def __call__(cls, *args, **kwargs) -> Callable:
+        """
+        """
         instance  = cls(*args, **kwargs)
-        return instance.test()
+        return instance.testify()
     
     """ Public Methods """
     
-    def test(self) -> None:
+    def testify(self) -> None:
+        """Calls testing methods for an entire package."""
+        testers = get_testers(package = self.package,
+                              folder = self.folder,
+                              prefix = self.prefix)
+        run_testers(testers = testers, 
+                    package = self.package, 
+                    prefix = self.prefix)
         return
+    

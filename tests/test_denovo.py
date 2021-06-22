@@ -41,21 +41,11 @@ import denovo
 def test_version() -> None:
     assert denovo.__version__ == '0.1.0'
     return
-    
-def test_all(folder: Union[str, pathlib.Path] = None) -> None:
-    test_version()
-    folder = folder or pathlib.Path('.')
-    python_modules = list(folder.glob('*/*.py'))
-    testers = [f for f in python_modules if f.name.startswith('test_')]
-    testers = [f for f in testers if f.name != f'test_{denovo.__package__}.py']
-    for tester in testers:
-        name = tester.stem
-        module_name = denovo.tools.drop_prefix(item = name, prefix = 'test_')
-        module_to_test = getattr(denovo, module_name)
-        imported = denovo.lazy.from_path(name = name, file_path = tester)
-        denovo.testing.testify(module_to_test = module_to_test,
-                               testing_module = imported)
-    return
 
 if __name__ == '__main__':
-    test_all()
+    test_version()
+    print('test package', denovo.__package__)
+    folder = pathlib.Path('.')
+    testimony = denovo.testing.Testimony(folder = folder)
+    testimony.testify()
+    
