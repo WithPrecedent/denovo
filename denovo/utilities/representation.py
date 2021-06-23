@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     beautify (Callable): provides a pretty str representation for an object. The
-        function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
+        function uses the 'NEW_LINE' and 'INDENT' module-level items for
         the values for new lines and length of an indentation.
         
 ToDo:
@@ -15,6 +15,7 @@ ToDo:
 from __future__ import annotations
 import abc
 import dataclasses
+import inspect
 import textwrap
 from types import FunctionType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
@@ -29,9 +30,12 @@ OFFSET: int = 2
 INDENT: str = WHITESPACE * OFFSET
 NEW_LINE: str = '\n'
 WIDTH: int = 40
-
-
-designer = textwrap.TextWrapper()
+KINDS: Dict[str, Tuple[str, str]] = {'dict': tuple('{', '}'), 
+                                     'list': tuple('[', ']'),
+                                     'object': tuple('', ''),
+                                     'set': tuple('{', '}'),
+                                     'string': tuple('', ''),
+                                     'tuple': tuple('(', ')')}
 
 
 @dataclasses.dataclass
@@ -42,13 +46,10 @@ class Designer(object):
     tab: int = 2
     line_break: str = '\n'
     width: int = 40
+    length: int = 20
     textwrapper: textwrap.TextWrapper = None
     brackets: MutableMapping[str, Tuple[str, str]] = dataclasses.field(
-        default_factory = lambda: {'dict': tuple('{', '}'),
-                                   'list': tuple('[', ']'),
-                                   'set': tuple('{', '}'),
-                                   'string': tuple('', ''),
-                                   'tuple': tuple('(', ')')})
+        default_factory = lambda: KINDS)
     
     """ Initialization Methods """
     
@@ -70,17 +71,36 @@ class Designer(object):
                  exclude: MutableSequence[str] = None,
                  include_private: bool = False) -> object:
         package = package or self.package or ''
+        first_line = self.beautify_first_line()
+        
+        
+        
+        
+        
         return beautify(item = item, 
                         package = package, 
                         exclude = exclude, 
                         include_private = include_private)
 
+    """ Private Methods """
     
-def beautify(item: object, 
+    def _build_textwrapper(self) -> None:
+        self.textwrapper = textwrap.TextWrapper(
+            width = self.width,
+            initial_indent = self.offset,
+            subsequent_indent = self.offset * 2,
+            tabsize = len(self.offset),
+            replace_whitespace = False,
+            drop_whitespace = False,
+            max_lines = self.length,
+            placeholder = '...')
+        return self
+    
+def beautify(item: Any, 
              package: str = None, 
+             offsets: int = 1, 
              exclude: MutableSequence[str] = None,
-             include_private: bool = False,
-             indents: int = 1) -> str:
+             include_private: bool = False) -> str:
     """Flexible tool to make prettier str represtentations of objects.
 
     Args:
@@ -92,27 +112,19 @@ def beautify(item: object,
         str: pretty str representation of the object.
         
     """
-    package = package or __package__ or ''
     exclude = exclude or []
     effigy = [NEW_LINE]
-    if package:
-        effigy.append(f'{package} ')
-    effigy.append(item.__class__.__name__)
-    print('test start rep', effigy)
-    if include_private:
-        attributes = [a for a in item.__dict__.keys() if not a.startswith('__')]
-    else:
-        attributes = [a for a in item.__dict__.keys() if not a.startswith('_')]
-    attributes = [a for a in attributes if a not in exclude]
-    for attribute in attributes:
-        contents = getattr(item, attribute)
-        method = get_beautify_method(item = contents)
-        print('test attribute contents', contents)
-        effigy.append(method(attribute = attribute,
-                             contents = contents,
-                             indents = indents))
-    print('test effigy end', effigy)
-    return NEW_LINE.join(effigy)
+    kind = _classify_kind(item = item)
+    method = globals()[f'beautify_{kind}']
+    kwargs = {'item': item, 'offsets': offsets}
+    if kind == 'object':
+        kwargs.update({'package': package, 
+                       'exclude': exclude,
+                       'include_private': include_private})
+    effigy.append(method(**kwargs))
+    effigy.append(NEW_LINE)
+    return ''.join(effigy)
+
 
 def get_beautify_method(item: Any) -> FunctionType:
     """[summary]
@@ -139,20 +151,20 @@ def get_beautify_method(item: Any) -> FunctionType:
     else:
         return beautify_other
 
-def beautify_list(attribute: str, contents: Sequence, indents: int) -> str:
+def beautify_list(item: str, contents: Sequence, indents: int) -> str:
     first_indent = INDENT * indents
-    other_indent = INDENT * indents + ' ' * len(attribute) + '   '
-    representation = [first_indent, attribute, ': [']
+    other_indent = INDENT * indents + ' ' * len(item) + '   '
+    representation = [first_indent, item, ': [']
     length = len(contents)
     for i, item in enumerate(contents):
         beautiful_item = beautify(item = item)
         if i == 0:
-            text_to_add = _first_line(attribute = attribute,
+            text_to_add = _first_line(item = item,
                                       contents = item,
                                       indents = indents,
                                       start_bracket = '[')
         elif i == length - 1:
-            text_to_add = _last_line(attribute = attribute,
+            text_to_add = _last_line(item = item,
                                      contents = item,
                                      indents = indents,
                                      start_bracket = '[')
@@ -163,7 +175,7 @@ def beautify_list(attribute: str, contents: Sequence, indents: int) -> str:
     representation.append([']'])
     return ''.join(representation)
    
-def beautify_dict(attribute: str, contents: Mapping, indents: int) -> str:
+def beautify_dict(item: str, contents: Mapping, indents: int) -> str:
     representation = [INDENT * indents, '{', NEW_LINE]
     print('init rep', representation)
     for key, value in contents.keys():
@@ -172,44 +184,87 @@ def beautify_dict(attribute: str, contents: Mapping, indents: int) -> str:
     representation.append(['}'])
     return ''.join(representation)
 
-def beautify_other(attribute: str, contents: Any, indents: int) -> str:
+def beautify_other(item: str, contents: Any, indents: int) -> str:
     return str(contents)
 
-def beautify_set(attribute: str, contents: Set, indents: int) -> str:
+def beautify_set(item: str, contents: Set, indents: int) -> str:
     representation = ', '.join(contents)
     return ''.join(['{', representation, '}'])
 
-def beautify_string(attribute: str, contents: Set) -> str:
+def beautify_string(item: str, contents: Set) -> str:
     return str(contents)
 
-def beautify_tuple(attribute: str, contents: Set, indents: int) -> str:
+def beautify_tuple(item: str, contents: Set, indents: int) -> str:
     representation = ', '.join(contents)
     return ''.join(['(', representation, ')'])
 
 def _calculate_offset(indents: int, 
-                      attribute: str,
+                      item: str,
                       format: RepresentationFormat,
                       first_line: bool = False) -> str:
     if first_line:
         return indents * INDENT
     else:
-        return indents * INDENT + (len(attribute) + len(format.offset)) * WHITESPACE
+        return indents * INDENT + (len(item) + len(format.offset)) * WHITESPACE
 
-def _first_line(attribute: str,
-                contents: str,
-                offset: int,
-                kind: RepresentationFormat) -> str:
-    return f'{WHITESPACE * offset}{attribute}: {kind.start}{contents},'
+
+def _classify_kind(item: Any) -> str:
+    if isinstance(item, str):
+        return 'string'
+    elif isinstance(item, MutableMapping):
+        return 'dictionary'
+    elif isinstance(item, MutableSequence):
+        return 'list'
+    elif isinstance(item, Sequence):
+        return 'tuple'
+    elif isinstance(item, Set):
+        return 'set'
+    else:
+        return 'object'
+    
+def _create_preamble(item: Any, package: str, kind: str, offsets: int) -> str:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+        offsets (int): [description]
+
+    Returns:
+        str: [description]
+    """
+    preamble = [INDENT * offsets]
+    if isinstance(item, (str, list, set, tuple, dict)):
+        preamble.append(f'{kind}: ')  
+    else:
+        name = denovo.tools.namify(item = item)
+        base = item.__class__.__name__
+        if not package:
+            module = inspect.getmodule(item)
+            package = module.__package__ or None
+        if name and base and package:
+            if name == base:
+                preamble.append(f'{package} {name}: ')
+            else:
+                preamble.append(f'{name}, ({package} {base}): ')
+        else:
+            if name == base:
+                preamble.append(f'{name}: ')
+            else:
+                preamble.append(f'{name}, ({base}): ')        
+    preamble.append(KINDS[kind][0])
+    preamble.append(NEW_LINE)
+    return ''.join(preamble)
 
 def _middle_line(indents: int,
                  contents: str,
-                 kind: RepresentationFormat) -> str:
-    return f'{INDENT * indents}{WHITESPACE * (len(kind.start) + len(attribute) + 2)}{contents},'
+                 kind: str) -> str:
+    return f'{INDENT * indents}{WHITESPACE * (len(kind.start) + len(item) + 2)}{contents},'
 
 def _last_line(indents: int,
                  contents: str,
-                 kind: RepresentationFormat) -> str:
-    return (f'{INDENT * indents}{WHITESPACE * (len(end_bracket) + 2)}'
-            f'{contents}{end_bracket}')
+                 kind: str) -> str:
+    bracket = KINDS[kind][0]
+    return (f'{INDENT * indents}{WHITESPACE * (len(bracket) + 2)}'
+            f'{contents}{bracket}')
   
 
