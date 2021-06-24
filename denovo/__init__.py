@@ -72,17 +72,18 @@ importables: Dict[str, str] = {
     'Catalog': 'core.containers.Catalog',
     'Library': 'core.containers.Library',
     'quirks': 'core.quirks',
+    'Quirk': 'core.quirks.Quirk',
     'Settings': 'core.configuration.Settings',
     'Filer': 'core.configuration.Filer',
     'FileFormat': 'core.configuration.FileFormat',
-    'Keystone': 'core.framework.Keystone',
-    'Quirk': 'core.framework.Quirk',
-    'create_keystone': 'core.framework.create_keystone',
-    'Validator': 'core.framework.Validator',
-    'Converter': 'core.framework.Converter',
+    # 'Keystone': 'core.framework.Keystone',
+    # 'create_keystone': 'core.framework.create_keystone',
+    # 'Validator': 'core.framework.Validator',
+    # 'Converter': 'core.framework.Converter',
     'structures': 'core.structures',
     'Structure': 'core.structures.Structure',
     'Graph': 'core.structures.Graph',
+    'Workflow': 'core.structures.Workflow',
     'Project': 'project.interface.Project'}
 
 def __getattr__(name: str) -> Any:

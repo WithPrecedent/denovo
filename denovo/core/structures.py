@@ -70,7 +70,7 @@ Edges: Type = MutableSequence[Edge]
 Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
 Pipelines: Type = MutableSequence[MutableSequence[Hashable]]
 Nodes: Type = Union[Hashable, Pipeline]
-_DefaultAdjacency: MutableMapping = collections.defaultdict(set)
+_DefaultAdjacency: MutableMapping = collections.defaultdict(list)
     
 def is_adjacency_list(item: Any) -> bool:
     """Returns whether 'item' is an adjacency list."""
@@ -508,21 +508,21 @@ class DirectedGraph(Graph, abc.ABC):
         """
         pass
   
-    @abc.abstractmethod
-    def prepend(self, 
-                item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
-        """Prepends 'item' to the roots of the stored graph.
+    # @abc.abstractmethod
+    # def prepend(self, 
+    #             item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+    #     """Prepends 'item' to the roots of the stored graph.
 
-        Prepending creates an edge between every endpoint of item and the every 
-        root of the stored graph in this instance.
+    #     Prepending creates an edge between every endpoint of item and the every 
+    #     root of the stored graph in this instance.
 
-        Args:
-            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
-                an adjacency list, an edge list, an adjacency matrix, or one or
-                more nodes.
+    #     Args:
+    #         item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
+    #             an adjacency list, an edge list, an adjacency matrix, or one or
+    #             more nodes.
    
-        """
-        pass
+    #     """
+    #     pass
     
     """ Dunder Methods """
 
@@ -584,7 +584,8 @@ class Workflow(DirectedGraph):
             '_DefaultAdjacency'.
                   
     """  
-    contents: Adjacency = dataclasses.field(default_factory = _DefaultAdjacency)
+    contents: Adjacency = dataclasses.field(
+        default_factory = lambda: _DefaultAdjacency)
     
     """ Properties """
 
@@ -848,6 +849,9 @@ class Workflow(DirectedGraph):
                 new_graph.delete(node = node)
         return new_graph
 
+    def subset(self, *args, **kwargs) -> Graph:
+        return self.subgraph(*args, **kwargs)
+    
     def walk(self, 
              start: Hashable, 
              stop: Hashable, 

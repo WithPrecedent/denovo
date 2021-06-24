@@ -42,8 +42,7 @@ import more_itertools
 import denovo
 
 
-Keys: Type = Union[Hashable, Sequence[Hashable]]
-Kinds: Type = collections.defaultdict(set)    
+Keys: Type = Union[Hashable, Sequence[Hashable]] 
  
 ALL_KEYS: List[Any] = ['all', 'All', ['all'], ['All']]
 DEFAULT_KEYS: List[Any] = ['default', 'defaults', 'Default', 'Defaults', 
@@ -892,7 +891,7 @@ class Library(Lexicon):
     subclasses: denovo.Catalog = denovo.Catalog()
     instances: denovo.Catalog = denovo.Catalog()
     kinds: MutableMapping[str, Set[str]] = dataclasses.field(
-        default_factory = Kinds)
+        default_factory = lambda: collections.defaultdict(default_factory = set))
 
     """ Public Methods """
     
