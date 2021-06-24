@@ -572,7 +572,7 @@ class Workflow(DirectedGraph):
     Workflow stores its graph as an adjacency list. Despite being called an 
     "adjacency list," the typical and most efficient way to create one in python
     is using a dict. The keys of the dict are the nodes and the values are sets
-    of the hashable representations of other nodes.
+    of the hashable summarys of other nodes.
 
     Workflow internally supports autovivification where a set is created as a 
     value for a missing key. 
@@ -950,7 +950,7 @@ class Workflow(DirectedGraph):
         return self
 
     def __str__(self) -> str:
-        """Returns prettier representation of the stored graph.
+        """Returns prettier summary of the stored graph.
 
         Returns:
             str: a formatted str of class information and the contained 
@@ -959,11 +959,11 @@ class Workflow(DirectedGraph):
         """
         new_line = '\n'
         tab = '    '
-        representation = [f'{new_line}denovo {self.__class__.__name__}']
-        representation.append('adjacency list:')
+        summary = [f'{new_line}denovo {self.__class__.__name__}']
+        summary.append('adjacency list:')
         for node, edges in self.contents.items():
-            representation.append(f'{tab}{node}: {str(edges)}')
-        return new_line.join(representation) 
+            summary.append(f'{tab}{node}: {str(edges)}')
+        return new_line.join(summary) 
 
 
 # @dataclasses.dataclass
@@ -1616,7 +1616,7 @@ class Workflow(DirectedGraph):
 #         return []
     
 #     def __str__(self) -> str:
-#         """Returns prettier representation of the Graph.
+#         """Returns prettier summary of the Graph.
 
 #         Returns:
 #             str: a formatted str of class information and the contained 
@@ -1625,10 +1625,10 @@ class Workflow(DirectedGraph):
 #         """
 #         new_line = '\n'
 #         tab = '    '
-#         representation = [f'{new_line}denovo {self.__class__.__name__}']
-#         representation.append('adjacency list:')
+#         summary = [f'{new_line}denovo {self.__class__.__name__}']
+#         summary.append('adjacency list:')
 #         for node, edges in self.contents.items():
-#             representation.append(f'{tab}{node}: {str(edges)}')
-#         return new_line.join(representation) 
+#             summary.append(f'{tab}{node}: {str(edges)}')
+#         return new_line.join(summary) 
 
 

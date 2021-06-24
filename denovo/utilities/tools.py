@@ -37,7 +37,7 @@ Contents:
     is_nested (Callable): returns whether a dict or dict-like item is nested.
     is_property (Callable): returns whether an attribute is actually a property.
     
-    beautify (Callable): provides a pretty str representation for an object. The
+    beautify (Callable): provides a pretty str summary for an object. The
         function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
         the values for new lines and length of an indentation.
         
@@ -138,43 +138,28 @@ def listify(item: Any, default_value: Any = None) -> List[Any]:
     else:
         return [item]
 
-def namify(self, item: Any) -> Hashable:
-    """Returns hashable representation of 'item'.
-
-    This function returns a hashable name for an item in the following priority
-    order:
-        1) If 'item' is a str, it is returned.
-        2) If 'item' has a 'name' attribute with a hashable value, that is 
-            returned.
-        3) hash() for 'item'.
-        4) str() for 'item'.
-        5) Snakecase '__name__' attribute of 'item'.
-        6) Snakecase '__name__' attribute of the '__class__' attribute of 
-            'item'.
-        
+def namify(item: Any) -> str:
+    """Returns str representation of 'item'.
     Args:
         item (Any): item to convert to a str type.
 
     Returns:
-        Hashable: a hashable represetnation of 'item.'
+        str: a representation of 'item.'
         
     """        
     if isinstance(item, str):
         return item
     else:
-        if hasattr(item, 'name') and isinstance(item.name, Hashable):
+        if hasattr(item, 'name') and isinstance(item.name, str):
             return item.name
         else:
             try:
-                return hash(item)
-            except (TypeError, AttributeError):
-                try:
-                    return str(item)
-                except TypeError:
-                    try:
-                        return snakify(item.__name__)
-                    except AttributeError:
-                        return snakify(item.__class__.__name__)
+                return snakify(item.__name__)
+            except AttributeError:
+                if item.__class__.__name__ is not None:
+                    return snakify(item.__class__.__name__)
+                else:
+                    return None
                     
 def numify(item: str, raise_error: bool = False) -> Union[int, float, str]:
     """Converts 'item' to a numeric type.
@@ -212,7 +197,7 @@ def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
     """Converts string 'path' to pathlib.Path object.
 
     Args:
-        item (Union[str, pathlib.Path]): either a string representation of a
+        item (Union[str, pathlib.Path]): either a string summary of a
             path or a pathlib.Path object.
 
     Returns:

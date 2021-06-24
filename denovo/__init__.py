@@ -60,7 +60,7 @@ importables: Dict[str, str] = {
     'decorators': 'utilities.decorators',
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
-    'representation': 'utilities.representation',
+    'summary': 'utilities.summary',
     'testing': 'utilities.testing',
     'tools': 'utilities.tools',
     'containers': 'core.containers',

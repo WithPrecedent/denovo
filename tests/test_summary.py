@@ -1,5 +1,5 @@
 """
-test_representation: tests function in denovo.representation
+test_summary: tests function in denovo.summary
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -24,13 +24,12 @@ def test_beautify():
     print('testing beautify for sure')
     dummy = TestClass(a_dict = {'tree': 'house', 'window': 'pane'},
                       a_list = ['car', 'road', 'lawn'])
-    representation = denovo.representation.beautify(item = dummy, 
-                                                    package = 'denovo')
-    print('test representation', representation)
+    summary = denovo.summary.beautify(item = dummy, package = 'denovo')
+    print('test summary', summary)
     return
 
 if __name__ == '__main__':
-    testables = denovo.testing.get_testables(module = denovo.representation)
+    testables = denovo.testing.get_testables(module = denovo.summary)
     denovo.testing.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

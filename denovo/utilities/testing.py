@@ -128,10 +128,8 @@ def run_tests(module: types.ModuleType,
         
     """
     for testable in testables:
-        try:
+        if hasattr(module, testable):
             getattr(module, testable)()
-        except AttributeError:
-            pass
     return
 
 
