@@ -10,7 +10,8 @@ Contents:
         the values for new lines and length of an indentation.
         
 ToDo:
-
+    Clean up and add DocStrings
+    
 """
 from __future__ import annotations
 import dataclasses
@@ -26,10 +27,11 @@ import denovo
 
 LINE_BREAK: str = '\n'
 WHITESPACE: str = ' '
-TAB: int = 2
+TAB: int = 3
 INDENT: str = WHITESPACE * TAB
-WIDTH: int = 40
-LENGTH: int = 20
+MAX_WIDTH: int = 40
+MAX_LENGTH: int = 20
+INCOMPLETE: str = '...'
 VERTICAL: bool = True
 
 
@@ -61,20 +63,23 @@ def beautify(item: Any,
     Returns:
         str: [description]
     """
-    exclude = exclude or []
-    summary = [LINE_BREAK]
     kind = _classify_kind(item = item)
-    method = globals()[f'beautify_{kind}']
-    kwargs = {'item': item, 'offsets': offsets}
-    if kind == 'object':
-        kwargs.update({'package': package, 
-                       'exclude': exclude,
-                       'include_private': include_private})
-    summary.append(method(**kwargs))
-    summary.append(LINE_BREAK)
-    return ''.join(summary)
+    if kind is None:
+        indent = _get_indent(offsets = offsets)
+        summary = f'{indent}None'
+    else:
+        kwargs = {'item': item, 'kind': kind, 'offsets': offsets}
+        if kind.name == 'object':
+            exclude = exclude or []
+            kwargs.update({'package': package, 
+                        'exclude': exclude,
+                        'include_private': include_private})
+        summary = kind.method(**kwargs)
+    return f'{LINE_BREAK}{summary}'
 
-def beautify_sequence(item: MutableSequence, kind: str, offsets: int) -> str:
+def beautify_sequence(item: MutableSequence, 
+                      kind: Union[Type, SummaryKind], 
+                      offsets: int) -> str:
     """[summary]
 
     Args:
@@ -84,20 +89,28 @@ def beautify_sequence(item: MutableSequence, kind: str, offsets: int) -> str:
     Returns:
         str: [description]
     """
-    kind = kinds[kind]
+    if not isinstance(kind, SummaryKind):
+        kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
-    summary = [f'{indent}list: {kind.start}']
+    inner = _get_indent(offsets = offsets, extra = TAB)
+    summary = [f'{indent}{kind.name}: {kind.start}{LINE_BREAK}']
     length = len(item)
     for i, sub_item in enumerate(item):
-        inner_indent = _get_indent(offsets = offsets, extra = TAB)
-        summary.append(f'{inner_indent}{str(sub_item)}, ')
-        if VERTICAL and length != i + 1:
-            summary.append(LINE_BREAK)
-        elif length == i + 1:
-            summary.append(brackets[1])
+        if i == MAX_LENGTH:
+            summary.append(f'{inner}{INCOMPLETE}, {kind.end}{LINE_BREAK}')
+            break
+        else:
+            summary.append(f'{inner}{str(sub_item)}')
+            if i + 1 == length:
+                summary.append(f'{kind.end}')
+            else:
+                summary.append(f',')
+            summary.append(f'{LINE_BREAK}')
     return ''.join(summary)
    
-def beautify_mapping(item: MutableMapping, kind: str, offsets: int) -> str:
+def beautify_mapping(item: MutableSequence, 
+                     kind: Union[Type, SummaryKind], 
+                     offsets: int) -> str:
     """[summary]
 
     Args:
@@ -107,21 +120,27 @@ def beautify_mapping(item: MutableMapping, kind: str, offsets: int) -> str:
     Returns:
         str: [description]
     """
-    brackets = kinds['dict']
+    if not isinstance(kind, SummaryKind):
+        kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
-    summary = [f'{indent}dict: {brackets[0]}']
+    inner = _get_indent(offsets = offsets, extra = TAB)
+    summary = [f'{indent}{kind.name}: {kind.start}{LINE_BREAK}']
     length = len(item)
     for i, (key, value) in enumerate(item.items()):
-        inner_indent = _get_indent(offsets = offsets, extra = TAB)
-        summary.append(f'{inner_indent}{str(key)}: {str(value)}, ')
-        if VERTICAL and length != i + 1:
-            summary.append(LINE_BREAK)
-        elif length == i + 1:
-            summary.append(brackets[1])
+        if i == MAX_LENGTH:
+            summary.append(f'{inner}{INCOMPLETE}, {kind.end}{LINE_BREAK}')
+            break
+        else:
+            summary.append(f'{inner}{key}: {value}')
+            if i + 1 == length:
+                summary.append(f'{kind.end}')
+            else:
+                summary.append(f',')
+            summary.append(f'{LINE_BREAK}')
     return ''.join(summary)
 
 def beautify_object(item: MutableSequence, 
-                    kind: str,
+                    kind: Union[Type, SummaryKind], 
                     offsets: int,
                     package: str = None,
                     exclude: MutableSequence[str] = None,
@@ -137,49 +156,47 @@ def beautify_object(item: MutableSequence,
 
     Returns:
         str: [description]
+        
     """
-    print('beautifying object')
+    if not isinstance(kind, SummaryKind):
+        kind = kinds[kind]
     if package is None:
         module = inspect.getmodule(item)
         if hasattr(module, '__package__'):
             package = module.__package__
-    name = denovo.tools.namify(item = item)
-    print('test name', name)
+    if kind.name == 'object':
+        name = denovo.tools.namify(item = item)
+    else:
+        name = ''
     base = denovo.tools.snakify(item.__class__.__name__)
-    print('test base', base)
-    brackets = kinds['object']
     indent = _get_indent(offsets = offsets)
-    preamble = [indent]
+    inner = _get_indent(offsets = offsets, extra = TAB)
+    summary = [f'{indent}']
     if name and base and package:
         if name == base:
-            preamble.append(f'{package} {name}: ')
+            summary.append(f'{package} {name}: {LINE_BREAK}')
         else:
-            preamble.append(f'{name}, ({package} {base}): ')
+            summary.append(f'{name}, ({package} {base}): {LINE_BREAK}')
     else:
         if name == base:
-            preamble.append(f'{name}: ')
+            summary.append(f'{name}: {LINE_BREAK}')
         else:
-            preamble.append(f'{name}, ({base}): ')  
-    summary = [''.join(preamble)]
-    print('test preamble', summary)
+            summary.append(f'{name}, ({base}): {LINE_BREAK}')  
     if include_private:
         attributes = [a for a in item.__dict__.keys() if not a.startswith('__')]
     else:
         attributes = [a for a in item.__dict__.keys() if not a.startswith('_')]
     attributes = [a for a in attributes if a not in exclude]
-    inner_offsets = offsets + 1
+    inner_offsets = offsets + 2
     for attribute in attributes:
         contents = getattr(item, attribute)
-        summary.append(f'{attribute}: {brackets[0]}')
-        effigy = beautify(item = contents, offsets = inner_offsets)
-        print('test effigy', effigy)
-        summary.append(effigy)
-        summary.append(brackets[1])
-        summary.append(LINE_BREAK)
-    print('test summary', summary)
+        summary.append(f'{inner}{attribute}: {kind.start}')
+        summary.append(beautify(item = contents, offsets = inner_offsets))
     return ''.join(summary)
 
-def beautify_string(item: str, offsets: int) -> str:
+def beautify_string(item: MutableSequence, 
+                    kind: Union[Type, SummaryKind], 
+                    offsets: int) -> str:
     """[summary]
 
     Args:
@@ -189,9 +206,10 @@ def beautify_string(item: str, offsets: int) -> str:
     Returns:
         str: [description]
     """
-    brackets = kinds['str']
+    if not isinstance(kind, SummaryKind):
+        kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
-    return [f'{indent}str: {brackets[0]}{item}{brackets[1]}']
+    return f'{indent}{kind.name}: {kind.start}{item}{kind.end}'
 
 """ Private Functions """
 
@@ -207,7 +225,7 @@ def _get_indent(offsets: int, extra: int = 0) -> str:
     """
     return offsets * INDENT + extra * WHITESPACE
 
-def _classify_kind(item: Any) -> str:
+def _classify_kind(item: Any) -> SummaryKind:
     """[summary]
 
     Args:
@@ -216,19 +234,14 @@ def _classify_kind(item: Any) -> str:
     Returns:
         str: [description]
     """
-    if isinstance(item, str):
-        return 'str'
-    elif isinstance(item, MutableMapping):
-        return 'dict'
-    elif isinstance(item, MutableSequence):
-        return 'list'
-    elif isinstance(item, Sequence):
-        return 'tuple'
-    elif isinstance(item, Set):
-        return 'set'
+    if item is None:
+        return None
     else:
-        return 'object'
-    
+        for kind, data in kinds.items():
+            if isinstance(item, kind):
+                return data
+    return kinds[str]
+       
 def _get_textwrapper() -> textwrap.TextWrapper:
     """[summary]
 
@@ -236,36 +249,37 @@ def _get_textwrapper() -> textwrap.TextWrapper:
         textwrap.TextWrapper: [description]
     """
     return textwrap.TextWrapper(
-        width = WIDTH,
+        width = MAX_WIDTH,
         tabsize = len(INDENT),
         replace_whitespace = False,
         drop_whitespace = False,
-        max_lines = LENGTH,
+        max_lines = MAX_LENGTH,
         placeholder = '...')
     
 """ Module Level Attributes """
 
-kinds: Dict[str, SummaryKind] = {dict: SummaryKind(name = 'dictionary',
-                                                   method = beautify_mapping,
-                                                   start = '{',
-                                                   end = '}'),
-                                 list: SummaryKind(name = 'list',
-                                                   method = beautify_sequence,
-                                                   start = '[',
-                                                   end = ']'), 
-                                 object: SummaryKind(name = None,
-                                                     method = beautify_object,
-                                                     start = '',
-                                                     end = ''),
-                                 set: SummaryKind(name = 'set',
-                                                  method = beautify_sequence,
-                                                  start = '{',
-                                                  end = '}'),
-                                 str: SummaryKind(name = 'string',
-                                                  method = beautify_string,
-                                                  start = '',
-                                                  end = ''),
-                                 tuple: SummaryKind(name = 'tuple',
-                                                    method = beautify_sequence,
-                                                    start = '(',
-                                                    end = ')')}
+kinds: Dict[str, SummaryKind] = {}
+kinds[str] = SummaryKind(name = 'string',
+                         method = beautify_string,
+                         start = '',
+                         end = '')
+kinds[MutableMapping] = SummaryKind(name = 'dictionary',
+                                    method = beautify_mapping,
+                                    start = '{',
+                                    end = '}')
+kinds[MutableSequence] = SummaryKind(name = 'list',
+                                     method = beautify_sequence,
+                                     start = '[',
+                                     end = ']')
+kinds[Sequence] = SummaryKind(name = 'tuple',
+                              method = beautify_sequence, 
+                              start = '(',
+                              end = ')')
+kinds[Set] = SummaryKind(name = 'set',
+                         method = beautify_sequence,
+                         start = '{',
+                         end = '}')
+kinds[object] = SummaryKind(name = 'object',
+                            method = beautify_object,
+                            start = '',
+                            end = '')

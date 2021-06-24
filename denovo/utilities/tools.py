@@ -7,7 +7,6 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     how_soon_is_now (Callable): converts a current date and time to a str in the
         format described in the 'TIME_FORMAT' module-level attribute.
-
     delistify (Callable): converts a list to a str, if it is passed a list.
     instancify (Callable): converts a class to an instance or adds kwargs to a
         passed instance as attributes.
@@ -36,10 +35,7 @@ Contents:
     is_iterable (Callable): returns whether an item is iterable but not a str.
     is_nested (Callable): returns whether a dict or dict-like item is nested.
     is_property (Callable): returns whether an attribute is actually a property.
-    
-    beautify (Callable): provides a pretty str summary for an object. The
-        function uses the 'NEW_LINE' and 'INDENT' module-level attributes for
-        the values for new lines and length of an indentation.
+
         
 ToDo:
 
@@ -59,8 +55,6 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 """ Module-Level Attributes """
 
 DIVIDER: str = '_'
-INDENT: str = '    '
-NEW_LINE: str = '\n'
 TIME_FORMAT: str = '%Y-%m-%d_%H-%M'
 
 """ General Tools """

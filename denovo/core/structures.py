@@ -65,7 +65,7 @@ Adjacency: Type = Dict[Hashable, MutableSequence[Hashable]]
 Matrix: Type = Union[Tuple[MutableSequence[MutableSequence[int]], 
                            MutableSequence[Hashable]], 
                      MutableSequence[MutableSequence[int]]]
-Edge: Tuple[Hashable, Hashable]
+Edge: Type = Tuple[Hashable, Hashable]
 Edges: Type = MutableSequence[Edge]
 Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
 Pipelines: Type = MutableSequence[MutableSequence[Hashable]]

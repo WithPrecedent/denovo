@@ -21,11 +21,9 @@ class TestClass(object):
     a_none: None = None     
 
 def test_beautify():
-    print('testing beautify for sure')
     dummy = TestClass(a_dict = {'tree': 'house', 'window': 'pane'},
                       a_list = ['car', 'road', 'lawn'])
     summary = denovo.summary.beautify(item = dummy, package = 'denovo')
-    print('test summary', summary)
     return
 
 if __name__ == '__main__':

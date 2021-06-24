@@ -70,6 +70,7 @@ importables: Dict[str, str] = {
     'Hybrid': 'core.containers.Hybrid',
     'Lexicon': 'core.containers.Lexicon',
     'Catalog': 'core.containers.Catalog',
+    'Library': 'core.containers.Library',
     'quirks': 'core.quirks',
     'Settings': 'core.configuration.Settings',
     'Filer': 'core.configuration.Filer',
@@ -79,6 +80,7 @@ importables: Dict[str, str] = {
     'create_keystone': 'core.framework.create_keystone',
     'Validator': 'core.framework.Validator',
     'Converter': 'core.framework.Converter',
+    'structures': 'core.structures',
     'Structure': 'core.structures.Structure',
     'Graph': 'core.structures.Graph',
     'Project': 'project.interface.Project'}

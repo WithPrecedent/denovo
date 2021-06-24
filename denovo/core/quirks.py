@@ -113,7 +113,7 @@ class Keystone(abc.ABC):
         _get_subclasses_catalog_key, _get_instances_catalog_key
     
     """
-    library: ClassVar[Library] = Library()
+    library: ClassVar[denovo.Library] = denovo.Library()
     
     """ Initialization Methods """
     
