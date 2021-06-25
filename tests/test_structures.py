@@ -36,9 +36,9 @@ def test_workflow():
     assert 'scorpion' in workflow['frog']
     assert 'river' not in workflow['frog']
     # Tests adjacency list constructor
-    adjacency = {'grumpy': ['sleepy'],
-                 'doc': [],
-                 'sneezy': ['grumpy', 'bashful']}
+    adjacency = {'grumpy': {'sleepy'},
+                 'doc': {},
+                 'sneezy': {'grumpy', 'bashful'}}
     workflow = denovo.Workflow.from_adjacency(adjacency = adjacency)
     assert 'sleepy' in workflow['grumpy']
     assert 'bashful' in workflow['sneezy']
@@ -59,10 +59,10 @@ def test_workflow():
     workflow.add('butch')
     workflow.add('sundance')
     workflow.add('henchman')
-    workflow.add('bonnie', 'clyde')
-    workflow.add('butch', 'sundance')
-    workflow.add('bonnie', 'henchman')
-    workflow.add('sundance', 'henchman')
+    workflow.connect('bonnie', 'clyde')
+    workflow.connect('butch', 'sundance')
+    workflow.connect('bonnie', 'henchman')
+    workflow.connect('sundance', 'henchman')
     assert 'clyde' in workflow['bonnie']
     assert 'henchman' in workflow ['bonnie']
     assert 'henchman' not in workflow['butch']
@@ -73,18 +73,18 @@ def test_workflow():
     # print(breadth_search)
     # assert breadth_search == ['clyde', 'bonnie', 'henchman']
     all_paths = workflow.paths
-    assert all_paths == [['bonnie', 'clyde'], 
-                         ['bonnie', 'henchman'], 
-                         ['butch', 'sundance', 'henchman']]
-    workflow.combine(structure = workflow_edges)
+    assert ['butch', 'sundance', 'henchman'] in all_paths
+    assert ['bonnie', 'clyde'] in all_paths
+    assert ['bonnie', 'henchman'] in all_paths
+    workflow.merge(item = workflow_edges)
     new_workflow = denovo.Workflow()
     something = Something()
     another_thing = AnotherThing()
     even_another = EvenAnother()
-    new_workflow.add(item = something)
-    new_workflow.add(item = another_thing)
-    new_workflow.add(item = even_another)
-    new_workflow.add(item = tuple(['something', 'another_thing']))
+    new_workflow.add(node = something)
+    new_workflow.add(node = another_thing)
+    new_workflow.add(node= even_another)
+    new_workflow.connect('something', 'another_thing')
     assert 'another_thing' in new_workflow['something']
     assert 'another_thing' in new_workflow[something]
     assert another_thing in new_workflow[something]

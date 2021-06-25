@@ -14,7 +14,7 @@ Types:
     Edge (Type): annotation type for a tuple of edge endpoints.
     Edges (Type): annotation type for an edge list.
     Pipeline (Type): annotation type for a pipeline.
-    Pipelines (Type): annotation type for pipelines.
+    Pipeline (Type): annotation type for pipelines.
     Nodes (Type): annotation type for one or more nodes.
     
 Functions:
@@ -61,39 +61,56 @@ import more_itertools
 import denovo
 
 
-Adjacency: Type = Dict[Hashable, MutableSequence[Hashable]]
-Matrix: Type = Union[Tuple[MutableSequence[MutableSequence[int]], 
-                           MutableSequence[Hashable]], 
-                     MutableSequence[MutableSequence[int]]]
+
+Adjacency: Type = MutableMapping[Hashable, Set[Hashable]]
+Matrix: Type = Tuple[MutableSequence[MutableSequence[int]], 
+                     MutableSequence[Hashable]]
 Edge: Type = Tuple[Hashable, Hashable]
 Edges: Type = MutableSequence[Edge]
-Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
-Pipelines: Type = MutableSequence[MutableSequence[Hashable]]
+Connections: Type = Set[Hashable]
+Pipeline: Type = MutableSequence[Hashable]
+Pipelines: Type = MutableSequence[Pipeline]
 Nodes: Type = Union[Hashable, Pipeline]
-_DefaultAdjacency: MutableMapping = collections.defaultdict(list)
+
     
 def is_adjacency_list(item: Any) -> bool:
     """Returns whether 'item' is an adjacency list."""
-    return (isinstance(item, MutableMapping) 
-            and all(isinstance(v, MutableSequence) for v in item.values()))
+    if isinstance(item, MutableMapping):
+        edges = list(item.values())
+        nodes = list(itertools.chain(item.values()))
+        return (all(isinstance(e, (Set)) for e in edges)
+                and all(isinstance(n, Hashable) for n in nodes))
+    else:
+        return False
 
 def is_adjacency_matrix(item: Any) -> bool:
     """Returns whether 'item' is an adjacency matrix."""
-    if isinstance(item, tuple):
-        item = item[0]
-    return (isinstance(item, MutableSequence) 
-            and all(isinstance(i, MutableSequence) for i in item))
+    if isinstance(item, tuple) and len(item) == 2:
+        matrix = item[0]
+        names = item[1]
+        edges = list(more_itertools.collapse(matrix))
+        return (isinstance(matrix, MutableSequence)
+                and isinstance(names, MutableSequence) 
+                and all(isinstance(i, MutableSequence) for i in matrix)
+                and all(isinstance(n, Hashable) for n in names)
+                and all(isinstance(e, int) for e in edges))
+    else:
+        return False
 
 def is_edge_list(item: Any) -> bool:
     """Returns whether 'item' is an edge list."""
-    return (isinstance(item, MutableSequence) 
-            and all(isinstance(i, Tuple) for i in item)
-            and all(len(i) == 2 for i in item))
+    if (isinstance(item, MutableSequence) 
+            and all(len(i) == 2 for i in item)
+            and all(isinstance(i, Tuple) for i in item)): 
+        nodes = list(more_itertools.collapse(item))
+        return all(isinstance(n, Hashable) for n in nodes)
+    else:
+        return False
     
 def is_pipeline(item: Any) -> bool:
     """Returns whether 'item' is a pipeline."""
-    return isinstance(item, (MutableSequence, Tuple, Set)
-                      and all(isinstance(i, Hashable) for i in item))
+    return (isinstance(item, MutableSequence)
+            and all(isinstance(i, Hashable) for i in item))
 
 def adjacency_to_edges(source: Adjacency) -> Edges:
     """Converts an adjacency list to an edge list."""
@@ -115,14 +132,14 @@ def adjacency_to_matrix(source: Adjacency) -> Matrix:
 
 def edges_to_adjacency(source: Edges) -> Adjacency:
     """Converts and edge list to an adjacency list."""
-    adjacency = {}
+    adjacency = collections.defaultdict(set)
     for edge_pair in source:
         if edge_pair[0] not in adjacency:
-            adjacency[edge_pair[0]] = [edge_pair[1]]
+            adjacency[edge_pair[0]] = {edge_pair[1]}
         else:
-            adjacency[edge_pair[0]].append(edge_pair[1])
+            adjacency[edge_pair[0]].add(edge_pair[1])
         if edge_pair[1] not in adjacency:
-            adjacency[edge_pair[1]] = []
+            adjacency[edge_pair[1]] = set()
     return adjacency
 
 def matrix_to_adjacency(source: Matrix) -> Adjacency:
@@ -133,21 +150,21 @@ def matrix_to_adjacency(source: Matrix) -> Adjacency:
     raw_adjacency = {
         i: [j for j, adjacent in enumerate(row) if adjacent] 
         for i, row in enumerate(matrix)}
-    adjacency = {}
+    adjacency = collections.defaultdict(set)
     for key, value in raw_adjacency.items():
         new_key = name_mapping[key]
-        new_values = []
+        new_values = set()
         for edge in value:
-            new_values.append(name_mapping[edge])
+            new_values.add(name_mapping[edge])
         adjacency[new_key] = new_values
     return adjacency
 
 def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
     """Converts a pipeline to an adjacency list."""
-    adjacency = {}
+    adjacency = collections.defaultdict(set)
     edges = more_itertools.windowed(source, 2)
     for edge_pair in edges:
-        adjacency[edge_pair[0]] = edge_pair[1]
+        adjacency[edge_pair[0]] = {edge_pair[1]}
     return adjacency
 
         
@@ -355,24 +372,6 @@ class Graph(denovo.Bunch, abc.ABC):
             
         """
         pass
-      
-    @abc.abstractmethod  
-    def subgraph(self, 
-                 include: Union[Hashable, Sequence[Hashable]] = None,
-                 exclude: Union[Hashable, Sequence[Hashable]] = None) -> Graph:
-        """Returns a new Graph instance with a subset of nodes.
-
-        Args:
-            include (Union[Hashable, Sequence[Hashable]]): node(s) which should 
-                be included with any applicable edges in the new subgraph.
-            exclude (Union[Hashable, Sequence[Hashable]]): node(s) which should 
-                be excluded with any applicable edges in the new subgraph.
-
-        Returns:
-            Graph: with only selected nodes and edges.
-
-        """
-        pass
    
     """ Class Methods """
     
@@ -508,21 +507,21 @@ class DirectedGraph(Graph, abc.ABC):
         """
         pass
   
-    # @abc.abstractmethod
-    # def prepend(self, 
-    #             item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
-    #     """Prepends 'item' to the roots of the stored graph.
+    @abc.abstractmethod
+    def prepend(self, 
+                item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+        """Prepends 'item' to the roots of the stored graph.
 
-    #     Prepending creates an edge between every endpoint of item and the every 
-    #     root of the stored graph in this instance.
+        Prepending creates an edge between every endpoint of item and the every 
+        root of the stored graph in this instance.
 
-    #     Args:
-    #         item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
-    #             an adjacency list, an edge list, an adjacency matrix, or one or
-    #             more nodes.
+        Args:
+            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
+                an adjacency list, an edge list, an adjacency matrix, or one or
+                more nodes.
    
-    #     """
-    #     pass
+        """
+        pass
     
     """ Dunder Methods """
 
@@ -585,7 +584,7 @@ class Workflow(DirectedGraph):
                   
     """  
     contents: Adjacency = dataclasses.field(
-        default_factory = lambda: _DefaultAdjacency)
+        default_factory = lambda: collections.defaultdict(set))
     
     """ Properties """
 
@@ -600,9 +599,9 @@ class Workflow(DirectedGraph):
         return adjacency_to_edges(source = self.contents)
 
     @property
-    def endpoints(self) -> List[Hashable]:
+    def endpoints(self) -> Set[Hashable]:
         """Returns endpoint nodes in the stored graph in a list."""
-        return [k for k in self.contents.keys() if not self.contents[k]]
+        return {k for k in self.contents.keys() if not self.contents[k]}
 
     @property
     def matrix(self) -> Matrix:
@@ -610,41 +609,41 @@ class Workflow(DirectedGraph):
         return adjacency_to_matrix(source = self.contents)
                       
     @property
-    def nodes(self) -> List[Hashable]:
+    def nodes(self) -> Set[Hashable]:
         """Returns all stored nodes in a list."""
-        return list(self.contents.keys())
+        return set(self.contents.keys())
 
     @property
     def paths(self) -> Pipelines:
-        """Returns all paths through the stored graph as Pipelines."""
-        return self._find_all_paths(starts = self.roots, ends = self.endpoints)
+        """Returns all paths through the stored graph as Pipeline."""
+        return self._find_all_paths(starts = self.roots, stops = self.endpoints)
        
     @property
-    def roots(self) -> List[Hashable]:
+    def roots(self) -> Set[Hashable]:
         """Returns root nodes in the stored graph in a list."""
         stops = list(itertools.chain.from_iterable(self.contents.values()))
-        return [k for k in self.contents.keys() if k not in stops]
+        return {k for k in self.contents.keys() if k not in stops}
     
     """ Class Methods """
  
     @classmethod
-    def from_adjacency(cls, adjacency: Adjacency) -> Graph:
-        """Creates a Graph instance from an adjacency list."""
+    def from_adjacency(cls, adjacency: Adjacency) -> Workflow:
+        """Creates a Workflow instance from an adjacency list."""
         return cls(contents = adjacency)
     
     @classmethod
-    def from_edges(cls, edges: Edges) -> Graph:
-        """Creates a Graph instance from an edge list."""
+    def from_edges(cls, edges: Edges) -> Workflow:
+        """Creates a Workflow instance from an edge list."""
         return cls(contents = edges_to_adjacency(source = edges))
     
     @classmethod
-    def from_matrix(cls, matrix: Matrix) -> Graph:
-        """Creates a Graph instance from an adjacency matrix."""
+    def from_matrix(cls, matrix: Matrix) -> Workflow:
+        """Creates a Workflow instance from an adjacency matrix."""
         return cls(contents = matrix_to_adjacency(source = matrix))
     
     @classmethod
-    def from_pipeline(cls, pipeline: Pipeline) -> Graph:
-        """Creates a Graph instance from a Pipeline."""
+    def from_pipeline(cls, pipeline: Pipeline) -> Workflow:
+        """Creates a Workflow instance from a Pipeline."""
         return cls(contents = pipeline_to_adjacency(source = pipeline))
        
     """ Public Methods """
@@ -717,7 +716,7 @@ class Workflow(DirectedGraph):
             self.merge(item = new_graph)
             for endpoint in current_endpoints:
                 for root in new_graph.roots:
-                    self.connect(start = root, stop = endpoint)
+                    self.connect(start = endpoint, stop = root)
         else:
             raise TypeError('item must be a Graph, Adjacency, Edges, Matrix, '
                             'Pipeline, or Hashable type')
@@ -742,7 +741,7 @@ class Workflow(DirectedGraph):
         elif stop not in self:
             self.add(node = stop)
         if stop not in self.contents[start]:
-            self.contents[start].append(self._stringify(stop))
+            self.contents[start].add(self._stringify(stop))
         return self
 
     def delete(self, node: Hashable) -> None:
@@ -814,16 +813,45 @@ class Workflow(DirectedGraph):
                             'Pipeline, or Hashable type')
         self.contents.update(adjacency)
         return self
-  
-    def subgraph(self, 
-                 include: Union[Any, Sequence[Any]] = None,
-                 exclude: Union[Any, Sequence[Any]] = None) -> Graph:
-        """Returns a new Graph without a subset of 'contents'.
+
+    def prepend(self, 
+                item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+        """Prepends 'item' to the roots of the stored graph.
+
+        Prepending creates an edge between every endpoint of 'item' and every
+        root of this instance;s stored graph.
+
+        Args:
+            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
+                an adjacency list, an edge list, an adjacency matrix, or one or
+                more nodes.
+            
+        Raises:
+            TypeError: if 'source' is neither a Graph, Adjacency, Edges, Matrix,
+                or Nodes type.
+                
+        """
+        if isinstance(item, (Graph, Adjacency, Edges, Matrix, Nodes)):
+            current_roots = list(self.roots)
+            new_graph = self.create(source = item)
+            self.merge(item = new_graph)
+            for root in current_roots:
+                for endpoint in new_graph.endpoints:
+                    self.connect(start = endpoint, stop = root)
+        else:
+            raise TypeError('item must be a Graph, Adjacency, Edges, Matrix, '
+                            'Pipeline, or Hashable type')
+        return self
+      
+    def subset(self, 
+               include: Union[Any, Sequence[Any]] = None,
+               exclude: Union[Any, Sequence[Any]] = None) -> Workflow:
+        """Returns a new Workflow without a subset of 'contents'.
         
         All edges will be removed that include any nodes that are not part of
         the new subgraph.
         
-        Any extra attributes that are part of a Graph (or a subclass) will be
+        Any extra attributes that are part of a Workflow (or a subclass) will be
         maintained in the returned subgraph.
 
         Args:
@@ -848,14 +876,11 @@ class Workflow(DirectedGraph):
             for node in more_itertools.always_iterable(excludables):
                 new_graph.delete(node = node)
         return new_graph
-
-    def subset(self, *args, **kwargs) -> Graph:
-        return self.subgraph(*args, **kwargs)
     
     def walk(self, 
              start: Hashable, 
              stop: Hashable, 
-             path: Pipeline = None) -> Pipelines:
+             path: Pipeline = None) -> Pipeline:
         """Returns all paths in graph from 'start' to 'stop'.
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
@@ -867,7 +892,7 @@ class Workflow(DirectedGraph):
                 empty list. 
 
         Returns:
-            Pipelines: a list of possible paths (each path is a list 
+            Pipeline: a list of possible paths (each path is a list 
                 nodes) from 'start' to 'stop'.
             
         """
@@ -893,7 +918,7 @@ class Workflow(DirectedGraph):
 
     def _find_all_paths(self, 
         starts: Union[Hashable, Sequence[Hashable]],
-        stops: Union[Hashable, Sequence[Hashable]]) -> Pipelines:
+        stops: Union[Hashable, Sequence[Hashable]]) -> Pipeline:
         """Returns all paths between 'starts' and 'stops'.
 
         Args:
@@ -903,7 +928,7 @@ class Workflow(DirectedGraph):
                 through the Graph.
 
         Returns:
-            Pipelines: list of all paths through the Graph from all
+            Pipeline: list of all paths through the Graph from all
                 'starts' to all 'ends'.
             
         """
@@ -1002,11 +1027,11 @@ class Workflow(DirectedGraph):
 #         return self.contents
 
 #     @property
-#     def breadths(self) -> Pipelines:
+#     def breadths(self) -> Pipeline:
 #         """Returns all paths through the Graph using breadth-first search.
         
 #         Returns:
-#             Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
+#             Pipeline: returns all paths from 'roots' to 'endpoints' in a list 
 #                 of lists of nodes.
                 
 #         """
@@ -1015,11 +1040,11 @@ class Workflow(DirectedGraph):
 #                                     depth_first = False)
 
 #     @property
-#     def depths(self) -> Pipelines:
+#     def depths(self) -> Pipeline:
 #         """Returns all paths through the Graph using depth-first search.
         
 #         Returns:
-#             Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
+#             Pipeline: returns all paths from 'roots' to 'endpoints' in a list 
 #                 of lists of nodes.
                 
 #         """
@@ -1379,7 +1404,7 @@ class Workflow(DirectedGraph):
 #              start: Hashable, 
 #              stop: Hashable, 
 #              path: Pipeline = None,
-#              depth_first: bool = True) -> Pipelines:
+#              depth_first: bool = True) -> Pipeline:
 #         """Returns all paths in graph from 'start' to 'stop'.
 
 #         The code here is adapted from: https://www.python.org/doc/essays/graphs/
@@ -1391,7 +1416,7 @@ class Workflow(DirectedGraph):
 #                 empty list. 
 
 #         Returns:
-#             Pipelines: a list of possible paths (each path is a list 
+#             Pipeline: a list of possible paths (each path is a list 
 #                 nodes) from 'start' to 'stop'.
             
 #         """
@@ -1503,7 +1528,7 @@ class Workflow(DirectedGraph):
 #     def _find_all_paths(self, 
 #         starts: Union[Hashable, Sequence[Hashable]],
 #         stops: Union[Hashable, Sequence[Hashable]],
-#         depth_first: bool = True) -> Pipelines:
+#         depth_first: bool = True) -> Pipeline:
 #         """[summary]
 
 #         Args:
@@ -1513,7 +1538,7 @@ class Workflow(DirectedGraph):
 #                 through the Graph.
 
 #         Returns:
-#             Pipelines: list of all paths through the Graph from all
+#             Pipeline: list of all paths through the Graph from all
 #                 'starts' to all 'ends'.
             
 #         """
