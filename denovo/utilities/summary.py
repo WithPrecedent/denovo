@@ -5,12 +5,28 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    SummaryKind (object): data for a data type's representation.
+    kinds (Dict): dictionary of different supported types with SummaryKind
+        instances as values.
     beautify (Callable): provides a pretty str summary for an object. The
         function uses the 'LINE_BREAK' and 'INDENT' module-level items for
         the values for new lines and length of an indentation.
-        
+    beautify_mapping (Callable): returns a beautiful string repreentation of a
+        dict or dict-like object.
+    beautify_object (Callable): returns a beautiful string repreentation of a
+        class instance and its attributes.
+    beautify_sequence (Callable): returns a beautiful string repreentation of a
+        list, set, tuple, list-like, set-like, or tuple-like object.
+    beautify_string (Callable): returns a beautiful string repreentation of a
+        str.
+    _get_indent (Callable): determines the appropriate indentation for a 
+        beautiful str.
+    _classify_kind (Callable): called by 'beautify' to determine the appropriate
+        function to beautify the passed 'item'.
+         
 ToDo:
     Clean up and add DocStrings
+    Add a textwrap option when VERTICAL is False.
     
 """
 from __future__ import annotations
@@ -35,14 +51,28 @@ INCOMPLETE: str = '...'
 VERTICAL: bool = True
 
 
+""" Public Classes """
+
+
 @dataclasses.dataclass
 class SummaryKind(object):
+    """Contains formating information for different data types.
     
+    Args:
+        name (str): name of data type to be used in the str returned by 
+            'beautify'.
+        method (FunctionType): the function to use to beautify the particular
+            data type.
+        start (str): starting bracket for listing the contents of the data type.
+            Defaults to ''.
+        end (str): ending bracket for listing the contents of the data type.
+            Defaults to ''.           
+    
+    """
     name: str
     method: FunctionType
     start: str = ''
     end: str = ''
-
 
 """ Public Functions"""
     
@@ -51,17 +81,22 @@ def beautify(item: Any,
              package: str = None,
              exclude: MutableSequence[str] = None,
              include_private: bool = False) -> str:
-    """[summary]
+    """Returns a beautiful string representation of 'item'.
 
     Args:
-        item (Any): [description]
-        offsets (int, optional): [description]. Defaults to 1.
-        package (str, optional): [description]. Defaults to None.
-        exclude (MutableSequence[str], optional): [description]. Defaults to None.
-        include_private (bool, optional): [description]. Defaults to False.
+        item (Any): item to provide a str representation of.
+        offsets (int): number of tabs of whitespace to put before the str
+            representation. Defaults to 1.
+        package (str): name of associated package of 'item'. 'package' is only
+            used if 'item' is an object. Defaults to None.
+        exclude (MutableSequence[str]): if 'item' is an object, the names of
+            attributes to exclude from the str representation. Defaults to None.
+        include_private (bool): whether to include attributes with a single 
+            leading underscore. Defaults to False.
 
     Returns:
-        str: [description]
+        str: beautiful str representation of 'item'.
+        
     """
     kind = _classify_kind(item = item)
     if kind is None:
@@ -76,42 +111,11 @@ def beautify(item: Any,
                         'include_private': include_private})
         summary = kind.method(**kwargs)
     return f'{LINE_BREAK}{summary}'
-
-def beautify_sequence(item: MutableSequence, 
-                      kind: Union[Type, SummaryKind], 
-                      offsets: int) -> str:
-    """[summary]
-
-    Args:
-        item (MutableSequence): [description]
-        offsets (int): [description]
-
-    Returns:
-        str: [description]
-    """
-    if not isinstance(kind, SummaryKind):
-        kind = kinds[kind]
-    indent = _get_indent(offsets = offsets)
-    inner = _get_indent(offsets = offsets, extra = TAB)
-    summary = [f'{indent}{kind.name}: {kind.start}{LINE_BREAK}']
-    length = len(item)
-    for i, sub_item in enumerate(item):
-        if i == MAX_LENGTH:
-            summary.append(f'{inner}{INCOMPLETE}, {kind.end}{LINE_BREAK}')
-            break
-        else:
-            summary.append(f'{inner}{str(sub_item)}')
-            if i + 1 == length:
-                summary.append(f'{kind.end}')
-            else:
-                summary.append(f',')
-            summary.append(f'{LINE_BREAK}')
-    return ''.join(summary)
    
 def beautify_mapping(item: MutableSequence, 
-                     kind: Union[Type, SummaryKind], 
+                     kind: Union[SummaryKind, Type], 
                      offsets: int) -> str:
-    """[summary]
+    """Returns a beautiful string representation of a mapping data type.
 
     Args:
         item (MutableMapping): [description]
@@ -140,7 +144,7 @@ def beautify_mapping(item: MutableSequence,
     return ''.join(summary)
 
 def beautify_object(item: MutableSequence, 
-                    kind: Union[Type, SummaryKind], 
+                    kind: Union[SummaryKind, Type], 
                     offsets: int,
                     package: str = None,
                     exclude: MutableSequence[str] = None,
@@ -148,11 +152,15 @@ def beautify_object(item: MutableSequence,
     """[summary]
 
     Args:
-        item (MutableSequence): [description]
-        offsets (int): [description]
-        package (str, optional): [description]. Defaults to None.
-        exclude (MutableSequence[str], optional): [description]. Defaults to None.
-        include_private (bool, optional): [description]. Defaults to False.
+        item (Any): item to provide a str representation of.
+        offsets (int): number of tabs of whitespace to put before the str
+            representation. Defaults to 1.
+        package (str): name of associated package of 'item'. 'package' is only
+            used if 'item' is an object. Defaults to None.
+        exclude (MutableSequence[str]): if 'item' is an object, the names of
+            attributes to exclude from the str representation. Defaults to None.
+        include_private (bool): whether to include attributes with a single 
+            leading underscore. Defaults to False.
 
     Returns:
         str: [description]
@@ -194,8 +202,41 @@ def beautify_object(item: MutableSequence,
         summary.append(beautify(item = contents, offsets = inner_offsets))
     return ''.join(summary)
 
+def beautify_sequence(item: Union[MutableSequence, Set, Tuple], 
+                      kind: Union[SummaryKind, Type], 
+                      offsets: int) -> str:
+    """Returns a beautiful string representation of a 1-dimensional data type.
+
+    Args:
+        item (Union[MutableSequence, Set, Tuple]): the list, set, tuple, or 
+            similar object to return a str representation for.
+        kind (Union[SummaryKind, Type]): 
+        offsets (int): [description]
+
+    Returns:
+        str: [description]
+    """
+    if not isinstance(kind, SummaryKind):
+        kind = kinds[kind]
+    indent = _get_indent(offsets = offsets)
+    inner = _get_indent(offsets = offsets, extra = TAB)
+    summary = [f'{indent}{kind.name}: {kind.start}{LINE_BREAK}']
+    length = len(item)
+    for i, sub_item in enumerate(item):
+        if i == MAX_LENGTH:
+            summary.append(f'{inner}{INCOMPLETE}, {kind.end}{LINE_BREAK}')
+            break
+        else:
+            summary.append(f'{inner}{str(sub_item)}')
+            if i + 1 == length:
+                summary.append(f'{kind.end}')
+            else:
+                summary.append(f',')
+            summary.append(f'{LINE_BREAK}')
+    return ''.join(summary)
+
 def beautify_string(item: MutableSequence, 
-                    kind: Union[Type, SummaryKind], 
+                    kind: Union[SummaryKind, Type], 
                     offsets: int) -> str:
     """[summary]
 
@@ -242,19 +283,19 @@ def _classify_kind(item: Any) -> SummaryKind:
                 return data
     return kinds[str]
        
-def _get_textwrapper() -> textwrap.TextWrapper:
-    """[summary]
+# def _get_textwrapper() -> textwrap.TextWrapper:
+#     """[summary]
 
-    Returns:
-        textwrap.TextWrapper: [description]
-    """
-    return textwrap.TextWrapper(
-        width = MAX_WIDTH,
-        tabsize = len(INDENT),
-        replace_whitespace = False,
-        drop_whitespace = False,
-        max_lines = MAX_LENGTH,
-        placeholder = '...')
+#     Returns:
+#         textwrap.TextWrapper: [description]
+#     """
+#     return textwrap.TextWrapper(
+#         width = MAX_WIDTH,
+#         tabsize = len(INDENT),
+#         replace_whitespace = False,
+#         drop_whitespace = False,
+#         max_lines = MAX_LENGTH,
+#         placeholder = '...')
     
 """ Module Level Attributes """
 

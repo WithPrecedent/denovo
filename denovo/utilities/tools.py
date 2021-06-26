@@ -7,7 +7,6 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     how_soon_is_now (Callable): converts a current date and time to a str in the
         format described in the 'TIME_FORMAT' module-level attribute.
-    delistify (Callable): converts a list to a str, if it is passed a list.
     instancify (Callable): converts a class to an instance or adds kwargs to a
         passed instance as attributes.
     listify (Callable): converts passed item to a list.

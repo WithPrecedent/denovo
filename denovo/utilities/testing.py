@@ -56,7 +56,6 @@ def get_testers(package: object,
     """
     name = package.__package__
     testers = denovo.tools.get_modules(folder = folder)
-    print('test testers', testers)
     testers = [t for t in testers if t.name.startswith(prefix)]
     testers = [t for t in testers if t.stem != f'{prefix}{name}']
     return testers
