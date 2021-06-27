@@ -10,10 +10,10 @@ Contents:
         class.
     # Importer (Quirk): quirk that supports lazy importation of modules and items 
     #     stored within them.
-    Flexible (Quirk): quirk that advertises the names of parameters needed in a 
-        'accepts' class attribute and includes a universal 'create' classmethod 
+    Factory (Quirk): quirk that advertises the names of parameters needed in a 
+        'sources' class attribute and includes a universal 'create' classmethod 
         that calls to the appropriate construction method following the form: 
-        "from_{first string listed in 'accepts'}"
+        "from_{first string listed in 'sources'}"
 
 ToDo:
     Fix Proxified as explained in its docs.
@@ -75,172 +75,6 @@ class Quirk(abc.ABC):
             # Stores 'cls' in 'quirks'.
             cls.quirks[key] = cls
 
-
-@dataclasses.dataclass
-class Keystone(abc.ABC):
-    """Base mixin for automatic registration of subclasses and instances. 
-    
-    Any concrete (non-abstract) subclass will automatically store itself in the 
-    class attribute 'subclasses' using the snakecase name of the class as the 
-    key.
-    
-    Any direct subclass will automatically store itself in the class attribute 
-    'library' using the snakecase name of the class as the key.
-    
-    Any instance of a subclass will be stored in the class attribute 'instances'
-    as long as '__post_init__' is called (either by a 'super()' call or if the
-    instance is a dataclass and '__post_init__' is not overridden).
-    
-    Args:
-        library (ClassVar[Library]): library that stores direct subclasses 
-            (those with Keystone in their '__bases__' attribute) and allows 
-            runtime access and instancing of those stored subclasses.
-    
-    Attributes:
-        subclasses (ClassVar[denovo.framework.Registry]): catalog that stores 
-            concrete subclasses and allows runtime access and instancing of 
-            those stored subclasses. 'subclasses' is automatically created when 
-            a direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced.
-        instances (ClassVar[denovo.Catalog]): catalog that stores
-            subclass instances and allows runtime access of those stored 
-            subclass instances. 'instances' is automatically created when a 
-            direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced. 
-                      
-    Namespaces: 
-        library, subclasses, instances, select, instance, __init_subclass__,
-        _get_subclasses_catalog_key, _get_instances_catalog_key
-    
-    """
-    library: ClassVar[denovo.Library] = denovo.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to appropriate class libraries."""
-        super().__init_subclass__(**kwargs)
-        # Gets name of key to use for storing the cls.
-        key = cls._get_subclasses_catalog_key()
-        # Adds class to 'library' if it is a base class.
-        if Keystone in cls.__bases__:
-            # Registers a new Keystone.
-            cls.library.register(name = key, keystone = cls)
-        # Adds concrete subclasses to 'library' using 'key'.
-        if not abc.ABC in cls.__bases__:
-            cls.subclasses[key] = cls
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        try:
-            key = self.name
-        except AttributeError:
-            key = self._get_instances_catalog_key()
-        self.instances[key] = self
-
-    """ Class Methods """
-    
-    @classmethod
-    def select(cls, name: Union[str, Sequence[str]]) -> Type[Keystone]:
-        """Returns matching subclass from 'subclasses.
-        
-        Args:
-            name (Union[str, Sequence[str]]): name of item in 'subclasses' to
-                return
-            
-        Raises:
-            KeyError: if no match is found for 'name' in 'subclasses'.
-            
-        Returns:
-            Type[Keystone]: stored Keystone subclass.
-            
-        """
-        item = None
-        for key in more_itertools.always_iterable(name):
-            try:
-                item = cls.subclasses[key]
-                break
-            except KeyError:
-                pass
-        if item is None:
-            raise KeyError(f'No matching item for {str(name)} was found') 
-        else:
-            return item
-    
-    @classmethod
-    def instance(cls, name: Union[str, Sequence[str]], **kwargs) -> Keystone:
-        """Returns match from 'instances' or 'subclasses'.
-        
-        The method prioritizes 'instances' before 'subclasses'. If a match is
-        found in 'subclasses', 'kwargs' are passed to instance the matching
-        subclass. If a match is found in 'instances', the 'kwargs' are manually
-        added as attributes to the matching instance.
-        
-        Args:
-            name (Union[str, Sequence[str]]): name of item in 'instances' or 
-                'subclasses' to return.
-            
-        Raises:
-            KeyError: if no match is found for 'name' in 'instances' or 
-                'subclasses'.
-            
-        Returns:
-            Keystone: stored Keystone subclass instance.
-            
-        """
-        item = None
-        for key in more_itertools.always_iterable(name):
-            for library in ['instances', 'subclasses']:
-                try:
-                    item = getattr(cls, library)[key]
-                    break
-                except KeyError:
-                    pass
-            if item is not None:
-                break
-        if item is None:
-            raise KeyError(f'No matching item for {str(name)} was found') 
-        elif inspect.isclass(item):
-            return cls(name = name, **kwargs)
-        else:
-            instance = copy.deepcopy(item)
-            for key, value in kwargs.items():
-                setattr(instance, key, value)
-            return instance
-
-    """ Private Methods """
-    
-    @classmethod
-    def _get_subclasses_catalog_key(cls) -> str:
-        """Returns a snakecase key of the class name.
-        
-        Returns:
-            str: the snakecase name of the class.
-            
-        """
-        return denovo.tools.snakify(cls.__name__)        
-
-    def _get_instances_catalog_key(self) -> str:
-        """Returns a snakecase key of the class name.
-        
-        Returns:
-            str: the snakecase name of the class.
-            
-        """
-        try:
-            key = self.name 
-        except AttributeError:
-            try:
-                key = denovo.tools.snakify(self.__name__) 
-            except AttributeError:
-                key = denovo.tools.snakify(self.__class__.__name__)
-        return key
-    
     
 @dataclasses.dataclass
 class Element(denovo.Quirk):
@@ -288,6 +122,139 @@ class Element(denovo.Quirk):
         
         """
         return denovo.tools.snakify(self.__class__.__name__)
+
+
+@dataclasses.dataclass
+class Factory(denovo.Quirk):
+    """Supports internal creation and automatic external parameterization.
+    
+    Args:
+        sources (ClassVar[Mapping[Type, str]]): attributes needed from 
+            another instance for some method within a subclass. The first item
+            in 'sources' to correspond to an internal factory classmethod named
+            f'from_{first item in sources}'. Defaults to an empty list.
+    
+    Namespaces: 'create' and 'sources'        
+    
+    """
+    sources: ClassVar[Mapping[Type, str]] = {}
+    
+    """ Class Methods """
+
+    @classmethod
+    def create(cls, source: Any, **kwargs) -> Factory:
+        """Calls corresponding creation class method to instance a subclass.
+        
+        For create to work properly, there should be a corresponding classmethod
+        named f'from_{value in sources}'.
+
+        Raises:
+            AttributeError: If an appropriate method does not exist for the
+                data type of 'source.'
+            ValueError: If the type of 'source' does not match a key in 
+                'sources'.
+
+        Returns:
+            Factory: instance of a Factory subclass.
+            
+        """
+        for kind, suffix in cls.sources.items():
+            if isinstance(source, kind):
+                method_name = f'from_{suffix}'
+                try:
+                    method = getattr(cls, method_name)
+                except AttributeError:
+                    raise AttributeError(f'{method_name} does not exist')
+                kwargs[suffix] = source
+                return method(**kwargs)
+        raise ValueError(f'source does not match any recognized types in '
+                         'sources')  
+    
+    
+# @dataclasses.dataclass
+# class Coordinator(denovo.Quirk):
+#     """Supports internal creation and automatic external parameterization.
+    
+#     Args:
+#         sources (ClassVar[Mapping[Type, str]]): attributes needed from 
+#             another instance for some method within a subclass. The first item
+#             in 'sources' to correspond to an internal factory classmethod named
+#             f'from_{first item in sources}'. Defaults to an empty list.
+    
+#     Namespaces: 'create' and 'parameterize'        
+#     """
+#     sources: ClassVar[Mapping[Type, str]] = {}
+    
+#     """ Class Methods """
+
+#     @classmethod
+#     def create(cls, source: Any, **kwargs) -> Factory:
+#         """Calls corresponding creation class method to instance a subclass.
+        
+#         For create to work properly, there should be a corresponding classmethod
+#         named f'from_{item in sources}'.
+
+#         Raises:
+#             ValueError: If there is no corresponding method.
+
+#         Returns:
+#             Factory: instance of a Factory subclass.
+            
+#         """
+#         sources = list(more_itertools.always_iterable(cls.sources))
+#         if sources[0] in ['self']:
+#             suffix = tuple(kwargs.keys())[0]
+#         else:
+#             suffix = sources[0]
+#         method = getattr(cls, f'from_{suffix}')
+#         for need in sources:
+#             if need not in kwargs and need not in ['self']:
+#                 raise ValueError(f'The create method must include a {need} '
+#                                  f'argument')
+#         return method(**kwargs)      
+    
+#     @classmethod
+#     def parameterize(cls, instance: object) -> Mapping[str, Any]:
+#         """Populates keywords from 'instance' based on 'sources'.
+
+#         Args:
+#             instance (object): instance with attributes or items in its 
+#                 'contents' attribute with data to compose arguments to be
+#                 passed to the 'create' classmethod.
+
+#         Raises:
+#             KeyError: if data could not be found for an argument.
+
+#         Returns:
+#             Mapping[str, Any]: keyword parameters and arguments to pass to the
+#                 'create' classmethod.
+            
+#         """
+#         kwargs = {}
+#         for need in more_itertools.always_iterable(cls.sources):
+#             if need in ['self']:
+#                 key = denovo.tools.snakify(instance.__class__.__name__)
+#                 kwargs[key] = instance
+#             else:
+#                 try:
+#                     kwargs[need] = getattr(instance, need)
+#                 except AttributeError:
+#                     try:
+#                         kwargs[need] = instance.contents[need]
+#                     except (AttributeError, KeyError):
+#                         raise KeyError(
+#                             f'{need} could not be found in order to call a '
+#                             f'method of {cls.__name__}')
+#         return kwargs
+
+
+# @dataclasses.dataclass
+# class Logger(Quirk):
+    
+#     @property
+#     def logger(self):
+#         name = f'{self.__module__}.{self.__class__.__name__}'
+#         return logging.getLogger(name)
 
 
 # @dataclasses.dataclass
@@ -357,92 +324,6 @@ class Element(denovo.Quirk):
 #             except ImportError:
 #                 pass
 #         return value
-
-
-@dataclasses.dataclass
-class Flexible(denovo.Quirk):
-    """Supports internal creation and automatic external parameterization.
-    
-    Args:
-        accepts (ClassVar[Mapping[str, Type]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'accepts' to correspond to an internal factory classmethod named
-            f'from_{first item in accepts}'. Defaults to an empty list.
-    
-    Namespaces: 'create' and 'parameterize'        
-    """
-    accepts: ClassVar[Mapping[str, Type]] = {}
-    
-    """ Class Methods """
-
-    @classmethod
-    def create(cls, source: Any, **kwargs) -> Flexible:
-        """Calls corresponding creation class method to instance a subclass.
-        
-        For create to work properly, there should be a corresponding classmethod
-        named f'from_{item in accepts}'.
-
-        Raises:
-            ValueError: If there is no corresponding method.
-
-        Returns:
-            Flexible: instance of a Flexible subclass.
-            
-        """
-        accepts = list(more_itertools.always_iterable(cls.accepts))
-        if accepts[0] in ['self']:
-            suffix = tuple(kwargs.keys())[0]
-        else:
-            suffix = accepts[0]
-        method = getattr(cls, f'from_{suffix}')
-        for need in accepts:
-            if need not in kwargs and need not in ['self']:
-                raise ValueError(f'The create method must include a {need} '
-                                 f'argument')
-        return method(**kwargs)      
-    
-    @classmethod
-    def parameterize(cls, instance: object) -> Mapping[str, Any]:
-        """Populates keywords from 'instance' based on 'accepts'.
-
-        Args:
-            instance (object): instance with attributes or items in its 
-                'contents' attribute with data to compose arguments to be
-                passed to the 'create' classmethod.
-
-        Raises:
-            KeyError: if data could not be found for an argument.
-
-        Returns:
-            Mapping[str, Any]: keyword parameters and arguments to pass to the
-                'create' classmethod.
-            
-        """
-        kwargs = {}
-        for need in more_itertools.always_iterable(cls.accepts):
-            if need in ['self']:
-                key = denovo.tools.snakify(instance.__class__.__name__)
-                kwargs[key] = instance
-            else:
-                try:
-                    kwargs[need] = getattr(instance, need)
-                except AttributeError:
-                    try:
-                        kwargs[need] = instance.contents[need]
-                    except (AttributeError, KeyError):
-                        raise KeyError(
-                            f'{need} could not be found in order to call a '
-                            f'method of {cls.__name__}')
-        return kwargs
-
-
-@dataclasses.dataclass
-class Logger(Quirk):
-    
-    @property
-    def logger(self):
-        name = f'{self.__module__}.{self.__class__.__name__}'
-        return logging.getLogger(name)
 
 # @dataclasses.dataclass
 # class Proxified(object):

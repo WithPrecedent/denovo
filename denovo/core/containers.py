@@ -891,7 +891,8 @@ class Library(Lexicon):
     subclasses: denovo.Catalog = denovo.Catalog()
     instances: denovo.Catalog = denovo.Catalog()
     kinds: MutableMapping[str, Set[str]] = dataclasses.field(
-        default_factory = lambda: collections.defaultdict(default_factory = set))
+        default_factory = lambda: collections.defaultdict(
+            default_factory = set))
 
     """ Public Methods """
     

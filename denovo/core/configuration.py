@@ -28,8 +28,13 @@ import denovo
 TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
 
 
+_sources: Mapping[Type, str] = {MutableMapping: 'dictionary', 
+                                pathlib.Path: 'file_path',  
+                                str: 'file_path'}
+
+
 @dataclasses.dataclass
-class Settings(denovo.Lexicon):
+class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     """Loads and stores configuration settings.
 
     To create Settings instance, a user can pass a:
@@ -59,7 +64,7 @@ class Settings(denovo.Lexicon):
             storing configuration options. Defaults to en empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty dict.
-        standard (Mapping[str, Mapping[str]]): any standard options that should
+        default (Mapping[str, Mapping[str]]): any default options that should
             be used when a user does not provide the corresponding options in 
             their configuration settings. Defaults to an empty dict.
         infer_types (bool): whether values in 'contents' are converted to other 
@@ -68,10 +73,11 @@ class Settings(denovo.Lexicon):
 
     """
     contents: TwoLevel = dataclasses.field(default_factory = dict)
-    default: Any = dataclasses.field(default_factory = dict)
-    standard: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+    default_factory: Any = dataclasses.field(default_factory = dict)
+    default: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = dict)
     infer_types: bool = True
+    sources: ClassVar[Mapping[Type, str]] = _sources
 
     """ Initialization Methods """
 
@@ -87,38 +93,14 @@ class Settings(denovo.Lexicon):
         if self.infer_types:
             self.contents = self._infer_types(contents = self.contents)
         # Adds default settings as backup settings to 'contents'.
-        self.contents = self._add_standard(contents = self.contents)
+        self.contents = self._add_default(contents = self.contents)
 
     """ Class Methods """
 
     @classmethod
-    def create(cls, **kwargs) -> Settings:
-        """Calls corresponding creation class method to instance a subclass.
-
-        Raises:
-            TypeError: If there is no corresponding method.
-
-        Returns:
-            Needy: instance of a Needy subclass.
-            
-        """
-        if 'file_path' in kwargs:
-            return cls.from_file_path(**kwargs)
-        elif 'dictionary' in kwargs:
-            if (isinstance(kwargs['dictionary'], Mapping) 
-                    and all(isinstance(v, Mapping) 
-                            for v in kwargs['dictionary'].values())):
-                return cls.from_dictionary(**kwargs)
-            else:
-                raise TypeError(f'dictionary must be nested dict type')
-        else:
-            raise TypeError(
-                f'create method requires a str, pathlib.Path, or dict type')   
-
-    @classmethod
     def from_dictionary(cls, 
-        dictionary: Mapping[str, Mapping[str, Any]], 
-        **kwargs) -> Settings:
+                        dictionary: Mapping[str, Mapping[str, Any]], 
+                        **kwargs) -> Settings:
         """[summary]
 
         Args:
@@ -132,8 +114,8 @@ class Settings(denovo.Lexicon):
     
     @classmethod
     def from_file_path(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+                       file_path: Union[str, pathlib.Path], 
+                       **kwargs) -> Settings:
         """[summary]
 
         Args:
@@ -142,16 +124,17 @@ class Settings(denovo.Lexicon):
         Returns:
             Settings: [description]
             
-        """        
-        extension = str(pathlib.Path(file_path).suffix)[1:]
+        """
+        file_path = denovo.tools.pathlibify(item = file_path)   
+        extension = file_path.suffix[1:]
         load_method = getattr(cls, f'from_{extension}')
         return load_method(file_path = file_path, **kwargs)
     
     @classmethod
     def from_ini(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
-        """Returns settings dictionary from an .ini file.
+                 file_path: Union[str, pathlib.Path], 
+                 **kwargs) -> Settings:
+        """Returns Settings from an .ini file.
 
         Args:
             file_path (str): path to configparser-compatible .ini file.
@@ -163,21 +146,22 @@ class Settings(denovo.Lexicon):
             FileNotFoundError: if the file_path does not correspond to a file.
 
         """
+        file_path = denovo.tools.pathlibify(item = file_path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
             contents = configparser.ConfigParser(dict_type = dict)
             contents.optionxform = lambda option: option
-            contents.read(str(file_path))
+            contents.read(file_path)
             return cls(contents = dict(contents._sections), **kwargs)
         except (KeyError, FileNotFoundError):
             raise FileNotFoundError(f'settings file {file_path} not found')
 
     @classmethod
     def from_json(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
-        """Returns settings dictionary from an .json file.
+                  file_path: Union[str, pathlib.Path], 
+                  **kwargs) -> Settings:
+        """Returns Settings from an .json file.
 
         Args:
             file_path (str): path to configparser-compatible .json file.
@@ -189,6 +173,7 @@ class Settings(denovo.Lexicon):
             FileNotFoundError: if the file_path does not correspond to a file.
 
         """
+        file_path = denovo.tools.pathlibify(item = file_path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
@@ -200,13 +185,14 @@ class Settings(denovo.Lexicon):
 
     @classmethod
     def from_py(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+                file_path: Union[str, pathlib.Path], 
+                **kwargs) -> Settings:
         """Returns a settings dictionary from a .py file.
 
         Args:
-            file_path (str): path to python module with '__dict__' dict
-                defined.
+            file_path (str): path to python module with '__dict__' defined and
+                an attribute named 'settings' that contains the settings to
+                use for creating a Settings instance..
 
         Returns:
             Mapping[Any, Any] of contents.
@@ -216,24 +202,24 @@ class Settings(denovo.Lexicon):
                 file.
 
         """
+        file_path = denovo.tools.pathlibify(item = file_path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = False
         try:
             file_path = pathlib.Path(file_path)
-            import_path = importlib.util.spec_from_file_location(
-                file_path.name,
-                file_path)
+            import_path = importlib.util.spec_from_file_location(file_path.name,
+                                                                 file_path)
             import_module = importlib.util.module_from_spec(import_path)
             import_path.loader.exec_module(import_module)
-            return cls(contents = import_module.configuration, **kwargs)
+            return cls(contents = import_module.settings, **kwargs)
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
 
     @classmethod
     def from_toml(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
-        """Returns settings dictionary from a .toml file.
+                  file_path: Union[str, pathlib.Path], 
+                  **kwargs) -> Settings:
+        """Returns Settings from a .toml file.
 
         Args:
             file_path (str): path to configparser-compatible .toml file.
@@ -246,6 +232,7 @@ class Settings(denovo.Lexicon):
 
         """
         import toml
+        file_path = denovo.tools.pathlibify(item = file_path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
@@ -255,9 +242,9 @@ class Settings(denovo.Lexicon):
    
     @classmethod
     def from_yaml(cls, 
-        file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
-        """Returns settings dictionary from a .yaml file.
+                  file_path: Union[str, pathlib.Path], 
+                  **kwargs) -> Settings:
+        """Returns Settings from a .yaml file.
 
         Args:
             file_path (str): path to configparser-compatible .toml file.
@@ -270,6 +257,7 @@ class Settings(denovo.Lexicon):
 
         """
         import yaml
+        file_path = denovo.tools.pathlibify(item = file_path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = False
         try:
@@ -357,7 +345,7 @@ class Settings(denovo.Lexicon):
                 new_contents[key] = denovo.tools.typify(value)
         return new_contents
 
-    def _add_standard(self, 
+    def _add_default(self, 
         contents: Mapping[str, Mapping[str, Any]]) -> (
             Mapping[str, Mapping[str, Any]]):
         """Creates a backup set of mappings for denovo settings lookup.
@@ -365,13 +353,13 @@ class Settings(denovo.Lexicon):
 
         Args:
             contents (MutableMapping[Any, Mapping[Any, Any]]): a nested contents 
-                dict to add standard to.
+                dict to add default to.
 
         Returns:
-            Mapping[Any, Mapping[Any, Any]]: with stored standard added.
+            Mapping[Any, Mapping[Any, Any]]: with stored default added.
 
         """
-        new_contents = self.standard
+        new_contents = self.default
         new_contents.update(contents)
         return new_contents
 
@@ -395,6 +383,6 @@ class Settings(denovo.Lexicon):
             try:
                 self.contents[key] = value
             except TypeError:
-                raise TypeError(
-                    'key must be a str and value must be a dict type')
+                raise TypeError('key must be a str and value must be a dict '
+                                'type')
         return self
