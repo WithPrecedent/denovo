@@ -9,7 +9,7 @@ ToDo:
     test_quirks
     test_configuration
     test_framework (or eliminate framework module)
-    test_storage
+    test_filing
     test_decorators
     test_lazy (beyond testing built into denovo)
     test_memory

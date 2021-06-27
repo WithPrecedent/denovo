@@ -61,17 +61,16 @@ import more_itertools
 import denovo
 
 
-
 Adjacency: Type = MutableMapping[Hashable, Set[Hashable]]
-Matrix: Type = Tuple[MutableSequence[MutableSequence[int]], 
-                     MutableSequence[Hashable]]
 Edge: Type = Tuple[Hashable, Hashable]
 Edges: Type = MutableSequence[Edge]
 Connections: Type = Set[Hashable]
+Matrix: Type = Tuple[MutableSequence[MutableSequence[int]], 
+                     MutableSequence[Hashable]]
 Pipeline: Type = MutableSequence[Hashable]
 Pipelines: Type = MutableSequence[Pipeline]
 Nodes: Type = Union[Hashable, Pipeline]
-
+Sources: Type = Union[Adjacency, Edges, Matrix, Nodes]
     
 def is_adjacency_list(item: Any) -> bool:
     """Returns whether 'item' is an adjacency list."""
@@ -252,10 +251,10 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
 
 @dataclasses.dataclass
 class Graph(denovo.Bunch, abc.ABC):
-    """Base class for connected denovo data structures.
+    """Base class for denovo graph data structures.
     
-    Graph supports '+' to join two Graph instances or data structures supported 
-    by the 'create' method using the 'merge' method.
+    Graph supports '+' to join. using the 'merge' method, two Graph instances or 
+    other data structures supported by the 'create' method .
     
     Args:
         contents (Union[Adjacency, Matrix]): an adjacency list or adjacency
@@ -359,16 +358,15 @@ class Graph(denovo.Bunch, abc.ABC):
 
     @abc.abstractmethod
     def merge(self, 
-              item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+              item: Union[Graph, Sources]) -> None:
         """Adds 'source' to this Graph.
 
         This method is roughly equivalent to a dict.update, adding nodes to the 
         existing graph. 
         
         Args:
-            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
-                an adjacency list, an edge list, an adjacency matrix, or one or
-                more nodes.
+            item (Union[Graph, Sources]): another Graph, an adjacency list, an 
+                edge list, an adjacency matrix, or one or more nodes.
             
         """
         pass
@@ -376,13 +374,12 @@ class Graph(denovo.Bunch, abc.ABC):
     """ Class Methods """
     
     @classmethod
-    def create(cls, source: Union[Adjacency, Edges, Matrix, Pipeline]) -> Graph:
+    def create(cls, source: Sources) -> Graph:
         """Creates an instance of a Graph from 'source'.
         
         Args:
-            source (Union[Adjacency, Edges, Matrix, Pipeline]): an adjacency 
-                list, adjacency matrix, edge list, or pipeline which can used to 
-                create the stored graph.
+            source (Sources): an adjacency list, adjacency matrix, edge list, or 
+                pipeline which can used to create the stored graph.
                 
         Returns:
             Graph: a Graph instance created based on 'source'.

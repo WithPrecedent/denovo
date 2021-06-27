@@ -5,7 +5,7 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Filer (object): interface for denovo file management classes and methods.
+    Clerk (object): interface for denovo file management classes and methods.
          
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ import denovo
 
 
 @dataclasses.dataclass
-class Filer(object):
+class Clerk(object):
     """File and folder management for denovo.
 
     Creates and stores dynamic and static file paths, properly formats files
@@ -36,7 +36,7 @@ class Filer(object):
             does ot have file configuration options or if 'settings' is None, 
             internal defaults will be used. Defaults to None.
         root_folder (Union[str, pathlib.Path]): the complete path from which the 
-            other paths and folders used by Filer are ordinarily derived 
+            other paths and folders used by Clerk are ordinarily derived 
             (unless you decide to use full paths for all other options). 
             Defaults to None. If not passed, the parent folder of the current 
             working workery is used.
@@ -386,11 +386,11 @@ class Distributor(abc.ABC):
     """Base class for denovo FileLoader and FileSaver.
 
     Args:
-        filer (Filer): a related Filer instance.
+        filer (Clerk): a related Clerk instance.
 
     """
 
-    filer: Filer
+    filer: Clerk
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
@@ -534,10 +534,10 @@ class FileLoader(Distributor):
     """Manages file importing for denovo.
 
     Args:
-        filer (Filer): related Filer instance.
+        filer (Clerk): related Clerk instance.
 
     """
-    filer: Filer
+    filer: Clerk
 
     """ Public Methods """
 
@@ -592,10 +592,10 @@ class FileSaver(Distributor):
     """Manages file exporting for denovo.
 
     Args:
-        filer (Filer): related Filer instance.
+        filer (Clerk): related Clerk instance.
 
     """
-    filer: Filer
+    filer: Clerk
 
     """ Public Methods """
 

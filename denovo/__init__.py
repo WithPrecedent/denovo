@@ -73,18 +73,18 @@ importables: Dict[str, str] = {
     'Library': 'core.containers.Library',
     'quirks': 'core.quirks',
     'Quirk': 'core.quirks.Quirk',
+    'configuration': 'core.configuration',
     'Settings': 'core.configuration.Settings',
-    'Filer': 'core.configuration.Filer',
-    'FileFormat': 'core.configuration.FileFormat',
+    'filing': 'core.filing',
+    'Clerk': 'core.filing.Clerk',
+    'FileFormat': 'core.filing.FileFormat',
     # 'Keystone': 'core.framework.Keystone',
     # 'create_keystone': 'core.framework.create_keystone',
     # 'Validator': 'core.framework.Validator',
     # 'Converter': 'core.framework.Converter',
     'structures': 'core.structures',
     'Structure': 'core.structures.Structure',
-    'Graph': 'core.structures.Graph',
-    'Workflow': 'core.structures.Workflow',
-    'Project': 'project.interface.Project'}
+    'Graph': 'core.structures.Graph'}
 
 def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them as package attributes.
