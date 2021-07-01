@@ -169,7 +169,71 @@ class Factory(denovo.Quirk):
                 return method(**kwargs)
         raise ValueError(f'source does not match any recognized types in '
                          'sources')  
+
+
+@dataclasses.dataclass
+class Importer(denovo.Quirk):
+    """Faciliates lazy importing from modules.
+
+    Subclasses with attributes storing strings containing import paths 
+    (indicated by having a '.' in their text) will automatically have those
+    attribute values turned into the corresponding stored classes.
+
+    The 'importify' method also allows this process to be performed manually.
+
+    Subclasses should not have custom '__getattribute__' methods or properties
+    to avoid errors. If a subclass absolutely must include a custom 
+    '__getattribute__' method, it should incorporate the code from this class.
+
+    Namespaces: 'importify', '__getattribute__'
     
+    """
+     
+    """ Public Methods """
+
+    def importify(self, path: str) -> Any:
+        """Returns object named by 'key'.
+
+        Args:
+            path (str): import path of class, function, or variable.
+            
+        Returns:
+            Any: item from a python module.
+
+        """
+        item = path.split('.')[-1]
+        module = path[:-len(item) - 1]
+        try:
+            imported = getattr(importlib.import_module(module), item)
+        except (ImportError, AttributeError):
+            raise ImportError(f'failed to load {item} in {module}')
+        return imported
+
+    """ Dunder Methods """
+
+    def __getattribute__(self, name: str) -> Any:
+        """Converts stored import paths into the corresponding objects.
+
+        If an import path is stored, that attribute is permanently converted
+        from a str to the imported object or class.
+        
+        Args:
+            name (str): name of attribute sought.
+
+        Returns:
+            Any: the stored value or, if the value is an import path, the
+                class or object stored at the designated import path.
+            
+        """
+        value = super().__getattribute__(name)
+        if (isinstance(value, str) and '.' in value):
+            try:
+                value = self.importify(path = value)
+                super().__setattr__(name, value)
+            except ImportError:
+                pass
+        return value
+   
     
 # @dataclasses.dataclass
 # class Coordinator(denovo.Quirk):
@@ -255,75 +319,6 @@ class Factory(denovo.Quirk):
 #     def logger(self):
 #         name = f'{self.__module__}.{self.__class__.__name__}'
 #         return logging.getLogger(name)
-
-
-# @dataclasses.dataclass
-# class Importer(denovo.Quirk):
-#     """Faciliates lazy importing from modules.
-
-#     Subclasses with attributes storing strings containing import paths 
-#     (indicated by having a '.' in their text) will automatically have those
-#     attribute values turned into the corresponding stored classes.
-
-#     The 'importify' method also allows this process to be performed manually.
-
-#     Subclasses should not have custom '__getattribute__' methods or properties
-#     to avoid errors. If a subclass absolutely must include a custom 
-#     '__getattribute__' method, it should incorporate the code from this class.
-
-#     Namespaces: 'importify', '__getattribute__'
-    
-#     """
-    
-#     """ Initialization Methods """
-    
-#     def __set_name__(self, owner, name):
-#         self.name = name
-     
-#     """ Public Methods """
-
-#     def importify(self, path: str) -> Any:
-#         """Returns object named by 'key'.
-
-#         Args:
-#             path (str): import path of class, function, or variable.
-            
-#         Returns:
-#             Any: item from a python module.
-
-#         """
-#         item = path.split('.')[-1]
-#         module = path[:-len(item) - 1]
-#         try:
-#             imported = getattr(importlib.import_module(module), item)
-#         except (ImportError, AttributeError):
-#             raise ImportError(f'failed to load {item} in {module}')
-#         return imported
-
-#     """ Dunder Methods """
-
-#     def __getattribute__(self, name: str) -> Any:
-#         """Converts stored import paths into the corresponding objects.
-
-#         If an import path is stored, that attribute is permanently converted
-#         from a str to the imported object or class.
-        
-#         Args:
-#             name (str): name of attribute sought.
-
-#         Returns:
-#             Any: the stored value or, if the value is an import path, the
-#                 class or object stored at the designated import path.
-            
-#         """
-#         value = super().__getattribute__(name)
-#         if (isinstance(value, str) and '.' in value):
-#             try:
-#                 value = self.importify(path = value)
-#                 super().__setattr__(name, value)
-#             except ImportError:
-#                 pass
-#         return value
 
 # @dataclasses.dataclass
 # class Proxified(object):
