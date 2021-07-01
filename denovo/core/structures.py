@@ -71,6 +71,7 @@ Pipeline: Type = MutableSequence[Hashable]
 Pipelines: Type = MutableSequence[Pipeline]
 Nodes: Type = Union[Hashable, Pipeline]
 Sources: Type = Union[Adjacency, Edges, Matrix, Nodes]
+ 
     
 def is_adjacency_list(item: Any) -> bool:
     """Returns whether 'item' is an adjacency list."""
@@ -429,12 +430,11 @@ class Graph(denovo.Bunch, abc.ABC):
       
     """ Dunder Methods """
 
-    def __add__(self, 
-                other: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+    def __add__(self, other: Union[Graph, Sources]) -> None:
         """Adds 'other' to the stored graph using the 'merge' method.
 
         Args:
-            other (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another 
+            other (Union[Graph, Sources]): another 
                 Graph, an adjacency list, an edge list, an adjacency matrix, or 
                 one or more nodes.
             
@@ -459,82 +459,420 @@ class Graph(denovo.Bunch, abc.ABC):
         else:
             return False   
 
+    def __str__(self) -> str:
+        """Returns prettier summary of the stored graph.
+
+        Returns:
+            str: a formatted str of class information and the contained 
+                adjacency list.
+            
+        """
+        return denovo.tools.beautify(item = self, package = 'denovo')  
+
     
 @dataclasses.dataclass
-class DirectedGraph(Graph, abc.ABC):
+class System(Graph):
     """Base class for denovo directed graphs.
     
-    DirectedGraph supports '+=' to join two Graph instances (or data structures 
-    supported by the 'create' method) using the 'append' method.
+    System supports '+' to join two Graph instances (or data structures 
+    supported by the 'create' method) using the 'append' method if an instance
+    is the left operand or 'prepend' if an instance is the right operand (and 
+    the left operand is not a System).
        
     Args:
-        contents (Union[Adjacency, Matrix]): an adjacency list or adjacency
-            matrix storing the contained graph.
+        contents (Adjacency): an adjacency list storing the contained graph.
+            Defaults to en empty defaultdict with set as the default factory
+            for missing keys.
                   
     """  
-    contents: Union[Adjacency, Matrix]
-
-    """ Required Subclass Properties """
+    contents: Adjacency = dataclasses.field(
+        default_factory = lambda: collections.defaultdict(set))
     
-    @abc.abstractproperty
-    def endpoints(self) -> MutableSequence[Hashable]:
-        """Returns endpoint nodes in the stored graph.."""
-        pass
+    """ Properties """
 
-    @abc.abstractproperty
-    def roots(self) -> MutableSequence[Hashable]:
-        """Returns root nodes in the stored graph.."""
-        pass
+    @property
+    def adjacency(self) -> denovo.structures.Adjacency:
+        """Returns the stored graph as an adjacency list."""
+        return self.contents
+
+    @property
+    def edges(self) -> denovo.structures.Edges:
+        """Returns the stored graph as an edge list."""
+        return denovo.structures.adjacency_to_edges(source = self.contents)
+
+    @property
+    def endpoints(self) -> Set[Hashable]:
+        """Returns endpoint nodes in the stored graph in a list."""
+        return {k for k in self.contents.keys() if not self.contents[k]}
+
+    @property
+    def matrix(self) -> denovo.structures.Matrix:
+        """Returns the stored graph as an adjacency matrix."""
+        return denovo.structures.adjacency_to_matrix(source = self.contents)
+                      
+    @property
+    def nodes(self) -> Set[Hashable]:
+        """Returns all stored nodes in a list."""
+        return set(self.contents.keys())
+
+    @property
+    def paths(self) -> denovo.structures.Pipelines:
+        """Returns all paths through the stored graph as Pipeline."""
+        return self._find_all_paths(starts = self.roots, stops = self.endpoints)
+       
+    @property
+    def roots(self) -> Set[Hashable]:
+        """Returns root nodes in the stored graph in a list."""
+        stops = list(itertools.chain.from_iterable(self.contents.values()))
+        return {k for k in self.contents.keys() if k not in stops}
     
-    """ Required Subclass Instance Methods """
+    """ Class Methods """
+ 
+    @classmethod
+    def from_adjacency(cls, adjacency: denovo.structures.Adjacency) -> System:
+        """Creates a System instance from an adjacency list."""
+        return cls(contents = adjacency)
+    
+    @classmethod
+    def from_edges(cls, edges: denovo.structures.Edges) -> System:
+        """Creates a System instance from an edge list."""
+        return cls(contents = denovo.structures.edges_to_adjacency(
+            source = edges))
+    
+    @classmethod
+    def from_matrix(cls, matrix: denovo.structures.Matrix) -> System:
+        """Creates a System instance from an adjacency matrix."""
+        return cls(contents = denovo.structures.matrix_to_adjacency(
+            source = matrix))
+    
+    @classmethod
+    def from_pipeline(cls, pipeline: denovo.structures.Pipeline) -> System:
+        """Creates a System instance from a Pipeline."""
+        return cls(contents = denovo.structures.pipeline_to_adjacency(
+            source = pipeline))
+       
+    """ Public Methods """
 
-    @abc.abstractmethod
-    def append(self, 
-               item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+    def add(self, 
+            node: Hashable,
+            ancestors: denovo.structures.Nodes = None,
+            descendants: denovo.structures.Nodes = None) -> None:
+        """Adds 'node' to the stored graph.
+        
+        Args:
+            node (Hashable): a node to add to the stored graph.
+            ancestors (Nodes): node(s) from which 'node' should be connected.
+            descendants (Nodes): node(s) to which 'node' should be connected.
+
+        Raises:
+            KeyError: if some nodes in 'descendants' or 'ancestors' are not in 
+                the stored graph.
+                
+        """
+        if descendants is None:
+            self.contents[node] = set()
+        elif denovo.tools.is_property(item = descendants, instance = self):
+            self.contents = set(getattr(self, descendants))
+        else:
+            descendants = denovo.tools.listify(descendants)
+            descendants = [self._stringify(n) for n in descendants]
+            missing = [n for n in descendants if n not in self.contents]
+            if missing:
+                raise KeyError(f'descendants {str(missing)} are not in the '
+                               f'stored graph.')
+            else:
+                self.contents[node] = set(descendants)
+        if ancestors is not None:  
+            if denovo.tools.is_property(item = ancestors, instance = self):
+                start = list(getattr(self, ancestors))
+            else:
+                ancestors = denovo.tools.listify(ancestors)
+                missing = [n for n in ancestors if n not in self.contents]
+                if missing:
+                    raise KeyError(f'ancestors {str(missing)} are not in the '
+                                   f'stored graph.')
+                else:
+                    start = ancestors
+            for starting in start:
+                if node not in self[starting]:
+                    self.connect(start = starting, stop = node)                 
+        return self 
+
+    def append(self, item: Union[Graph, Sources]) -> None:
         """Appends 'item' to the endpoints of the stored graph.
 
         Appending creates an edge between every endpoint of this instance's
         stored graph and the every root of 'item'.
 
         Args:
-            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
+            item (Union[Graph, Sources]): another Graph, 
                 an adjacency list, an edge list, an adjacency matrix, or one or
                 more nodes.
-   
+            
+        Raises:
+            TypeError: if 'source' is neither a Graph, Adjacency, Edges, Matrix,
+                or Nodes type.
+                
         """
-        pass
+        if isinstance(item, (denovo.structures.Graph, 
+                             denovo.structures.Adjacency, 
+                             denovo.structures.Edges, 
+                             denovo.structures.Matrix, 
+                             denovo.structures.Nodes)):
+            current_endpoints = list(self.endpoints)
+            new_graph = self.create(source = item)
+            self.merge(item = new_graph)
+            for endpoint in current_endpoints:
+                for root in new_graph.roots:
+                    self.connect(start = endpoint, stop = root)
+        else:
+            raise TypeError('item must be a System, Adjacency, Edges, '
+                            'Matrix, Pipeline, or Hashable type')
+        return self
   
-    @abc.abstractmethod
-    def prepend(self, 
-                item: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
-        """Prepends 'item' to the roots of the stored graph.
-
-        Prepending creates an edge between every endpoint of item and the every 
-        root of the stored graph in this instance.
+    def connect(self, start: Hashable, stop: Hashable) -> None:
+        """Adds an edge from 'start' to 'stop'.
 
         Args:
-            item (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another Graph, 
-                an adjacency list, an edge list, an adjacency matrix, or one or
-                more nodes.
-   
+            start (Hashable): name of node for edge to start.
+            stop (Hashable): name of node for edge to stop.
+            
+        Raises:
+            ValueError: if 'start' is the same as 'stop'.
+            
         """
-        pass
+        if start == stop:
+            raise ValueError('The start of an edge cannot be the same as the '
+                             'stop in a System because it is acyclic')
+        elif start not in self:
+            self.add(node = start)
+        elif stop not in self:
+            self.add(node = stop)
+        if stop not in self.contents[start]:
+            self.contents[start].add(self._stringify(stop))
+        return self
+
+    def delete(self, node: Hashable) -> None:
+        """Deletes node from graph.
+        
+        Args:
+            node (Hashable): node to delete from 'contents'.
+        
+        Raises:
+            KeyError: if 'node' is not in 'contents'.
+            
+        """
+        try:
+            del self.contents[node]
+        except KeyError:
+            raise KeyError(f'{node} does not exist in the graph')
+        self.contents = {k: v.discard(node) for k, v in self.contents.items()}
+        return self
+
+    def disconnect(self, start: Hashable, stop: Hashable) -> None:
+        """Deletes edge from graph.
+
+        Args:
+            start (Hashable): starting node for the edge to delete.
+            stop (Hashable): ending node for the edge to delete.
+        
+        Raises:
+            KeyError: if 'start' is not a node in the stored graph..
+
+        """
+        try:
+            self.contents[start].discard(stop)
+        except KeyError:
+            raise KeyError(f'{start} does not exist in the graph')
+        return self
+
+    def merge(self, item: Union[Graph, Sources]) -> None:
+        """Adds 'item' to this Graph.
+
+        This method is roughly equivalent to a dict.update, just adding the
+        new keys and values to the existing graph. It converts 'item' to an 
+        adjacency list that is then added to the existing 'contents'.
+        
+        Args:
+            item (Union[Graph, Sources]): another Graph, an adjacency list, an 
+                edge list, an adjacency matrix, or one or more nodes.
+            
+        Raises:
+            TypeError: if 'item' is neither a System, Adjacency, Edges, Matrix, 
+                or Nodes type.
+            
+        """
+        if isinstance(item, denovo.structures.System):
+            adjacency = item.adjacency
+        elif isinstance(item, denovo.structures.Adjacency):
+            adjacency = item
+        elif isinstance(item, denovo.structures.Edges):
+            adjacency = denovo.structures.edges_to_adjacency(source = item)
+        elif isinstance(item, denovo.structures.Matrix):
+            adjacency = denovo.structures.matrix_to_adjacency(source = item)
+        elif isinstance(item, (MutableSequence, Tuple, Set)):
+            adjacency = denovo.structures.pipeline_to_adjacency(source = item)
+        elif isinstance(item, Hashable):
+            adjacency = {item: set()}
+        else:
+            raise TypeError('item must be a System, Adjacency, Edges, '
+                            'Matrix, Pipeline, or Hashable type')
+        self.contents.update(adjacency)
+        return self
+
+    def prepend(self, item: Union[Graph, Sources]) -> None:
+        """Prepends 'item' to the roots of the stored graph.
+
+        Prepending creates an edge between every endpoint of 'item' and every
+        root of this instance;s stored graph.
+
+        Args:
+            item (Union[Graph, Sources]): another Graph, an adjacency list, an 
+                edge list, an adjacency matrix, or one or more nodes.
+            
+        Raises:
+            TypeError: if 'item' is neither a System, Adjacency, Edges, Matrix, 
+                or Nodes type.
+                
+        """
+        if isinstance(item, (denovo.structures.System, 
+                             denovo.structures.Adjacency, 
+                             denovo.structures.Edges, 
+                             denovo.structures.Matrix, 
+                             denovo.structures.Nodes)):
+            current_roots = list(self.roots)
+            new_graph = self.create(source = item)
+            self.merge(item = new_graph)
+            for root in current_roots:
+                for endpoint in new_graph.endpoints:
+                    self.connect(start = endpoint, stop = root)
+        else:
+            raise TypeError('item must be a System, Adjacency, Edges, '
+                            'Matrix, Pipeline, or Hashable type')
+        return self
+      
+    def subset(self, 
+               include: Union[Any, Sequence[Any]] = None,
+               exclude: Union[Any, Sequence[Any]] = None) -> System:
+        """Returns a new System without a subset of 'contents'.
+        
+        All edges will be removed that include any nodes that are not part of
+        the new subgraph.
+        
+        Any extra attributes that are part of a System (or a subclass) will be
+        maintained in the returned subgraph.
+
+        Args:
+            include (Union[Any, Sequence[Any]]): nodes which should be included
+                with any applicable edges in the new subgraph.
+            exclude (Union[Any, Sequence[Any]]): nodes which should not be 
+                included with any applicable edges in the new subgraph.
+
+        Returns:
+           System: with only key/value pairs with keys not in 'subset'.
+
+        """
+        if include is None and exclude is None:
+            raise ValueError('Either include or exclude must not be None')
+        else:
+            if include:
+                excludables = [k for k in self.contents if k not in include]
+            else:
+                excludables = []
+            excludables.extend([i for i in self.contents if i in exclude])
+            new_graph = copy.deepcopy(self)
+            for node in more_itertools.always_iterable(excludables):
+                new_graph.delete(node = node)
+        return new_graph
+    
+    def walk(self, 
+             start: Hashable, 
+             stop: Hashable, 
+             path: denovo.structures.Pipeline = None) -> (
+                 denovo.structures.Pipeline):
+        """Returns all paths in graph from 'start' to 'stop'.
+
+        The code here is adapted from: https://www.python.org/doc/essays/graphs/
+        
+        Args:
+            start (Hashable): node to start paths from.
+            stop (Hashable): node to stop paths.
+            path (Pipeline): a path from 'start' to 'stop'. Defaults to an 
+                empty list. 
+
+        Returns:
+            Pipeline: a list of possible paths (each path is a list 
+                nodes) from 'start' to 'stop'.
+            
+        """
+        if path is None:
+            path = []
+        path = path + [start]
+        if start == stop:
+            return [path]
+        if start not in self.contents:
+            return []
+        paths = []
+        for node in self.contents[start]:
+            if node not in path:
+                new_paths = self.walk(
+                    start = node, 
+                    stop = stop, 
+                    path = path)
+                for new_path in new_paths:
+                    paths.append(new_path)
+        return paths
+
+    """ Private Methods """
+
+    def _find_all_paths(self, starts: Nodes, stops: Nodes) -> Pipeline:
+        """Returns all paths between 'starts' and 'stops'.
+
+        Args:
+            start (Union[Hashable, Sequence[Hashable]]): starting points for 
+                paths through the System.
+            ends (Union[Hashable, Sequence[Hashable]]): endpoints for paths 
+                through the System.
+
+        Returns:
+            Pipeline: list of all paths through the System from all 'starts' 
+                to all 'ends'.
+            
+        """
+        all_paths = []
+        for start in more_itertools.always_iterable(starts):
+            for end in more_itertools.always_iterable(stops):
+                paths = self.walk(start = start, stop = end)
+                if paths:
+                    if all(isinstance(path, Hashable) for path in paths):
+                        all_paths.append(paths)
+                    else:
+                        all_paths.extend(paths)
+        return all_paths
     
     """ Dunder Methods """
 
-    def __iadd__(self, 
-                 other: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+    def __add__(self, other: Union[Graph, Sources]) -> None:
         """Adds 'other' to the stored graph using the 'append' method.
 
         Args:
-            other (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another 
-                Graph, an adjacency list, an edge list, an adjacency matrix, or 
-                one or more nodes.
+            other (Union[Graph, Sources]): another Graph, an adjacency list, an 
+                edge list, an adjacency matrix, or one or more nodes.
             
         """
         self.append(item = other)     
         return self 
-    
+
+    def __radd__(self, other: Union[Graph, Sources]) -> None:
+        """Adds 'other' to the stored graph using the 'prepend' method.
+
+        Args:
+            other (Union[Graph, Sources]): another Graph, an adjacency list, an 
+                edge list, an adjacency matrix, or one or more nodes.
+            
+        """
+        self.prepend(item = other)     
+        return self 
 
 # @dataclasses.dataclass
 # class Network(Graph):
@@ -558,7 +896,7 @@ class DirectedGraph(Graph, abc.ABC):
 #             dict.
                   
 #     """  
-#     contents: Adjacency = dataclasses.field(default_factory = dict)
+#     contents: Matrix = dataclasses.field(default_factory = dict)
     
 #     """ Properties """
 

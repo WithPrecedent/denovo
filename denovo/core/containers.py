@@ -890,7 +890,7 @@ class Library(Lexicon):
     """
     subclasses: denovo.Catalog = denovo.Catalog()
     instances: denovo.Catalog = denovo.Catalog()
-    kinds: MutableMapping[str, Set[str]] = dataclasses.field(
+    collections: MutableMapping[str, Set[str]] = dataclasses.field(
         default_factory = lambda: collections.defaultdict(
             default_factory = set))
 
@@ -900,11 +900,11 @@ class Library(Lexicon):
         """[summary]
  
         """
-        kinds = []  
-        for kind, subclasses in self.kinds.items():
+        collections = []  
+        for kind, subclasses in self.collections.items():
             if item in subclasses:
-                kinds.append(kind)
-        return tuple(kinds)
+                collections.append(kind)
+        return tuple(collections)
        
     def deposit(self, 
                 item: Union[Type, object],
