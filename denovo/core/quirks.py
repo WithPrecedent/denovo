@@ -5,18 +5,19 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    Quirk (ABC): base class for quirks.
     Element (Quirk): quirk that automatically assigns a 'name' attribute if 
         none is passed. The default 'name' will be the snakecase name of the 
         class.
-    # Importer (Quirk): quirk that supports lazy importation of modules and items 
-    #     stored within them.
-    Factory (Quirk): quirk that advertises the names of parameters needed in a 
-        'sources' class attribute and includes a universal 'create' classmethod 
-        that calls to the appropriate construction method following the form: 
-        "from_{first string listed in 'sources'}"
+    Factory (Quirk): quirk that determines the appropriate constructor when a 
+        universal 'create' classmethod is called. The appropriate construction 
+        method should have the following form: "from_{str value matching key
+        Type in 'sources' class variable}"
+    Importer (Quirk): quirk that supports lazy importation of modules and items 
+        stored within them.
 
 ToDo:
-    Fix Proxified as explained in its docs.
+    Fix quirks which are currently commented out.
 
 """
 from __future__ import annotations
@@ -77,7 +78,7 @@ class Quirk(abc.ABC):
 
     
 @dataclasses.dataclass
-class Element(denovo.Quirk):
+class Element(Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -125,7 +126,7 @@ class Element(denovo.Quirk):
 
 
 @dataclasses.dataclass
-class Factory(denovo.Quirk):
+class Factory(Quirk):
     """Supports internal creation and automatic external parameterization.
     
     Args:
@@ -172,7 +173,7 @@ class Factory(denovo.Quirk):
 
 
 @dataclasses.dataclass
-class Importer(denovo.Quirk):
+class Importer(Quirk):
     """Faciliates lazy importing from modules.
 
     Subclasses with attributes storing strings containing import paths 
@@ -236,7 +237,7 @@ class Importer(denovo.Quirk):
    
     
 # @dataclasses.dataclass
-# class Coordinator(denovo.Quirk):
+# class Coordinator(Quirk):
 #     """Supports internal creation and automatic external parameterization.
     
 #     Args:

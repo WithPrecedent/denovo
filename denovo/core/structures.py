@@ -39,10 +39,14 @@ Classes:
         stored as an adjacency list. As a result, it should primarily be used
         for workflows or other uses that do form large graphs. In those
         instances, an adjacency matrix would be far more efficient.
+    System (Graph): a lightweight directed acyclic graph (DAG). Internally, the 
+        graph is stored as an adjacency list. As a result, it should primarily 
+        be used for workflows or other uses that do require large graphs.
 
 To Do:
     Add an Edge class and seamless support for it in Graph to allow for weights,
         direction, and other edge attributes.
+    Complete Network which will use an adjacency matrix for internal storage.
     
 """
 from __future__ import annotations

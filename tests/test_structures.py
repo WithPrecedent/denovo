@@ -30,6 +30,6 @@ class EvenAnother(denovo.structures.Node):
 
 
 if __name__ == '__main__':
-    denovo.testing.testify(module_to_test = denovo.structures, 
+    denovo.testing.testify(target_module = denovo.structures, 
                            testing_module = __name__)
     

@@ -159,27 +159,27 @@ def importify(name: str, package: str, importables: Dict[str, str]) -> Any:
         raise AttributeError(f'module {package} has no attribute {name}')   
 
 
-@dataclasses.dataclass
-class Importer(object):
-    """Descriptor for lazy importing.
+# @dataclasses.dataclass
+# class Importer(object):
+#     """Descriptor for lazy importing.
     
-    """
-    package: str = None
-    importables: Dict[str, str] = dataclasses.field(default_factory = dict)
+#     """
+#     package: str = None
+#     importables: Dict[str, str] = dataclasses.field(default_factory = dict)
     
-    """ Initialization Methods """
+#     """ Initialization Methods """
     
-    def __set_name__(self, owner: object, name: str) -> None:
-        self.name = name
+#     def __set_name__(self, owner: object, name: str) -> None:
+#         self.name = name
     
-    """ Dunder Methods """
+#     """ Dunder Methods """
 
-    def __get__(self, owner: object, type: Type = None) -> Any:
-        value = owner.__dict__.get(self.name)
-        if (isinstance(value, str) and '.' in value):
-            try:
-                value = self.fetch(item = value, package = self.package)
-                owner.__dict__[self.name] = value
-            except ImportError:
-                pass
-        return value
+#     def __get__(self, owner: object, type: Type = None) -> Any:
+#         value = owner.__dict__.get(self.name)
+#         if (isinstance(value, str) and '.' in value):
+#             try:
+#                 value = self.fetch(item = value, package = self.package)
+#                 owner.__dict__[self.name] = value
+#             except ImportError:
+#                 pass
+#         return value

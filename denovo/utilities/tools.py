@@ -186,6 +186,18 @@ def numify(item: str, raise_error: bool = False) -> Union[int, float, str]:
             else:
                 return item
 
+def parameterify(self, item: Type) -> List[str]:
+    """Returns list of parameters based on annotations of 'item'.
+
+    Args:
+        item (Type): item to find the annotated parameters for.
+
+    Returns:
+        List[str]: names of annotated parameters.
+        
+    """        
+    return list(item.__annotations__.keys())
+    
 def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
     """Converts string 'path' to pathlib.Path object.
 

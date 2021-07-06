@@ -885,17 +885,25 @@ class Catalog(Lexicon):
  
 @dataclasses.dataclass
 class Library(Lexicon):
-    """Stores classes and subclass instances.
+    """Stores classes and class instances.
     
     When searching for matches, instances are prioritized over classes.
     
-    
+    Args:
+        classes (Catalog): a catalog of stored classes. Defaults to any empty
+            Catalog
+        instances (Catalog): a catalog of stored class instances. Defaults to an
+            empty Catalog.
+        collections (MutableMapping[str, Set[str]]): a defaultdict with keys
+            that are the different kinds of stored items and values which are
+            sets of names of items that are of that kind. Defaults to an empty
+            defaultdict which autovivifies sets as values.
+            
     """
     classes: denovo.Catalog = denovo.Catalog()
     instances: denovo.Catalog = denovo.Catalog()
     collections: MutableMapping[str, Set[str]] = dataclasses.field(
-        default_factory = lambda: collections.defaultdict(
-            default_factory = set))
+        default_factory = lambda: collections.defaultdict(set))
 
     """ Public Methods """
     
@@ -910,8 +918,10 @@ class Library(Lexicon):
             Tuple[str]: collections of which 'item' is part of.
  
         """
+        if not isinstance(item, str):
+            item = denovo.tools.namify(item = item)
         collections = []  
-        for collection, classes in self.collections.items():
+        for collection, classes in self.collections.items():  
             if item in classes:
                 collections.append(collection)
         return tuple(collections)
@@ -931,37 +941,49 @@ class Library(Lexicon):
                 to. Defaults to None.
                 
         """
+        key = denovo.tools.namify(item = item)
+        base_key = None
         if inspect.isclass(item):
-            self._register_class(item = item)
+            self.classes[key] = item
         elif isinstance(item, object):
-            self._register_class(item = item.__class__)
-            self._register_instance(item = item)
+            self.instances[key] = item
+            base = item.__class__
+            base_key = denovo.tools.namify(item = base)
+            self.classes[base_key] = base
         else:
             raise TypeError(f'item must be a class or a class instance')
         if collection is not None:
             for classification in more_itertools.always_iterable(collection):
-                self.collection[classification].add(
-                    self._get_class_key(item = item))
+                self.collections[classification].add(key)
+                if base_key is not None:
+                    self.collections[classification].add(base_key)
         return self
     
-    def instance(self, name: Union[str, Sequence[str]], **kwargs) -> object:
-        """Returns instance of first match of 'name' in stored catalogs.
+    def withdraw(self, 
+                 name: Union[str, Sequence[str]], 
+                 kwargs: Mapping[Hashable, Any] = None) -> Union[Type, object]:
+        """Returns instance or class of first match of 'name' from catalogs.
         
         The method prioritizes the 'instances' catalog over 'classes' and any
         passed names in the order they are listed.
         
         Args:
-            name (Union[str, Sequence[str]]): [description]
+            name (Union[str, Sequence[str]]): key name(s) of stored item(s) 
+                sought.
+            kwargs (Mapping[Hashable, Any]): keyword arguments to pass to a
+                newly created instance or, if the stored item is already an
+                instance to be manually added as attributes.
             
         Raises:
-            KeyError: [description]
+            KeyError: if 'name' does not match a key to a stored item in either
+                'instances' or 'classes'.
             
         Returns:
-            Component: [description]
+            Union[Type, object]: returns a class is 'kwargs' are None. 
+                Otherwise, and object is returned.
             
         """
         names = denovo.tools.listify(name)
-        primary = names[0]
         item = None
         for key in names:
             for catalog in ['instances', 'classes']:
@@ -973,93 +995,48 @@ class Library(Lexicon):
             if item is not None:
                 break
         if item is None:
-            raise KeyError(f'No matching item for {name} was found') 
-        elif inspect.isclass(item):
-            instance = item(name = primary, **kwargs)
-        else:
-            instance = copy.deepcopy(item)
-            for key, value in kwargs.items():
-                setattr(instance, key, value)  
-        return instance 
+            raise KeyError(f'No matching item for {name} was found')
+        if kwargs is not None:
+            if 'name' in item.__annotations__.keys() and 'name' not in kwargs:
+                kwargs[name] = names[0]
+            if inspect.isclass(item):
+                item = item(**kwargs)
+            else:
+                for key, value in kwargs.items():
+                    setattr(item, key, value)  
+        return item
 
-    def parameterify(self, name: Union[str, Sequence[str]]) -> List[str]:
-        """[summary]
-
-        Args:
-            name (Union[str, Sequence[str]]): [description]
-
-        Returns:
-            List[str]: [description]
-            
-        """        
-        component = self.select(name = name)
-        return list(component.__annotations__.keys())
-
-    def select(self, name: Union[str, Sequence[str]]) -> Component:
-        """Returns subclass of first match of 'name' in stored catalogs.
+    # def select(self, name: Union[str, Sequence[str]]) -> Type:
+    #     """Returns subclass of first match of 'name' in stored catalogs.
         
-        The method prioritizes the 'classes' catalog over 'instances' and any
-        passed names in the order they are listed.
+    #     The method prioritizes the 'classes' catalog over 'instances' and any
+    #     passed names in the order they are listed.
         
-        Args:
-            name (Union[str, Sequence[str]]): [description]
+    #     Args:
+    #         name (Union[str, Sequence[str]]): [description]
             
-        Raises:
-            KeyError: [description]
+    #     Raises:
+    #         KeyError: [description]
             
-        Returns:
-            Component: [description]
+    #     Returns:
+    #         Type: [description]
             
-        """
-        names = denovo.tools.listify(name)
-        item = None
-        for key in names:
-            for catalog in ['classes', 'instances']:
-                try:
-                    item = getattr(self, catalog)[key]
-                    break
-                except KeyError:
-                    pass
-            if item is not None:
-                break
-        if item is None:
-            raise KeyError(f'No matching item for {name} was found') 
-        elif inspect.isclass(item):
-            component = item
-        else:
-            component = item.__class__  
-        return component 
-    
-    """ Private Methods """
-    
-    def _get_class_key(self, item: Type) -> str:
-        """Returns a snakecase key of the class name.
-        
-        Returns:
-            str: the snakecase name of the class.
-            
-        """
-        try:
-            key = denovo.tools.snakify(item.__name__) 
-        except AttributeError:
-            key = denovo.tools.snakify(item.__class__.__name__)
-        return key      
-
-    def _get_instance_key(self, item: object) -> str:
-        """Returns a snakecase key of the class instance name.
-        
-        Returns:
-            str: the snakecase name of the class instance.
-            
-        """
-        try:
-            key = item.name 
-        except AttributeError:
-            try:
-                key = hash(item)
-            except (TypeError, AttributeError):
-                try:
-                    key = denovo.tools.snakify(item.__name__) 
-                except AttributeError:
-                    key = denovo.tools.snakify(item.__class__.__name__)
-        return key
+    #     """
+    #     names = denovo.tools.listify(name)
+    #     item = None
+    #     for key in names:
+    #         for catalog in ['classes', 'instances']:
+    #             try:
+    #                 item = getattr(self, catalog)[key]
+    #                 break
+    #             except KeyError:
+    #                 pass
+    #         if item is not None:
+    #             break
+    #     if item is None:
+    #         raise KeyError(f'No matching item for {name} was found') 
+    #     elif inspect.isclass(item):
+    #         pass
+    #     else:
+    #         item = item.__class__  
+    #     return item 
