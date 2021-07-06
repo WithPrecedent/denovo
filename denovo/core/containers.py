@@ -959,6 +959,28 @@ class Library(Lexicon):
                     self.collections[classification].add(base_key)
         return self
     
+    def remove(self, name: str) -> None:
+        """Removes an item from 'instances' or 'classes.'
+        
+        If 'name' is found in 'instances', it will not also be removed from 
+        'classes'.
+
+        Args:
+            name (str): key name of item to remove.
+            
+        Raises:
+            KeyError: if 'name' is neither found in 'instances' or 'classes'.
+
+        """
+        try:
+            del self.instances[name]
+        except KeyError:
+            try:
+                del self.classes[name]
+            except KeyError:
+                raise KeyError(f'{name} is not found in the library')
+        return self    
+
     def withdraw(self, 
                  name: Union[str, Sequence[str]], 
                  kwargs: Mapping[Hashable, Any] = None) -> Union[Type, object]:
@@ -1006,37 +1028,3 @@ class Library(Lexicon):
                     setattr(item, key, value)  
         return item
 
-    # def select(self, name: Union[str, Sequence[str]]) -> Type:
-    #     """Returns subclass of first match of 'name' in stored catalogs.
-        
-    #     The method prioritizes the 'classes' catalog over 'instances' and any
-    #     passed names in the order they are listed.
-        
-    #     Args:
-    #         name (Union[str, Sequence[str]]): [description]
-            
-    #     Raises:
-    #         KeyError: [description]
-            
-    #     Returns:
-    #         Type: [description]
-            
-    #     """
-    #     names = denovo.tools.listify(name)
-    #     item = None
-    #     for key in names:
-    #         for catalog in ['classes', 'instances']:
-    #             try:
-    #                 item = getattr(self, catalog)[key]
-    #                 break
-    #             except KeyError:
-    #                 pass
-    #         if item is not None:
-    #             break
-    #     if item is None:
-    #         raise KeyError(f'No matching item for {name} was found') 
-    #     elif inspect.isclass(item):
-    #         pass
-    #     else:
-    #         item = item.__class__  
-    #     return item 

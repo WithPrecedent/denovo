@@ -458,6 +458,14 @@ def drop_suffix(item: Union[str, Mapping[str, Any], Sequence[str]],
 
 """ Introspection Tools """
     
+def find_base(item: Type, match: Type) -> Type:
+    """Returns class containing 'match' in its 'bases'."""
+    if match in item.__bases__:
+        return item
+    else:
+        for base_class in item.__bases__:
+            find_base(item = base_class, match = match)
+       
 def get_classes(module: types.ModuleType) -> List[Type]:
     """Returns list of string names of classes in a module."""
     return [m[0] for m in inspect.getmembers(module, inspect.isclass)

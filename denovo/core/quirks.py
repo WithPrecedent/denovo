@@ -229,13 +229,84 @@ class Importer(Quirk):
         value = super().__getattribute__(name)
         if (isinstance(value, str) and '.' in value):
             try:
+                print('trying to import')
                 value = self.importify(path = value)
                 super().__setattr__(name, value)
             except ImportError:
                 pass
         return value
    
+
+@dataclasses.dataclass
+class Keystone(Quirk, abc.ABC):
+    """Base mixin for automatic registration of subclasses and instances. 
     
+    Any concrete (non-abstract) subclass will automatically store itself in the 
+    class attribute 'subclasses' using the snakecase name of the class as the 
+    key.
+    
+    Any direct subclass will automatically store itself in the class attribute 
+    'library' using the snakecase name of the class as the key.
+    
+    Any instance of a subclass will be stored in the class attribute 'instances'
+    as long as '__post_init__' is called (either by a 'super()' call or if the
+    instance is a dataclass and '__post_init__' is not overridden).
+    
+    Args:
+        library (ClassVar[Library]): library that stores direct subclasses 
+            (those with Keystone in their '__bases__' attribute) and allows 
+            runtime access and instancing of those stored subclasses.
+    
+    Attributes:
+        subclasses (ClassVar[denovo.framework.Registry]): catalog that stores 
+            concrete subclasses and allows runtime access and instancing of 
+            those stored subclasses. 'subclasses' is automatically created when 
+            a direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced.
+        instances (ClassVar[denovo.Catalog]): catalog that stores
+            subclass instances and allows runtime access of those stored 
+            subclass instances. 'instances' is automatically created when a 
+            direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced. 
+                      
+    Namespaces: 
+        library, subclasses, instances, select, instance, __init_subclass__,
+        _get_subclasses_catalog_key, _get_instances_catalog_key
+    
+    """
+    library: ClassVar[denovo.Library] = denovo.Library()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to appropriate class libraries."""
+        super().__init_subclass__(**kwargs)
+        # Gets name of key to use for storing the cls.
+        key = denovo.tools.namify(item = cls)
+        # Adds class to 'library' if it is a base class.
+        if Keystone in cls.__bases__:
+            # Registers a new Keystone.
+            cls.library.deposit(name = key, collection = key)
+        else:
+            base = denovo.tools.find_base(item = cls, match = Keystone)
+            base = denovo.tools.namify(item = base)
+        # Adds concrete subclasses to 'library' using 'key'.
+        if not abc.ABC in cls.__bases__:
+            cls.subclasses[key] = cls
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Stores instance in 'library'.
+        self.library.deposit(item = self)
+
+    """ Private Methods """
+
+       
 # @dataclasses.dataclass
 # class Coordinator(Quirk):
 #     """Supports internal creation and automatic external parameterization.
