@@ -134,34 +134,67 @@ def run_tests(module: types.ModuleType,
 
 @dataclasses.dataclass
 class Testimony(object):
-    """Unit tester for a python package.
+    """Automated unit tester for an entire python package.
     
     Args:
-
+        package (object): the package to create and run unit tests for. Defaults
+            to 'denovo' package.
+        folder (Union[str, pathlib.Path]): folder where the unit test files are
+            located. Defaults to None.
+        prefix (str): prefix for the file names of the unit test files. Defaults
+            to 'test_' string.
+        
+    Attributes:
+        report (Union[str, pathlib.Path]): log report of testing listing which
+            tests were performed, which were skipped, any errors in testing,
+            and other information.
+            
+    To Do:
+        report: add method and support for it in the 'testify' method. 
         
     """
-    folder: Union[str, pathlib.Path]
     package: object = denovo
+    folder: Union[str, pathlib.Path] = None
     prefix: str = 'test_'
-    report: Union[str, pathlib.Path] = None
     
     """ Initialization Methods """
     
     def __call__(cls, *args, **kwargs) -> Callable:
-        """
+        """Instances the class and calls testify method.
+        
+        Returns:
+            Callable: 'testify' method based on args and kwargs.
+            
         """
         instance  = cls(*args, **kwargs)
         return instance.testify()
     
     """ Public Methods """
     
-    def testify(self) -> None:
-        """Calls testing methods for an entire package."""
-        testers = get_testers(package = self.package,
-                              folder = self.folder,
-                              prefix = self.prefix)
+    def testify(self, 
+                package: object = None, 
+                folder: Union[str, pathlib.Path] = None,
+                prefix: str = None) -> None:
+        """Calls testing methods for an entire package.
+        
+        Args:
+            package (object): the package to create and run unit tests for. 
+                Defaults to None, which will use the class instance attribute.
+            folder (Union[str, pathlib.Path]): folder where the unit test files 
+                are located.  Defaults to None, which will use the class 
+                instance attribute.
+            prefix (str): prefix for the file names of the unit test files. 
+                 Defaults to None, which will use the class instance attribute.
+            
+        """
+        package = package or self.package
+        folder = folder or self.folder
+        prefix = prefix or self.prefix
+        testers = get_testers(package = package, 
+                              folder = folder, 
+                              prefix = prefix)
         run_testers(testers = testers, 
-                    package = self.package, 
-                    prefix = self.prefix)
+                    package = package, 
+                    prefix = prefix)
         return
     

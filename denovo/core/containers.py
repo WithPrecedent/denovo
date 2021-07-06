@@ -4,7 +4,7 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-All denovo containers have a 'contents' attribute where an item or 'items' are
+All denovo containers have a 'contents' attribute where an item or items are
 internally stored. This is used instead of the normal 'data' attribute used in
 base python classes to make it easier for users to know which object they are
 accessing when using either 'contents' or 'data'.
@@ -24,6 +24,8 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
+    Library (object): registry for storing, accessing, and instancing classes
+        and instances.
         
 """
 from __future__ import annotations
@@ -880,15 +882,16 @@ class Catalog(Lexicon):
                          if i not in more_itertools.always_iterable(key)}
         return self
 
-      
+ 
 @dataclasses.dataclass
 class Library(Lexicon):
-    """Stores subclasses and subclass instances.
+    """Stores classes and subclass instances.
     
-    When searching for matches, instances are prioritized over subclasses.
+    When searching for matches, instances are prioritized over classes.
+    
     
     """
-    subclasses: denovo.Catalog = denovo.Catalog()
+    classes: denovo.Catalog = denovo.Catalog()
     instances: denovo.Catalog = denovo.Catalog()
     collections: MutableMapping[str, Set[str]] = dataclasses.field(
         default_factory = lambda: collections.defaultdict(
@@ -897,20 +900,36 @@ class Library(Lexicon):
     """ Public Methods """
     
     def classify(self, item: Union[str, object, Type]) -> Tuple[str]:
-        """[summary]
+        """Returns kind or kinds of 'item' based on 'collections.'
+        
+        Args:
+            item (Union[str, object, Type]): name of object or Type or an object
+                or Type to be classified.
+                
+        Returns:
+            Tuple[str]: collections of which 'item' is part of.
  
         """
         collections = []  
-        for kind, subclasses in self.collections.items():
-            if item in subclasses:
-                collections.append(kind)
+        for collection, classes in self.collections.items():
+            if item in classes:
+                collections.append(collection)
         return tuple(collections)
        
     def deposit(self, 
                 item: Union[Type, object],
-                kind: Union[str, Sequence[str]] = None) -> None:
-        """[summary]
+                collection: Union[str, Sequence[str]] = None) -> None:
+        """Adds 'item' to 'classes' and, possibly, 'instances'.
 
+        If 'item' is a class, it is added to 'classes.' If it is an object, it
+        is added to 'instances' and its class is added to 'classes'.
+        
+        Args:
+            item (Union[Type, object]): class or instance to add to the Library
+                instance.
+            collection (Union[str, Sequence[str]]): collection(s) to add 'item'
+                to. Defaults to None.
+                
         """
         if inspect.isclass(item):
             self._register_class(item = item)
@@ -919,15 +938,16 @@ class Library(Lexicon):
             self._register_instance(item = item)
         else:
             raise TypeError(f'item must be a class or a class instance')
-        if kind is not None:
-            for classification in more_itertools.always_iterable(kind):
-                self.kind[classification].add(self._get_class_key(item = item))
+        if collection is not None:
+            for classification in more_itertools.always_iterable(collection):
+                self.collection[classification].add(
+                    self._get_class_key(item = item))
         return self
     
     def instance(self, name: Union[str, Sequence[str]], **kwargs) -> object:
         """Returns instance of first match of 'name' in stored catalogs.
         
-        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        The method prioritizes the 'instances' catalog over 'classes' and any
         passed names in the order they are listed.
         
         Args:
@@ -944,7 +964,7 @@ class Library(Lexicon):
         primary = names[0]
         item = None
         for key in names:
-            for catalog in ['instances', 'subclasses']:
+            for catalog in ['instances', 'classes']:
                 try:
                     item = getattr(self, catalog)[key]
                     break
@@ -978,7 +998,7 @@ class Library(Lexicon):
     def select(self, name: Union[str, Sequence[str]]) -> Component:
         """Returns subclass of first match of 'name' in stored catalogs.
         
-        The method prioritizes the 'subclasses' catalog over 'instances' and any
+        The method prioritizes the 'classes' catalog over 'instances' and any
         passed names in the order they are listed.
         
         Args:
@@ -994,7 +1014,7 @@ class Library(Lexicon):
         names = denovo.tools.listify(name)
         item = None
         for key in names:
-            for catalog in ['subclasses', 'instances']:
+            for catalog in ['classes', 'instances']:
                 try:
                     item = getattr(self, catalog)[key]
                     break

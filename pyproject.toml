@@ -1,8 +1,13 @@
 [tool.poetry]
 name = "denovo"
 version = "0.1.0"
-description = ""
+description = "handy tools and classes for a new python package"
 authors = ["Corey Rayburn Yung <coreyrayburnyung@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/WithPrecedent/fiat"
+documentation = "https://fiat.readthedocs.io"
+repository = "https://github.com/WithPrecedent/fiat"
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -10,7 +15,18 @@ more-itertools = "^8.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+coverage = "^5.5"
+
+[tool.coverage.paths]
+source = ["denovo"]
+
+[tool.coverage.run]
+branch = true
+source = ["denovo"]
+
+[tool.coverage.report]
+show_missing = true
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.masonry.api"

@@ -6,10 +6,10 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 ToDo:
     Add testing logger
-    test_quirks
     test_configuration
-    test_framework (or eliminate framework module)
     test_filing
+    test_framework (or eliminate framework module)
+    test_quirks
     test_decorators
     test_lazy (beyond testing built into denovo)
     test_memory
