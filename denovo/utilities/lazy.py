@@ -28,6 +28,19 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 
 """ Importing Tools """
 
+def acquire(path: Union[str, pathlib.Path]) -> Any:
+    if isinstance(path, pathlib.Path) or '\\' in path or '\/' in path:
+        return fetch(file_path = path)
+    else:
+        parts = path.split('.')
+        package = parts.pop(0)
+        item = parts.pop(-1)
+        if parts:
+            module = '.'.join(parts)
+        else:
+            module = None
+        return fetch(item = item, module = module, package = package)
+
 def fetch(item: str, 
           module: str = None, 
           package: str = None,
@@ -68,7 +81,6 @@ def fetch(item: str,
             kwargs = {}
         else:
             kwargs = {'package': package}
-        print('test package module item', package, module, item)
         try:
             imported = importlib.import_module(module, **kwargs)
         except (ImportError, AttributeError):

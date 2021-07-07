@@ -180,58 +180,35 @@ class Importer(Quirk):
     (indicated by having a '.' in their text) will automatically have those
     attribute values turned into the corresponding stored classes.
 
-    The 'importify' method also allows this process to be performed manually.
-
     Subclasses should not have custom '__getattribute__' methods or properties
     to avoid errors. If a subclass absolutely must include a custom 
     '__getattribute__' method, it should incorporate the code from this class.
 
-    Namespaces: 'importify', '__getattribute__'
+    Namespaces: '__getattribute__'
     
     """
-     
-    """ Public Methods """
-
-    def importify(self, path: str) -> Any:
-        """Returns object named by 'key'.
-
-        Args:
-            path (str): import path of class, function, or variable.
-            
-        Returns:
-            Any: item from a python module.
-
-        """
-        item = path.split('.')[-1]
-        module = path[:-len(item) - 1]
-        try:
-            imported = getattr(importlib.import_module(module), item)
-        except (ImportError, AttributeError):
-            raise ImportError(f'failed to load {item} in {module}')
-        return imported
 
     """ Dunder Methods """
 
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self, attribute: str) -> Any:
         """Converts stored import paths into the corresponding objects.
 
         If an import path is stored, that attribute is permanently converted
         from a str to the imported object or class.
         
         Args:
-            name (str): name of attribute sought.
+            attribute (str): name of attribute sought.
 
         Returns:
             Any: the stored value or, if the value is an import path, the
                 class or object stored at the designated import path.
             
         """
-        value = super().__getattribute__(name)
-        if (isinstance(value, str) and '.' in value):
+        value = super().__getattribute__(attribute)
+        if isinstance(value, str) and '.' in value:
             try:
-                print('trying to import')
-                value = self.importify(path = value)
-                super().__setattr__(name, value)
+                value = denovo.lazy.acquire(path = value)
+                super().__setattr__(attribute, value)
             except ImportError:
                 pass
         return value
@@ -256,22 +233,8 @@ class Keystone(Quirk, abc.ABC):
         library (ClassVar[Library]): library that stores direct subclasses 
             (those with Keystone in their '__bases__' attribute) and allows 
             runtime access and instancing of those stored subclasses.
-    
-    Attributes:
-        subclasses (ClassVar[denovo.framework.Registry]): catalog that stores 
-            concrete subclasses and allows runtime access and instancing of 
-            those stored subclasses. 'subclasses' is automatically created when 
-            a direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced.
-        instances (ClassVar[denovo.Catalog]): catalog that stores
-            subclass instances and allows runtime access of those stored 
-            subclass instances. 'instances' is automatically created when a 
-            direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced. 
                       
-    Namespaces: 
-        library, subclasses, instances, select, instance, __init_subclass__,
-        _get_subclasses_catalog_key, _get_instances_catalog_key
+    Namespaces: library, __init_subclass__, __post_init__
     
     """
     library: ClassVar[denovo.Library] = denovo.Library()
@@ -279,20 +242,16 @@ class Keystone(Quirk, abc.ABC):
     """ Initialization Methods """
     
     def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to appropriate class libraries."""
+        """Adds 'cls' to 'library'."""
         super().__init_subclass__(**kwargs)
-        # Gets name of key to use for storing the cls.
-        key = denovo.tools.namify(item = cls)
-        # Adds class to 'library' if it is a base class.
-        if Keystone in cls.__bases__:
-            # Registers a new Keystone.
-            cls.library.deposit(name = key, collection = key)
-        else:
-            base = denovo.tools.find_base(item = cls, match = Keystone)
-            base = denovo.tools.namify(item = base)
-        # Adds concrete subclasses to 'library' using 'key'.
+        # Adds concrete subclasses to 'library'.
         if not abc.ABC in cls.__bases__:
-            cls.subclasses[key] = cls
+            if Keystone in cls.__bases__:
+                base = denovo.tools.namify(item = cls)
+            else:
+                base = denovo.tools.find_base(item = cls, match = Keystone)
+                base = denovo.tools.namify(item = base)
+            cls.library.deposit(item = cls, collection = base)
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
@@ -302,9 +261,8 @@ class Keystone(Quirk, abc.ABC):
         except AttributeError:
             pass
         # Stores instance in 'library'.
-        self.library.deposit(item = self)
-
-    """ Private Methods """
+        base = denovo.tools.find_base(item = self, match = Keystone)
+        self.library.deposit(item = self, collection = base)
 
        
 # @dataclasses.dataclass

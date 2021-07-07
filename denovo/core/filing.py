@@ -201,6 +201,7 @@ class Clerk(object):
         base.update(self.parameters)
         self.parameters = base
         # Adds and/overrides 'parameters' from 'settings'.
+        self.settings = self.settings or {}
         self._add_settings()
         # Creates FileLoader and FileSaver instances for loading and saving
         # files.
