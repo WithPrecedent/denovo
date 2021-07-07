@@ -10,7 +10,7 @@ Contents:
     Quirk (ABC): abstract base class for all denovo quirks, which are pseudo-
         mixins that sometimes do more than add functionality to subclasses. 
     Keystone (Quirk, ABC):
-    create_keystone (FunctionType):
+    build_keystone (FunctionType):
     Validator (Quirk):
     Converter (ABC):
 
@@ -35,53 +35,66 @@ import more_itertools
 import denovo
 
 
-# def create_keystone(
-#         keystone: Union[str, Keystone] = object, 
-#         name: str = None, 
-#         quirks: Union[
-#             str, 
-#             denovo.Quirk, 
-#             Sequence[str],
-#             Sequence[denovo.Quirk]] = None) -> Keystone:
-#     """[summary]
+quirks: denovo.Catalog[str, denovo.Quirk] = denovo.Catalog()
+keystones: denovo.Library = denovo.quirks.Keystone.library
 
-#     Args:
-#         keystone (Union[str, Keystone], optional): [description]. Defaults to 
-#             object.
-#         name (str, optional): [description]. Defaults to None.
-#         quirks (Union[ str, denovo.Quirk, Sequence[str], 
-#             Sequence[denovo.Quirk]], optional): Defaults to None.
+meta_sources = {}
 
-#     Raises:
-#         ValueError: [description]
-#         TypeError:
-        
-#     Returns:
-#         Keystone: [description]
-        
-#     """
-#     bases = []
-#     for quirk in more_itertools.always_iterable(quirks):
-#         if isinstance(quirk, str):
-#             bases.append(denovo.Quirk.quirks[quirk])
-#         elif isinstance(quirk, denovo.Quirk):
-#             bases.append(quirk)
-#         else:
-#             raise TypeError('All quirks must be str or Quirk type')
-#     if keystone is not object and name is None:
-#         raise ValueError('name must not be None is keystone is object')
-#     elif isinstance(keystone, str):
-#         bases.append(Keystone.library[keystone])
-#     elif isinstance(keystone, Keystone):
-#         bases.append(keystone)
-#     else:
-#         raise TypeError('keystone must be a str, Keystone type, or object')
-#     creation = dataclasses.dataclass(type(name, tuple(bases), {}))
-#     if keystone is object:
-#         Keystone.library[name] = creation
-#     return creation
-        
 
+def build_keystone(name: str,
+                   keystone: Union[str, denovo.quirks.Keystone] = None, 
+                   quirks: Union[str, 
+                                 denovo.Quirk, 
+                                 Sequence[Union[str, denovo.Quirk]]] = None,
+                   **kwargs) -> denovo.quirks.Keystone:
+    """[summary]
+
+    Args:
+        name (str): [description]
+        keystone (Union[str, denovo.quirks.Keystone], optional): [description]. 
+            Defaults to None.
+        quirks (Union[str, denovo.Quirk, Sequence[Union[str, denovo.Quirk]]], 
+            optional): [description]. Defaults to None.
+
+    Raises:
+        TypeError: if all 'quirks' are not str or Quirk type or if 'keystone' is
+            not a str or Keystone type.
+
+    Returns:
+        denovo.quirks.Keystone: dataclass of Keystone subclass with 'quirks'
+            added.
+        
+    """
+    bases = []
+    for quirk in more_itertools.always_iterable(quirks):
+        if isinstance(quirk, str):
+            bases.append(quirks[quirk])
+        elif isinstance(quirk, denovo.Quirk):
+            bases.append(quirk)
+        else:
+            raise TypeError('All quirks must be str or Quirk type')
+    if isinstance(keystone, str):
+        bases.append(keystones.classes[keystone])
+    elif isinstance(keystone, denovo.quirks.Keystone):
+        bases.append(keystone)
+    else:
+        raise TypeError('keystone must be a str or Keystone type')
+    return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
+
+@dataclasses.dataclass
+class Origin(object):
+    
+    annotation: Type
+    sources: Mapping[Union[Type, Tuple[Type], str]]
+
+@dataclasses.dataclass
+class Workshop(object):
+    
+    sources: Mapping[Union[Type, Tuple[Type], str]]
+    
+    def convert(self, source: Any, output: Type) -> Any:
+    
+    
 # @dataclasses.dataclass
 # class Validator(denovo.Quirk):
 #     """Mixin for calling validation methods

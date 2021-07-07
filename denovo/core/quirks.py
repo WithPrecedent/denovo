@@ -46,14 +46,10 @@ class Quirk(abc.ABC):
     addition to other classes like mixins but do not meet the formal definition. 
     Despite that face, quirks are sometimes internally referred to as "mixins" 
     because their design and goals are otherwise similar to mixins.
-
-    Args:
-        quirks (ClassVar[Catalog]): a catalog of Quirk subclasses.
-        
+ 
     Namespaces: __init_subclass__
     
     """
-    quirks: ClassVar[denovo.Catalog] = denovo.Catalog()
     
     """ Initialization Methods """
     
@@ -74,11 +70,11 @@ class Quirk(abc.ABC):
             except ValueError:
                 pass
             # Stores 'cls' in 'quirks'.
-            cls.quirks[key] = cls
+            denovo.framework.quirks[key] = cls
 
     
 @dataclasses.dataclass
-class Element(Quirk):
+class Element(Quirk, abc.ABC):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -126,7 +122,7 @@ class Element(Quirk):
 
 
 @dataclasses.dataclass
-class Factory(Quirk):
+class Factory(Quirk, abc.ABC):
     """Supports internal creation and automatic external parameterization.
     
     Args:
@@ -173,7 +169,7 @@ class Factory(Quirk):
 
 
 @dataclasses.dataclass
-class Importer(Quirk):
+class Importer(Quirk, abc.ABC):
     """Faciliates lazy importing from modules.
 
     Subclasses with attributes storing strings containing import paths 
