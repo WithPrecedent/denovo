@@ -35,10 +35,9 @@ import more_itertools
 import denovo
 
 
-quirks: denovo.Catalog[str, denovo.Quirk] = denovo.Catalog()
 keystones: denovo.Library = denovo.quirks.Keystone.library
-
-meta_sources = {}
+kinds: denovo.Catalog[str, Kind] = denovo.Catalog()
+quirks: denovo.Catalog[str, denovo.Quirk] = denovo.Catalog()
 
 
 def build_keystone(name: str,
@@ -81,20 +80,102 @@ def build_keystone(name: str,
         raise TypeError('keystone must be a str or Keystone type')
     return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
 
-@dataclasses.dataclass
-class Origin(object):
-    
-    annotation: Type
-    sources: Mapping[Union[Type, Tuple[Type], str]]
 
 @dataclasses.dataclass
-class Workshop(object):
+class Kind(object):
     
-    sources: Mapping[Union[Type, Tuple[Type], str]]
+    name: str
+    comparison: Union[Type, Tuple[Type]]
+    origins: List[Type] = dataclasses.field(default_factory = list)
     
-    def convert(self, source: Any, output: Type) -> Any:
+    """ Properties """
+    
+    @property
+    def sources(self) -> Tuple[Type, ...]:
+        return tuple(self.origins)
+
+
+@dataclasses.dataclass
+class Dyad(object):
+    
+    name: str = 'dyad'
+    comparison: Union[Type, Tuple[Type]] = MutableMapping
+    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
     
     
+@dataclasses.dataclass
+class Dictionary(object):
+    
+    name: str = 'dictionary'
+    comparison: Union[Type, Tuple[Type]] = MutableMapping
+    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])    
+    
+    
+    
+def dyad_to_dictionary(source: Dyad) -> Dictionary:
+    return dict(zip(source))
+
+
+@dataclasses.dataclass
+class Workshop(denovo.Lexicon):
+    
+    contents: Dict[str, Kind] = dataclasses.field(default_factory = dict)
+    
+    """ Properties """
+    
+    @property
+    def matches(self) -> Dict[Tuple[Type, ...], str]:
+        return {tuple(k.origins): k.name for k in self.values()}
+    
+    @property
+    def types(self) -> Dict[str, Type]:
+        return {k.name: k.comparison for k in self.values()}
+    
+    """Public Methods"""
+    
+    def categorize(self, item: Any) -> str:
+        """[summary]
+
+        Args:
+            item (Any): [description]
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        if inspect.isclass(item):
+            method = issubclass
+        else:
+            method = isinstance
+        for key, value in self.kinds.items():
+            if method(item, key):
+                return value
+        raise KeyError(f'item does not match any recognized type')
+       
+    def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
+        """[summary]
+
+        Args:
+            item (Any): [description]
+            output (str): [description]
+
+        Returns:
+            Any: [description]
+            
+        """
+        start = self.categorize(item = item)
+        if not isinstance(output, str):
+            stop = self.categorize(item = output)
+        else:
+            stop = output
+            output = self.kinds[output].name
+        method = getattr(self.kinds[output], f'from_{start}')
+        return method(item = item, **kwargs)
+
+
 # @dataclasses.dataclass
 # class Validator(denovo.Quirk):
 #     """Mixin for calling validation methods
