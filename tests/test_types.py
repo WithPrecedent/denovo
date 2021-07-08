@@ -4,7 +4,9 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
+import collections
 import dataclasses
+import pathlib
 import sys
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
@@ -25,6 +27,21 @@ def test_kind():
     assert isinstance(a_string, String)
     a_dict = {a_string: 'something'}
     assert isinstance(a_dict, Dictionary)
+    a_dyad = [['a', 'b', 'c'], ['d', 'e', 'f']]
+    assert isinstance(a_dyad, Dyad)
+    an_int = 4
+    assert isinstance(an_int, Integer)
+    assert not isinstance(an_int, Real)
+    a_real = 3.14
+    assert isinstance(a_real, Real)
+    a_default = collections.defaultdict(None, {'tree': 'house'})
+    assert isinstance(a_default, DefaultDictionary)
+    a_listing = ['abc', '123']
+    assert isinstance(a_listing, Listing)
+    a_disk = pathlib.Path('.')
+    assert isinstance(a_disk, Disk)
+    an_index = tuple(['for', 'four'])
+    assert isinstance(an_index, Index)
     new_string = NewString()
     assert new_string.comparison == str
     return
