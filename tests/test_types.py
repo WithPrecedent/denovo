@@ -25,9 +25,8 @@ def test_kind():
     assert isinstance(a_string, String)
     a_dict = {a_string: 'something'}
     assert isinstance(a_dict, Dictionary)
-    
-    
     new_string = NewString()
+    assert new_string.comparison == str
     return
 
 if __name__ == '__main__':

@@ -39,16 +39,24 @@ kinds: Dict[str, Kind] = {}
 
 @dataclasses.dataclass
 class Kind(Generic[KindType], abc.ABC):
+    """Base class for generic types used by denovo.
     
-    name: str
-    comparison: Union[Type, Tuple[Type]]
-    origins: List[Kind] = dataclasses.field(default_factory = list)
+    Args:
+    
+    
+    """
+    name: ClassVar[str]
+    comparison: ClassVar[Union[Type, Tuple[Type]]]
+    sources: ClassVar[Tuple[Kind]]
     
     """ Initialization Methods """
     
-    def __post_init__(self):
-        """Adds 'cls' instance to 'kinds' dict."""
-        kinds[self.name] = self
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'kinds' dict."""
+        super().__init_subclass__(**kwargs)
+        # Adds concrete subclasses to 'library'.
+        key = denovo.tools.namify(item = cls)
+        kinds[key] = cls
          
     """ Properties """
     
@@ -58,6 +66,7 @@ class Kind(Generic[KindType], abc.ABC):
     
     """ Dunder Methods """
     
+    @classmethod
     def __instancecheck__(self, instance: Any) -> bool:
         print('test instance', instance)
         print('test comparison', denovo.tools.tuplify(self.comparison))
@@ -66,8 +75,9 @@ class Kind(Generic[KindType], abc.ABC):
     def __str__(self) -> str:
         return denovo.tools.snakify(item = self.name)
     
-    # def __subclasscheck__(self, subclass: Type) -> bool:
-    #     return issubclass(subclass, denovo.tools.tuplify(self.comparison))
+    @classmethod
+    def __subclasscheck__(self, subclass: Type) -> bool:
+        return issubclass(subclass, denovo.tools.tuplify(self.comparison))
 
 
 """ Mapping Types """
@@ -75,29 +85,29 @@ class Kind(Generic[KindType], abc.ABC):
 @dataclasses.dataclass
 class Dictionary(Kind):
     
-    name: str = 'dictionary'
-    comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Dyad, Unknown])    
+    name: ClassVar[str] = 'dictionary'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableMapping
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Dyad, Unknown])    
 
 
 @dataclasses.dataclass
 class DefaultDictionary(Kind):
     
-    name: str = 'default_dictionary'
-    comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Dyad, Unknown])
+    name: ClassVar[str] = 'default_dictionary'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableMapping
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Dyad, Unknown])
     
     """ Dunder Methods """
     
+    @classmethod
     def __instancecheck__(self, instance: Any) -> bool:
         return (isinstance(instance, denovo.tools.tuplify(self.comparison))
                 and hasattr(instance, 'default_factory'))
 
-    # def __subclasscheck__(self, subclass: type) -> bool:
-    #     return (issubclass(subclass, denovo.tools.tuplify(self.comparison))
-    #             and 'default_factory' in subclass.__annotations__)
+    @classmethod
+    def __subclasscheck__(self, subclass: type) -> bool:
+        return (issubclass(subclass, denovo.tools.tuplify(self.comparison))
+                and 'default_factory' in subclass.__annotations__)
 
 
 """ Numerical Types """
@@ -105,19 +115,17 @@ class DefaultDictionary(Kind):
 @dataclasses.dataclass
 class Integer(Kind):
     
-    name: str = 'integer'
-    comparison: Union[Type, Tuple[Type]] = int
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Real, String, Unknown]) 
+    name: ClassVar[str] = 'integer'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = int
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Real, String, Unknown]) 
 
 
 @dataclasses.dataclass
 class Real(Kind):
     
-    name: str = 'real'
-    comparison: Union[Type, Tuple[Type]] = float
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Integer, String, Unknown]) 
+    name: ClassVar[str] = 'real'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = float
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Integer, String, Unknown]) 
 
 
 """ Sequence Types """
@@ -125,20 +133,20 @@ class Real(Kind):
 @dataclasses.dataclass
 class Chain(Kind, abc.ABC):
     
-    name: str = 'chain'
-    comparison: Union[Type, Tuple[Type]] = MutableSequence
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [String, Unknown])    
+    name: ClassVar[str] = 'chain'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableSequence
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([String, Unknown])    
 
 
 @dataclasses.dataclass
 class Dyad(Kind):
     
-    name: str = 'dyad'
-    comparison: Union[Type, Tuple[Type]] = Sequence 
+    name: ClassVar[str] = 'dyad'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = Sequence 
   
     """ Dunder Methods """
     
+    @classmethod
     def __instancecheck__(self, instance: Any) -> bool:
         return (isinstance(instance, denovo.tools.tuplify(self.comparison)) 
                 and len(instance) == 2
@@ -149,8 +157,8 @@ class Dyad(Kind):
 @dataclasses.dataclass
 class Listing(Chain):
     
-    name: str = 'listing'
-    comparison: Union[Type, Tuple[Type]] = MutableSequence  
+    name: ClassVar[str] = 'listing'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableSequence  
      
         
 """ Other Types """
@@ -158,45 +166,41 @@ class Listing(Chain):
 @dataclasses.dataclass
 class String(Kind):
     
-    name: str = 'string'
-    comparison: Union[Type, Tuple[Type]] = str
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Listing, Unknown])   
+    name: ClassVar[str] = 'string'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = str
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Listing, Unknown])   
 
     
 @dataclasses.dataclass
 class Disk(Kind):
     
-    name: str = 'disk'
-    comparison: Union[Type, Tuple[Type]] = tuple([String, pathlib.Path])
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Unknown])  
+    name: ClassVar[str] = 'disk'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple([String, pathlib.Path])
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Unknown])  
 
     
 @dataclasses.dataclass
 class Group(Kind):
     
-    name: str = 'group'
-    comparison: Union[Type, Tuple[Type]] = tuple([Set, Tuple, Chain])
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Unknown, Chain])  
+    name: ClassVar[str] = 'group'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple([Set, Tuple, Chain])
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Unknown, Chain])  
     
              
 @dataclasses.dataclass
 class Index(Kind):
     
-    name: str = 'index'
-    comparison: Union[Type, Tuple[Type]] = Hashable
-    origins: List[Kind] = dataclasses.field(
-        default_factory = lambda: [Unknown])  
+    name: ClassVar[str] = 'index'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = Hashable
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Unknown])  
     
 
 @dataclasses.dataclass
 class Unknown(Kind):
     
-    name: str = 'unknown'
-    comparison: Union[Type, Tuple[Type]] = Literal
-    origins: List[Kind] = dataclasses.field(default_factory = lambda: []) 
+    name: ClassVar[str] = 'unknown'
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = Literal
+    sources: ClassVar[Tuple[Kind]] = lambda: tuple([]) 
        
 
 """ Conversion Functions """
@@ -358,7 +362,7 @@ def unknown_to_string(source: Unknown) -> String:
 
 #     """ Private Methods """
     
-#     def _initialize_converter(self, name: str) -> Converter:
+#     def _initialize_converter(self, name: ClassVar[str]) -> Converter:
 #         """[summary]
 
 #         Args:

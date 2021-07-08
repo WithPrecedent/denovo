@@ -31,11 +31,11 @@ from .utilities import lazy
 from .utilities import tools
 from .core import types
 
-kind_names = tools.get_classes(module = types)
-for name in kind_names:
-    kind = getattr(types, name)
-    if not abc.ABC in kind.__bases__:
-        kind()
+# kind_names = tools.get_classes(module = types)
+# for name in kind_names:
+#     kind = getattr(types, name)
+#     if not abc.ABC in kind.__bases__:
+#         kind()
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 

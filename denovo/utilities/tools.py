@@ -286,8 +286,10 @@ def tuplify(item: Any, default_value: Any = None) -> Tuple[Any]:
             return default_value
     elif isinstance(item, tuple):
         return item
-    else:
+    elif isinstance(item, Iterable):
         return tuple(item)
+    else:
+        return tuple([item])
         
 def typify(item: str) -> Union[Sequence, int, float, bool, str]:
     """Converts stings to appropriate, supported datatypes.
