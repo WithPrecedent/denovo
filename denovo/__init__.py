@@ -27,7 +27,9 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Set, Tuple, Type, Union)
 
+from .core import types
 from .utilities import lazy
+from .utilities import tools
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 

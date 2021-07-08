@@ -1,33 +1,28 @@
 """
-framework:
+types:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 
 Contents:
-    Library (object):
-    Quirk (ABC): abstract base class for all denovo quirks, which are pseudo-
-        mixins that sometimes do more than add functionality to subclasses. 
-    Keystone (Quirk, ABC):
-    build_keystone (FunctionType):
-    Validator (Quirk):
-    Converter (ABC):
+
 
 ToDo:
-    Validator support for complex types like List[List[str]]
-    Add deannotation ability to Validator to automatically determine needed
-        converters
+    subclass check for Dyad
+    add date types and appropriate conversion functions
     
 """
 from __future__ import annotations
 import abc
+import collections
 import copy
 import dataclasses
 import inspect
+import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
-                    List, Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, TypeVar, Union)
+                    List, Literal, Mapping, MutableMapping, MutableSequence, 
+                    Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
@@ -35,145 +30,262 @@ import more_itertools
 import denovo
 
 
-keystones: denovo.Library = denovo.quirks.Keystone.library
-kinds: denovo.Catalog[str, Kind] = denovo.Catalog()
-quirks: denovo.Catalog[str, denovo.Quirk] = denovo.Catalog()
+KindType = TypeVar('KindType')
+
+kinds: Dict[str, Kind] = {}
 
 
-def build_keystone(name: str,
-                   keystone: Union[str, denovo.quirks.Keystone] = None, 
-                   quirks: Union[str, 
-                                 denovo.Quirk, 
-                                 Sequence[Union[str, denovo.Quirk]]] = None,
-                   **kwargs) -> denovo.quirks.Keystone:
-    """[summary]
-
-    Args:
-        name (str): [description]
-        keystone (Union[str, denovo.quirks.Keystone], optional): [description]. 
-            Defaults to None.
-        quirks (Union[str, denovo.Quirk, Sequence[Union[str, denovo.Quirk]]], 
-            optional): [description]. Defaults to None.
-
-    Raises:
-        TypeError: if all 'quirks' are not str or Quirk type or if 'keystone' is
-            not a str or Keystone type.
-
-    Returns:
-        denovo.quirks.Keystone: dataclass of Keystone subclass with 'quirks'
-            added.
-        
-    """
-    bases = []
-    for quirk in more_itertools.always_iterable(quirks):
-        if isinstance(quirk, str):
-            bases.append(quirks[quirk])
-        elif isinstance(quirk, denovo.Quirk):
-            bases.append(quirk)
-        else:
-            raise TypeError('All quirks must be str or Quirk type')
-    if isinstance(keystone, str):
-        bases.append(keystones.classes[keystone])
-    elif isinstance(keystone, denovo.quirks.Keystone):
-        bases.append(keystone)
-    else:
-        raise TypeError('keystone must be a str or Keystone type')
-    return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
-
+""" Base Type """
 
 @dataclasses.dataclass
-class Kind(object):
+class Kind(Generic[KindType]):
     
     name: str
     comparison: Union[Type, Tuple[Type]]
-    origins: List[Type] = dataclasses.field(default_factory = list)
+    origins: List[Kind] = dataclasses.field(default_factory = list)
     
+    """ Initialization Methods """
+    
+    def __post_init__(self):
+        """Adds 'cls' instance to 'kinds' catalog."""
+        super().__post_init__()
+        # Adds instance to 'kinds'.
+        kinds[self.name] = self
+         
     """ Properties """
     
     @property
-    def sources(self) -> Tuple[Type, ...]:
+    def sources(self) -> Tuple[Kind, ...]:
         return tuple(self.origins)
+    
+    """ Dunder Methods """
+    
+    def __instancecheck__(self, instance: Any) -> bool:
+        return isinstance(instance, denovo.tools.tuplify(self.comparison))
+    
+    def __str__(self) -> str:
+        return denovo.tools.snakify(item = self.name)
+    
+    def __subclasscheck__(self, subclass: type) -> bool:
+        return issubclass(subclass, denovo.tools.tuplify(self.comparison))
 
 
+""" Mapping Types """
+
 @dataclasses.dataclass
-class Dyad(object):
-    
-    name: str = 'dyad'
-    comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
-    
-    
-@dataclasses.dataclass
-class Dictionary(object):
+class Dictionary(Kind):
     
     name: str = 'dictionary'
     comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])    
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Dyad, Unknown])    
+
+
+@dataclasses.dataclass
+class DefaultDictionary(Kind):
     
+    name: str = 'default_dictionary'
+    comparison: Union[Type, Tuple[Type]] = MutableMapping
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Dyad, Unknown])
     
+    """ Dunder Methods """
+    
+    def __instancecheck__(self, instance: Any) -> bool:
+        return (isinstance(instance, denovo.tools.tuplify(self.comparison))
+                and hasattr(instance, 'default_factory'))
+
+    def __subclasscheck__(self, subclass: type) -> bool:
+        return (issubclass(subclass, denovo.tools.tuplify(self.comparison))
+                and 'default_factory' in subclass.__annotations__)
+
+
+""" Numerical Types """
+
+@dataclasses.dataclass
+class Integer(Kind):
+    
+    name: str = 'integer'
+    comparison: Union[Type, Tuple[Type]] = int
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Real, String, Unknown]) 
+
+
+@dataclasses.dataclass
+class Real(Kind):
+    
+    name: str = 'real'
+    comparison: Union[Type, Tuple[Type]] = float
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Integer, String, Unknown]) 
+
+
+""" Sequence Types """
+
+@dataclasses.dataclass
+class Chain(Kind, abc.ABC):
+    
+    name: str = 'chain'
+    comparison: Union[Type, Tuple[Type]] = MutableSequence
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [String, Unknown])    
+
+
+@dataclasses.dataclass
+class Dyad(Kind):
+    
+    name: str = 'dyad'
+    comparison: Union[Type, Tuple[Type]] = Sequence 
+  
+    """ Dunder Methods """
+    
+    def __instancecheck__(self, instance: Any) -> bool:
+        return (isinstance(instance, denovo.tools.tuplify(self.comparison)) 
+                and len(instance) == 2
+                and isinstance(instance[0], self.comparison)
+                and isinstance(instance[1], self.comparison))
+        
+        
+@dataclasses.dataclass
+class Listing(Chain):
+    
+    name: str = 'listing'
+    comparison: Union[Type, Tuple[Type]] = MutableSequence  
+     
+        
+""" Other Types """
+         
+@dataclasses.dataclass
+class String(Kind):
+    
+    name: str = 'string'
+    comparison: Union[Type, Tuple[Type]] = str
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Listing, Unknown])   
+
+    
+@dataclasses.dataclass
+class Disk(Kind):
+    
+    name: str = 'disk'
+    comparison: Union[Type, Tuple[Type]] = tuple([String, pathlib.Path])
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Unknown])  
+
+    
+@dataclasses.dataclass
+class Group(Kind):
+    
+    name: str = 'group'
+    comparison: Union[Type, Tuple[Type]] = tuple([Set, Tuple, Chain])
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Unknown, Chain])  
+    
+             
+@dataclasses.dataclass
+class Index(Kind):
+    
+    name: str = 'index'
+    comparison: Union[Type, Tuple[Type]] = Hashable
+    origins: List[Kind] = dataclasses.field(
+        default_factory = lambda: [Unknown])  
+    
+
+@dataclasses.dataclass
+class Unknown(Kind):
+    
+    name: str = 'unknown'
+    comparison: Union[Type, Tuple[Type]] = Literal
+    origins: List[Kind] = dataclasses.field(default_factory = lambda: []) 
+       
+
+""" Conversion Functions """
+
     
 def dyad_to_dictionary(source: Dyad) -> Dictionary:
     return dict(zip(source))
 
+def dyad_to_default_dictionary(source: Dyad, 
+                               default_factory: Any) -> DefaultDictionary:
+    return collections.defaultdict(zip(source), 
+                                   default_factory = default_factory)
 
-@dataclasses.dataclass
-class Workshop(denovo.Lexicon):
-    
-    contents: Dict[str, Kind] = dataclasses.field(default_factory = dict)
-    
-    """ Properties """
-    
-    @property
-    def matches(self) -> Dict[Tuple[Type, ...], str]:
-        return {tuple(k.origins): k.name for k in self.values()}
-    
-    @property
-    def types(self) -> Dict[str, Type]:
-        return {k.name: k.comparison for k in self.values()}
-    
-    """Public Methods"""
-    
-    def categorize(self, item: Any) -> str:
-        """[summary]
+def integer_to_real(source: Integer) -> Real:
+    return float(source)
 
-        Args:
-            item (Any): [description]
+def listing_to_string(source: Listing) -> String:
+    return ', '.join(source)
 
-        Raises:
-            KeyError: [description]
+def real_to_integer(source: Real) -> Integer:
+    return int(source)
 
-        Returns:
-            str: [description]
+def unknown_to_index(source: Unknown) -> Index:
+    return hash(source)
+
+def unknown_to_string(source: Unknown) -> String:
+    return str(source)
+
+
+
+
+# @dataclasses.dataclass
+# class Workshop(denovo.Lexicon):
+    
+#     contents: Dict[str, Kind] = dataclasses.field(default_factory = dict)
+    
+#     """ Properties """
+    
+#     @property
+#     def matches(self) -> Dict[Tuple[Type, ...], str]:
+#         return {tuple(k.origins): k.name for k in self.values()}
+    
+#     @property
+#     def types(self) -> Dict[str, Type]:
+#         return {k.name: k.comparison for k in self.values()}
+    
+#     """Public Methods"""
+    
+#     def categorize(self, item: Any) -> str:
+#         """[summary]
+
+#         Args:
+#             item (Any): [description]
+
+#         Raises:
+#             KeyError: [description]
+
+#         Returns:
+#             str: [description]
             
-        """
-        if inspect.isclass(item):
-            method = issubclass
-        else:
-            method = isinstance
-        for key, value in self.kinds.items():
-            if method(item, key):
-                return value
-        raise KeyError(f'item does not match any recognized type')
+#         """
+#         if inspect.isclass(item):
+#             method = issubclass
+#         else:
+#             method = isinstance
+#         for key, value in self.kinds.items():
+#             if method(item, key):
+#                 return value
+#         raise KeyError(f'item does not match any recognized type')
        
-    def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
-        """[summary]
+#     def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
+#         """[summary]
 
-        Args:
-            item (Any): [description]
-            output (str): [description]
+#         Args:
+#             item (Any): [description]
+#             output (str): [description]
 
-        Returns:
-            Any: [description]
+#         Returns:
+#             Any: [description]
             
-        """
-        start = self.categorize(item = item)
-        if not isinstance(output, str):
-            stop = self.categorize(item = output)
-        else:
-            stop = output
-            output = self.kinds[output].name
-        method = getattr(self.kinds[output], f'from_{start}')
-        return method(item = item, **kwargs)
+#         """
+#         start = self.categorize(item = item)
+#         if not isinstance(output, str):
+#             stop = self.categorize(item = output)
+#         else:
+#             stop = output
+#             output = self.kinds[output].name
+#         method = getattr(self.kinds[output], f'from_{start}')
+#         return method(item = item, **kwargs)
 
 
 # @dataclasses.dataclass
