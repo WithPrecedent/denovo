@@ -22,14 +22,20 @@ __package__ = 'denovo'
 
 __author__ = 'Corey Rayburn Yung'
 
-
+import abc
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Set, Tuple, Type, Union)
 
-from .core import types
 from .utilities import lazy
 from .utilities import tools
+from .core import types
+
+kind_names = tools.get_classes(module = types)
+for name in kind_names:
+    kind = getattr(types, name)
+    if not abc.ABC in kind.__bases__:
+        kind()
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 

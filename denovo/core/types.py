@@ -38,7 +38,7 @@ kinds: Dict[str, Kind] = {}
 """ Base Type """
 
 @dataclasses.dataclass
-class Kind(Generic[KindType]):
+class Kind(Generic[KindType], abc.ABC):
     
     name: str
     comparison: Union[Type, Tuple[Type]]
@@ -47,9 +47,7 @@ class Kind(Generic[KindType]):
     """ Initialization Methods """
     
     def __post_init__(self):
-        """Adds 'cls' instance to 'kinds' catalog."""
-        super().__post_init__()
-        # Adds instance to 'kinds'.
+        """Adds 'cls' instance to 'kinds' dict."""
         kinds[self.name] = self
          
     """ Properties """
@@ -61,13 +59,15 @@ class Kind(Generic[KindType]):
     """ Dunder Methods """
     
     def __instancecheck__(self, instance: Any) -> bool:
+        print('test instance', instance)
+        print('test comparison', denovo.tools.tuplify(self.comparison))
         return isinstance(instance, denovo.tools.tuplify(self.comparison))
     
     def __str__(self) -> str:
         return denovo.tools.snakify(item = self.name)
     
-    def __subclasscheck__(self, subclass: type) -> bool:
-        return issubclass(subclass, denovo.tools.tuplify(self.comparison))
+    # def __subclasscheck__(self, subclass: Type) -> bool:
+    #     return issubclass(subclass, denovo.tools.tuplify(self.comparison))
 
 
 """ Mapping Types """
@@ -95,9 +95,9 @@ class DefaultDictionary(Kind):
         return (isinstance(instance, denovo.tools.tuplify(self.comparison))
                 and hasattr(instance, 'default_factory'))
 
-    def __subclasscheck__(self, subclass: type) -> bool:
-        return (issubclass(subclass, denovo.tools.tuplify(self.comparison))
-                and 'default_factory' in subclass.__annotations__)
+    # def __subclasscheck__(self, subclass: type) -> bool:
+    #     return (issubclass(subclass, denovo.tools.tuplify(self.comparison))
+    #             and 'default_factory' in subclass.__annotations__)
 
 
 """ Numerical Types """
