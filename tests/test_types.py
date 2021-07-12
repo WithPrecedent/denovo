@@ -10,7 +10,7 @@ import pathlib
 import sys
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+                    Sequence, Set, Text, Tuple, Type, Union)
 
 import denovo
 from denovo.core.types import *
@@ -39,11 +39,15 @@ def test_kind():
     a_listing = ['abc', '123']
     assert isinstance(a_listing, Listing)
     a_disk = pathlib.Path('.')
-    assert isinstance(a_disk, Disk)
+    assert isinstance(a_disk, Path)
     an_index = tuple(['for', 'four'])
     assert isinstance(an_index, Index)
     new_string = NewString()
     assert new_string.comparison == str
+    an_adjacency = {'a_node': {'another_node', 'ya_node'},
+                    'another_node': set(),
+                    'ya_node': set()}
+    assert isinstance(an_adjacency, Adjacency)
     return
 
 if __name__ == '__main__':

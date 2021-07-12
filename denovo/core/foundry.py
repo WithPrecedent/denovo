@@ -1,5 +1,5 @@
 """
-converters:
+foundry: classes for converting and validating types
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -15,108 +15,78 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
+import dataclasses
+import inspect
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
                     List, Literal, Mapping, MutableMapping, MutableSequence, 
                     Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
 
-import more_itertools
-
 import denovo
-from denovo.core.types import (Chain, DefaultDictionary, Dictionary, Disk, Dyad, 
-                               Group, Index, Integer, Kind, Listing, Real, 
-                               String, Unknown)
+from denovo.core.types import Kind, kinds
 
 
+@dataclasses.dataclass
+class Workshop(denovo.Lexicon):
+    """Controls type conversion, class
     
-def dyad_to_dictionary(source: Dyad) -> Dictionary:
-    return dict(zip(source))
-
-def dyad_to_default_dictionary(source: Dyad, 
-        default_factory: Any = None) -> DefaultDictionary:
-    return collections.defaultdict(zip(source), 
-                                   default_factory = default_factory)
-
-def integer_to_real(source: Integer) -> Real:
-    return float(source)
-
-def listing_to_string(source: Listing) -> String:
-    return ', '.join(source)
-
-def real_to_integer(source: Real) -> Integer:
-    return int(source)
-
-def string_to_disk(source: String) -> Disk:
-    """Converts String 'source' to Disk object."""
-    return pathlib.Path(source)
     
-def unknown_to_index(source: Unknown) -> Index:
-    return hash(source)
-
-def unknown_to_string(source: Unknown) -> String:
-    return str(source)
-
-
-
-
-# @dataclasses.dataclass
-# class Workshop(denovo.Lexicon):
+    """
+    contents: Dict[str, Kind] = dataclasses.field(default_factory = kinds)
     
-#     contents: Dict[str, Kind] = dataclasses.field(default_factory = dict)
+    """ Properties """
     
-#     """ Properties """
+    @property
+    def matches(self) -> Dict[Tuple[Type, ...], str]:
+        return {tuple(k.origins): k.name for k in self.values()}
     
-#     @property
-#     def matches(self) -> Dict[Tuple[Type, ...], str]:
-#         return {tuple(k.origins): k.name for k in self.values()}
+    @property
+    def types(self) -> Dict[str, Type]:
+        return {k.name: k.comparison for k in self.values()}
     
-#     @property
-#     def types(self) -> Dict[str, Type]:
-#         return {k.name: k.comparison for k in self.values()}
+    """Public Methods"""
     
-#     """Public Methods"""
-    
-#     def categorize(self, item: Any) -> str:
-#         """[summary]
+    def categorize(self, item: Any) -> str:
+        """[summary]
 
-#         Args:
-#             item (Any): [description]
+        Args:
+            item (Any): [description]
 
-#         Raises:
-#             KeyError: [description]
+        Raises:
+            KeyError: [description]
 
-#         Returns:
-#             str: [description]
+        Returns:
+            str: [description]
             
-#         """
-#         if inspect.isclass(item):
-#             method = issubclass
-#         else:
-#             method = isinstance
-#         for key, value in self.kinds.items():
-#             if method(item, key):
-#                 return value
-#         raise KeyError(f'item does not match any recognized type')
+        """
+        if inspect.isclass(item):
+            method = issubclass
+        else:
+            method = isinstance
+        for key, value in self.kinds.items():
+            if method(item, key):
+                return value
+        raise KeyError(f'item does not match any recognized type')
        
-#     def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
-#         """[summary]
+    def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
+        """[summary]
 
-#         Args:
-#             item (Any): [description]
-#             output (str): [description]
+        Args:
+            item (Any): [description]
+            output (str): [description]
 
-#         Returns:
-#             Any: [description]
+        Returns:
+            Any: [description]
             
-#         """
-#         start = self.categorize(item = item)
-#         if not isinstance(output, str):
-#             stop = self.categorize(item = output)
-#         else:
-#             stop = output
-#             output = self.kinds[output].name
-#         method = getattr(self.kinds[output], f'from_{start}')
-#         return method(item = item, **kwargs)
+        """
+        start = self.categorize(item = item)
+        if not isinstance(output, str):
+            stop = self.categorize(item = output)
+        else:
+            stop = output
+            output = self.kinds[output].name
+        method = getattr(self.kinds[output], f'from_{start}')
+        return method(item = item, **kwargs)
 
 
 # @dataclasses.dataclass
