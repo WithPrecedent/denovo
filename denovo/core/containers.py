@@ -900,8 +900,8 @@ class Library(Lexicon):
             defaultdict which autovivifies sets as values.
             
     """
-    classes: denovo.Catalog = denovo.Catalog()
-    instances: denovo.Catalog = denovo.Catalog()
+    classes: Catalog = Catalog()
+    instances: Catalog = Catalog()
     collections: MutableMapping[str, Set[str]] = dataclasses.field(
         default_factory = lambda: collections.defaultdict(set))
 

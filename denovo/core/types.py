@@ -15,7 +15,7 @@ Contents:
     Nodes (Type): annotation type for one or more nodes.
 
 ToDo:
-    add date types and appropriate conversion functions
+    Add date types and appropriate conversion functions
     Combine 'comparison' and 'annotation' attributes for Kind to allow using
         type hints for instance and subclass checks (and removing the need for
         'annotation' attribute inclusion in type hints). First stab with
@@ -41,7 +41,7 @@ import denovo
 
 KindType = TypeVar('KindType')
 
-kinds: Dict[str, Kind] = {}
+catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 
 
 """ Base Type """
@@ -62,10 +62,10 @@ class Kind(Generic[KindType], abc.ABC):
     """ Initialization Methods """
     
     def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'kinds' dict."""
+        """Adds 'cls' to 'catalog' dict."""
         super().__init_subclass__(**kwargs)
         # Adds concrete subclasses to 'library'.
-        kinds[cls.name] = cls
+        catalog[cls.name] = cls
 
     """ Dunder Methods """
     

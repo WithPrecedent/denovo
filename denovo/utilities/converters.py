@@ -30,6 +30,7 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
+import functools
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
                     List, Literal, Mapping, MutableMapping, MutableSequence, 
@@ -43,59 +44,95 @@ from denovo.core.types import (Adjacency, Chain, Composite, Connections,
                                Group, Index, Integer, Kind, Listing, Matrix, 
                                Nodes, Path, Pipeline, Pipelines, Real, String)
 
+
+""" Converter Registry and Registry Decorator """
+
+catalog: denovo.containers.Catalog = denovo.containers.Catalog()
+
+def converter(func: Callable) -> Callable:
+    """Decorator for a converter registry.
+    
+    Args:
+        func (Callable): an callable converter.
+        
+    Returns:
+        Callable: with passed arguments.
+        
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
+        catalog[name] = func
+        return func(*args, **kwargs)
+    return wrapper
+
+
 """ Strict Simple Converters """
 
+@converter
 def dyad_to_dictionary(source: Dyad) -> Dictionary:
     """Converts a Dyad to a Dictionary."""
     return dict(zip(source))
 
+@converter
 def dyad_to_default_dictionary(source: Dyad, 
         default_factory: Any = None) -> DefaultDictionary:
     """Converts a Dyad to a DefaultDictionary."""
     return collections.defaultdict(default_factory, dict(zip(source)))
 
+@converter
 def integer_to_real(source: Integer) -> Real:
     """Converts an Integer to a Float."""
     return float(source)
 
+@converter
 def integer_to_string(source: Integer) -> String:
     """Converts an Integer to a String."""
     return str(source)
 
+@converter
 def listing_to_string(source: Listing) -> String:
     """Converts a Listing to a String."""
     return ', '.join(source)
 
+@converter
 def real_to_integer(source: Real) -> Integer:
     """Converts a Real to an Integer."""
     return int(source)
 
+@converter
 def real_to_string(source: Real) -> String:
     """Converts an Real to a String."""
     return str(source)
 
+@converter
 def string_to_integer(source: String) -> Integer:
     """Converts a String to an Integer."""
     return int(source)
 
+@converter
 def string_to_dictionary(source: String) -> Dictionary:
     """Convets a String to a dictionary."""
     return ast.literal_eval(source)
 
+@converter
 def string_to_disk(source: String) -> Path:
     """Converts a String to a Path."""
     return pathlib.Path(source)
 
+@converter
 def string_to_listing(source: String) -> Listing:
     """Converts String to a Listing."""
     return ast.literal_eval(source)
 
+@converter
 def string_to_real(source: String) -> Real:
     """Converts a String to an Real."""
     return float(source)
 
 """ Strict Composite Converters """
 
+@converter
 def adjacency_to_edges(source: Adjacency) -> Edges:
     """Converts an adjacency list to an edge list."""
     edges = []
@@ -104,6 +141,7 @@ def adjacency_to_edges(source: Adjacency) -> Edges:
             edges.append(tuple(node, connection))
     return edges
 
+@converter
 def adjacency_to_matrix(source: Adjacency) -> Matrix:
     """Converts an adjacency list to an adjacency matrix."""
     names = list(source.keys())
@@ -114,6 +152,7 @@ def adjacency_to_matrix(source: Adjacency) -> Matrix:
             matrix[i][j] = 1
     return tuple(matrix, names)
 
+@converter
 def edges_to_adjacency(source: Edges) -> Adjacency:
     """Converts and edge list to an adjacency list."""
     adjacency = collections.defaultdict(set)
@@ -126,6 +165,7 @@ def edges_to_adjacency(source: Edges) -> Adjacency:
             adjacency[edge_pair[1]] = set()
     return adjacency
 
+@converter
 def matrix_to_adjacency(source: Matrix) -> Adjacency:
     """Converts adjacency matrix to an adjacency list."""
     matrix = source[0]
@@ -143,6 +183,7 @@ def matrix_to_adjacency(source: Matrix) -> Adjacency:
         adjacency[new_key] = new_values
     return adjacency
 
+@converter
 def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
     """Converts a pipeline to an adjacency list."""
     adjacency = collections.defaultdict(set)
@@ -153,9 +194,11 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
 
 """ Flexible Converters """
 
+@converter
 def to_index(source: Any) -> Index:
     return hash(source)
-      
+
+@converter     
 def to_string(source: Any) -> String:
     """Converts 'source' to a String.
     
@@ -174,7 +217,8 @@ def to_string(source: Any) -> String:
         return source
     else:
         return str(source)
-    
+
+@converter    
 def to_dictionary(source: Any) -> Dictionary:
     if isinstance(source, String):
     try:

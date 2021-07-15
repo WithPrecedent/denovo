@@ -22,7 +22,7 @@ class NewString(denovo.types.String):
     
 
 def test_kind():
-    assert 'default_dictionary' in kinds
+    assert 'default_dictionary' in denovo.types.catalog
     a_string = 'blah'
     assert isinstance(a_string, String)
     a_dict = {a_string: 'something'}

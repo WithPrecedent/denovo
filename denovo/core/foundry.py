@@ -18,6 +18,7 @@ import collections
 import dataclasses
 import inspect
 import pathlib
+from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
                     List, Literal, Mapping, MutableMapping, MutableSequence, 
                     Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
@@ -33,12 +34,15 @@ class Workshop(denovo.Lexicon):
     
     """
     contents: Dict[str, Kind] = dataclasses.field(default_factory = kinds)
+    converters: Dict[str, Callable] = dataclasses.field(
+        default_factory = lambda: denovo.converters.catalog)
     
     """ Properties """
     
     @property
     def matches(self) -> Dict[Tuple[Type, ...], str]:
-        return {tuple(k.origins): k.name for k in self.values()}
+        return {denovo.converters.tuplify(item = k.sources): k.name 
+                for k in self.values()}
     
     @property
     def types(self) -> Dict[str, Type]:
