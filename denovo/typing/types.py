@@ -188,8 +188,8 @@ class Listing(Kind):
 class Dyad(Kind):
     
     name: ClassVar[str] = 'dyad'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableSequence
-    annotation: ClassVar[Annotated] = MutableSequence
+    comparison: ClassVar[Union[Type, Tuple[Type]]] = Sequence
+    annotation: ClassVar[Annotated] = Sequence[Sequence]
     sources: ClassVar[Tuple[Kind]] = lambda: tuple([String]) 
     
     """ Dunder Methods """

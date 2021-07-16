@@ -24,10 +24,11 @@ from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable,
                     Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
 
 import denovo
-from denovo.core.types import (Adjacency, Chain, Composite, Connections, 
-                               DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
-                               Group, Index, Integer, Kind, Listing, Matrix, 
-                               Nodes, Path, Pipeline, Pipelines, Real, String)
+from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
+                                 DefaultDictionary, Dictionary, Dyad, Edge, 
+                                 Edges, Group, Index, Integer, Kind, Listing, 
+                                 Matrix, Nodes, Path, Pipeline, Pipelines, Real, 
+                                 String)
 
 
 @dataclasses.dataclass
@@ -102,9 +103,11 @@ class Workshop(object):
         else:
             stop = self.names[output]
         try:
-            method = self.converters[f'{start}_{stop}']
+            strict_key = denovo.typing.types.STRICT(start, stop)
+            method = self.converters[strict_key]
         except KeyError:
-            method = self.converters[f'to_{stop}']
+            flexible_key = denovo.typing.types.FLEXIBLE(stop)
+            method = self.converters[flexible_key]
         return method(item = item, **kwargs)
 
 

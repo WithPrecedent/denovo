@@ -28,9 +28,8 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
                     Sequence, Set, Tuple, Type, Union)
 
 from .utilities import lazy
-from .utilities import tools
 from .core import containers
-from .core import types
+from .typing import types
 
 # kind_names = tools.get_classes(module = types)
 # for name in kind_names:

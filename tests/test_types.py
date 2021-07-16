@@ -13,7 +13,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
                     Sequence, Set, Text, Tuple, Type, Union)
 
 import denovo
-from denovo.core.types import *
+from denovo.typing.types import *
 
 
 @dataclasses.dataclass

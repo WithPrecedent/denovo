@@ -39,11 +39,17 @@ from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable,
 import more_itertools
 
 import denovo
-from denovo.core.types import (Adjacency, Chain, Composite, Connections, 
-                               DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
-                               Group, Index, Integer, Kind, Listing, Matrix, 
-                               Nodes, Path, Pipeline, Pipelines, Real, String)
+from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
+                                 DefaultDictionary, Dictionary, Dyad, Edge, 
+                                 Edges, Group, Index, Integer, Kind, Listing, 
+                                 Matrix, Nodes, Path, Pipeline, Pipelines, Real, 
+                                 String)
 
+
+""" String Format Templates for Converter Function Names """
+
+FLEXIBLE: Callable = lambda: 'to_{}'.format
+STRICT: Callable = lambda: '{}_to_{}'.format
 
 """ Converter Registry and Registry Decorator """
 
