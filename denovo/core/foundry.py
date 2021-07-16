@@ -24,29 +24,42 @@ from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable,
                     Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
 
 import denovo
-from denovo.core.types import Kind, kinds
+from denovo.core.types import (Adjacency, Chain, Composite, Connections, 
+                               DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
+                               Group, Index, Integer, Kind, Listing, Matrix, 
+                               Nodes, Path, Pipeline, Pipelines, Real, String)
 
 
 @dataclasses.dataclass
-class Workshop(denovo.Lexicon):
+class Workshop(object):
     """Controls type conversion, class
     
     
     """
-    contents: Dict[str, Kind] = dataclasses.field(default_factory = kinds)
+    kinds: Dict[str, Kind] = dataclasses.field(
+        default_factory = lambda: denovo.types.catalog)
     converters: Dict[str, Callable] = dataclasses.field(
         default_factory = lambda: denovo.converters.catalog)
     
     """ Properties """
     
     @property
-    def matches(self) -> Dict[Tuple[Type, ...], str]:
-        return {denovo.converters.tuplify(item = k.sources): k.name 
-                for k in self.values()}
+    def matchers(self) -> Dict[Tuple[Type, ...], str]:
+        return {denovo.converters.to_tuple(item = k.sources): k.name 
+                for k in self.kinds.values()}
     
     @property
+    def names(self) -> Dict[Kind, str]:
+        labels = {}
+        for key, value in self.kinds.items():
+            for item in denovo.converters.to_tuple(item = value.comparison):
+                labels[item] = key
+        return labels
+        
+    @property
     def types(self) -> Dict[str, Type]:
-        return {k.name: k.comparison for k in self.values()}
+        return {k.name: denovo.converters.to_tuple(item = k.comparison) 
+                for k in self.kinds.values()}
     
     """Public Methods"""
     
@@ -72,7 +85,7 @@ class Workshop(denovo.Lexicon):
                 return value
         raise KeyError(f'item does not match any recognized type')
        
-    def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
+    def convert(self, item: Any, output: Union[Kind, String], **kwargs) -> Any:
         """[summary]
 
         Args:
@@ -84,12 +97,14 @@ class Workshop(denovo.Lexicon):
             
         """
         start = self.categorize(item = item)
-        if not isinstance(output, str):
-            stop = self.categorize(item = output)
-        else:
+        if not isinstance(output, String):
             stop = output
-            output = self.kinds[output].name
-        method = getattr(self.kinds[output], f'from_{start}')
+        else:
+            stop = self.names[output]
+        try:
+            method = self.converters[f'{start}_{stop}']
+        except KeyError:
+            method = self.converters[f'to_{stop}']
         return method(item = item, **kwargs)
 
 
