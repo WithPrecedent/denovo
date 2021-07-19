@@ -6,13 +6,16 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 
 Contents:
-    Adjacency (Type): annotation type for an adjacency list.
-    Matrix (Type): annotation type for an adjacency matrix.
-    Edge (Type): annotation type for a tuple of edge endpoints.
-    Edges (Type): annotation type for an edge list.
-    Pipeline (Type): annotation type for a pipeline.
-    Pipelines (Type): annotation type for pipelines.
-    Nodes (Type): annotation type for one or more nodes.
+    KindType (TypeVar): Base generic type for denovo typing system.
+    Kind (KindType, ABC): base class for denovo typing system.
+    
+    Adjacency (Kind): annotation type for an adjacency list.
+    Matrix (Kind): annotation type for an adjacency matrix.
+    Edge (Kind): annotation type for a tuple of edge endpoints.
+    Edges (Kind): annotation type for an edge list.
+    Pipeline (Kind): annotation type for a pipeline.
+    Pipelines (Kind): annotation type for pipelines.
+    Nodes (Kind): annotation type for one or more nodes.
 
 ToDo:
     Add date types and appropriate conversion functions
@@ -26,20 +29,21 @@ ToDo:
 """
 from __future__ import annotations
 import abc
+from collections.abc import (Container, Hashable, Iterable, Iterator, 
+                             Generator, Callable, Collection, Sequence, 
+                             MutableSequence, Set, MutableSet, Mapping, 
+                             MutableMapping, MappingView, ItemsView, KeysView, 
+                             ValuesView)
 import dataclasses
 import itertools
 import pathlib
-from typing import (Annotated, Any, Callable, ClassVar, Dict, Generic, Hashable, 
-                    Iterable, List, Literal, Mapping, MutableMapping, 
-                    MutableSequence, Optional, Sequence, Set, Text, Tuple, 
-                    Type, TypeVar, Union)
+from typing import (Annotated, Any, ClassVar, Generic, Literal, Optional, Type,
+                    TypeVar, Union)
 
 import more_itertools
 
 import denovo
 
-
-KindType = TypeVar('KindType')
 
 catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 
@@ -47,7 +51,7 @@ catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 """ Base Type """
 
 @dataclasses.dataclass
-class Kind(Generic[KindType], abc.ABC):
+class Kind(abc.ABC):
     """Base class for generic types used by denovo.
     
     Args:
@@ -55,9 +59,8 @@ class Kind(Generic[KindType], abc.ABC):
     
     """
     name: ClassVar[str]
-    comparison: ClassVar[Union[Type, Tuple[Type]]]
+    comparison: ClassVar[Union[Type, tuple[Type]]]
     annotation: ClassVar[Annotated]
-    sources: ClassVar[Tuple[Kind]]
     
     """ Initialization Methods """
     
@@ -84,45 +87,40 @@ class Kind(Generic[KindType], abc.ABC):
 class String(Kind):
     
     name: ClassVar[str] = 'string'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = str
-    annotation: ClassVar[Annotated] = Text
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Listing])   
+    comparison: ClassVar[Union[Type, tuple[Type]]] = str
+    annotation: ClassVar[Annotated] = str
 
     
 @dataclasses.dataclass
 class Path(Kind):
     
     name: ClassVar[str] = 'disk'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = pathlib.Path
+    comparison: ClassVar[Union[Type, tuple[Type]]] = pathlib.Path
     annotation: ClassVar[Annotated] = pathlib.Path
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([String])  
    
              
 @dataclasses.dataclass
 class Index(Kind):
     
     name: ClassVar[str] = 'index'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Hashable
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Hashable
     annotation: ClassVar[Annotated] = Hashable
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])  
 
 
 @dataclasses.dataclass
 class Integer(Kind):
     
     name: ClassVar[str] = 'integer'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = int
-    annotation: ClassVar[Annotated] = int
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Real, String]) 
+    comparison: ClassVar[Union[Type, tuple[Type]]] = int
+    annotation: ClassVar[Annotated] = int 
 
 
 @dataclasses.dataclass
 class Real(Kind):
     
     name: ClassVar[str] = 'real'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = float
+    comparison: ClassVar[Union[Type, tuple[Type]]] = float
     annotation: ClassVar[Annotated] = float
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Integer, String]) 
 
 
 """ Container Types """
@@ -131,18 +129,16 @@ class Real(Kind):
 class Dictionary(Kind):
     
     name: ClassVar[str] = 'dictionary'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableMapping
-    annotation: ClassVar[Annotated] = MutableMapping[Hashable, Any]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Dyad])    
+    comparison: ClassVar[Union[Type, tuple[Type]]] = MutableMapping
+    annotation: ClassVar[Annotated] = MutableMapping[Hashable, Any] 
 
 
 @dataclasses.dataclass
 class DefaultDictionary(Kind):
     
     name: ClassVar[str] = 'default_dictionary'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableMapping
+    comparison: ClassVar[Union[Type, tuple[Type]]] = MutableMapping
     annotation: ClassVar[Annotated] = MutableMapping[Index, Any]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Dyad])
     
     """ Dunder Methods """
     
@@ -156,9 +152,8 @@ class DefaultDictionary(Kind):
 class Chain(Kind, abc.ABC):
     
     name: ClassVar[str] = 'chain'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Sequence
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Sequence
     annotation: ClassVar[Annotated] = Sequence 
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([String])  
     
     """ Dunder Methods """
     
@@ -172,9 +167,8 @@ class Chain(Kind, abc.ABC):
 class Listing(Kind):
     
     name: ClassVar[str] = 'listing'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableSequence
+    comparison: ClassVar[Union[Type, tuple[Type]]] = MutableSequence
     annotation: ClassVar[Annotated] = MutableSequence
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([String]) 
     
     """ Dunder Methods """
     
@@ -188,9 +182,8 @@ class Listing(Kind):
 class Dyad(Kind):
     
     name: ClassVar[str] = 'dyad'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Sequence
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Sequence
     annotation: ClassVar[Annotated] = Sequence[Sequence]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([String]) 
     
     """ Dunder Methods """
     
@@ -206,9 +199,8 @@ class Dyad(Kind):
 class Group(Kind):
     
     name: ClassVar[str] = 'group'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple([Set, Tuple, Chain])
-    annotation: ClassVar[Annotated] = Union[Set, Tuple, Chain]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Chain])  
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([Set, tuple, Chain])
+    annotation: ClassVar[Annotated] = Union[Set, tuple, Chain]
 
      
 """ Composite Types """
@@ -217,9 +209,8 @@ class Group(Kind):
 class Adjacency(Kind):
     
     name: ClassVar[str] = 'adjacency'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = MutableMapping
-    annotation: ClassVar[Annotated] = MutableMapping[Hashable, Set[Hashable]]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Edges, Matrix, Nodes])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = MutableMapping
+    annotation: ClassVar[Annotated] = MutableMapping[Hashable, Set[Hashable]]    
 
     """ Dunder Methods """
     
@@ -238,9 +229,8 @@ class Adjacency(Kind):
 class Edge(Kind):
     
     name: ClassVar[str] = 'edge'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple
-    annotation: ClassVar[Annotated] = Tuple[Hashable, Hashable]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple
+    annotation: ClassVar[Annotated] = tuple[Hashable, Hashable]  
 
     """ Dunder Methods """
     
@@ -256,9 +246,8 @@ class Edge(Kind):
 class Edges(Kind):
     
     name: ClassVar[str] = 'edges'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Chain
-    annotation: ClassVar[Annotated] = Sequence[Edge]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Adjacency, Matrix, Nodes])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    annotation: ClassVar[Annotated] = Sequence[Edge]    
 
     """ Dunder Methods """
     
@@ -273,9 +262,8 @@ class Edges(Kind):
 class Connections(Kind):
     
     name: ClassVar[str] = 'connections'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Set
-    annotation: ClassVar[Annotated] = Set[Hashable]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Set
+    annotation: ClassVar[Annotated] = Set[Hashable] 
 
     """ Dunder Methods """
     
@@ -290,10 +278,9 @@ class Connections(Kind):
 class Matrix(Kind):
     
     name: ClassVar[str] = 'matrix'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple
-    annotation: ClassVar[Annotated] = Tuple[MutableSequence[MutableSequence[
-        Integer]], MutableSequence[Index]]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([Adjacency, Edges, Nodes])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple
+    annotation: ClassVar[Annotated] = tuple[MutableSequence[MutableSequence[
+        Integer]], MutableSequence[Index]]    
 
     """ Dunder Methods """
     
@@ -313,9 +300,8 @@ class Matrix(Kind):
 class Pipeline(Kind):
     
     name: ClassVar[str] = 'pipeline'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Chain
-    annotation: ClassVar[Annotated] = Sequence[Index]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    annotation: ClassVar[Annotated] = Sequence[Index]  
 
     """ Dunder Methods """
     
@@ -330,9 +316,8 @@ class Pipeline(Kind):
 class Pipelines(Kind):
     
     name: ClassVar[str] = 'pipelines'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = Chain
-    annotation: ClassVar[Annotated] = Sequence[Sequence[Index]]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    annotation: ClassVar[Annotated] = Sequence[Sequence[Index]]   
 
     """ Dunder Methods """
     
@@ -347,19 +332,16 @@ class Pipelines(Kind):
 class Nodes(Kind):
     
     name: ClassVar[str] = 'nodes'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple([Index, Pipeline])
-    annotation: ClassVar[Annotated] = Union[Hashable, Sequence]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])     
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([Index, Pipeline])
+    annotation: ClassVar[Annotated] = Union[Hashable, Sequence] 
 
 
 @dataclasses.dataclass
 class Composite(Kind):
     
     name: ClassVar[str] = 'graphs'
-    comparison: ClassVar[Union[Type, Tuple[Type]]] = tuple([Adjacency, 
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([Adjacency, 
                                                             Edges,
                                                             Matrix, 
                                                             Nodes])
     annotation: ClassVar[Annotated] = Union[Adjacency, Edges, Matrix, Nodes]
-    sources: ClassVar[Tuple[Kind]] = lambda: tuple([])   
-

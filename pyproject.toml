@@ -10,7 +10,7 @@ documentation = "https://fiat.readthedocs.io"
 repository = "https://github.com/WithPrecedent/fiat"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 more-itertools = "^8.8.0"
 
 [tool.poetry.dev-dependencies]
