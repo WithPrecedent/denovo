@@ -10,9 +10,9 @@ ToDo:
 """
 import dataclasses
 import sys
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import denovo
 

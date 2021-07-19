@@ -21,9 +21,9 @@ import copy
 import dataclasses
 import importlib.util
 import pathlib
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import denovo
 
@@ -154,7 +154,7 @@ class Clerk(object):
     denovo, pandas, and numpy objects.
 
     Args:
-        settings (Settings): a Settings instance, preferably with a section 
+        settings (settings): a settings instance, preferably with a section 
             named 'files' with file-management related settings. If 'settings' 
             does ot have file configuration options or if 'settings' is None, 
             internal defaults will be used. Defaults to None.
@@ -178,7 +178,7 @@ class Clerk(object):
             global 'default_parameters' variable.
 
     """
-    settings: denovo.Settings = None
+    settings: denovo.settings = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'

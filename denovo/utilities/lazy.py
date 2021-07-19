@@ -22,9 +22,9 @@ from importlib import util
 import pathlib
 import sys
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 """ Importing Tools """
 

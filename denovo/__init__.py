@@ -23,19 +23,13 @@ __package__ = 'denovo'
 __author__ = 'Corey Rayburn Yung'
 
 import abc
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+                    Sequence, Type, Union)
 
 from .utilities import lazy
 from .core import containers
 from .typing import types
-
-# kind_names = tools.get_classes(module = types)
-# for name in kind_names:
-#     kind = getattr(types, name)
-#     if not abc.ABC in kind.__bases__:
-#         kind()
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 
@@ -83,7 +77,7 @@ importables: Dict[str, str] = {
     'quirks': 'core.quirks',
     'Quirk': 'core.quirks.Quirk',
     'configuration': 'core.configuration',
-    'Settings': 'core.configuration.Settings',
+    'settings': 'core.configuration.settings',
     'filing': 'core.filing',
     'Clerk': 'core.filing.Clerk',
     'FileFormat': 'core.filing.FileFormat',

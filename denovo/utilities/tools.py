@@ -46,9 +46,9 @@ import inspect
 import pathlib
 import re
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 """ Module-Level Attributes """
 
@@ -102,7 +102,7 @@ def instancify(item: Union[Type, object], **kwargs) -> object:
     else:
         raise TypeError('item must be a class or class instance')
             
-def listify(item: Any, default_value: Any = None) -> List[Any]:
+def listify(item: Any, default_value: Any = None) -> list[Any]:
     """Returns passed item as a list (if not already a list).
 
     Args:
@@ -185,14 +185,14 @@ def numify(item: str, raise_error: bool = False) -> Union[int, float, str]:
             else:
                 return item
 
-def parameterify(self, item: Type) -> List[str]:
+def parameterify(self, item: Type) -> list[str]:
     """Returns list of parameters based on annotations of 'item'.
 
     Args:
         item (Type): item to find the annotated parameters for.
 
     Returns:
-        List[str]: names of annotated parameters.
+        list[str]: names of annotated parameters.
         
     """        
     return list(item.__annotations__.keys())
@@ -262,7 +262,7 @@ def stringify(item: Any, default_value: Any = None) -> Any:
     else:
         raise TypeError('item must be str or a sequence')
     
-def tuplify(item: Any, default_value: Any = None) -> Tuple[Any]:
+def tuplify(item: Any, default_value: Any = None) -> tuple[Any]:
     """Returns passed item as a tuple (if not already a tuple).
 
     Args:
@@ -467,17 +467,17 @@ def find_base(item: Type, match: Type) -> Type:
         for base_class in item.__bases__:
             find_base(item = base_class, match = match)
        
-def get_classes(module: types.ModuleType) -> List[Type]:
+def get_classes(module: types.ModuleType) -> list[Type]:
     """Returns list of string names of classes in a module."""
     return [m[0] for m in inspect.getmembers(module, inspect.isclass)
             if m[1].__module__ == module.__name__]
     
-def get_functions(module: types.ModuleType) -> List[str]:
+def get_functions(module: types.ModuleType) -> list[str]:
     """Returns list of string names of functions in a module."""
     return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
             if m[1].__module__ == module.__name__]
 
-def get_modules(folder: Union[str, pathlib.Path]) -> List[pathlib.Path]:  
+def get_modules(folder: Union[str, pathlib.Path]) -> list[pathlib.Path]:  
     """Returns list of pathlib Paths of modules in 'folder'."""
     folder = pathlibify(item = folder)  
     return list(folder.glob('*/*.py'))

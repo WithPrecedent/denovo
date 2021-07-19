@@ -24,7 +24,7 @@ Contents:
     pipeline_to_adjacency (Callable): converts pipeline to an adjacency list.
 
 ToDo:
-
+    Add more flexible converters.
     
 """
 from __future__ import annotations
@@ -33,8 +33,8 @@ import collections
 import functools
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
-                    List, Literal, Mapping, MutableMapping, MutableSequence, 
-                    Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
+                    list, Literal, Mapping, MutableMapping, MutableSequence, 
+                    Optional, Sequence, set, tuple, Type, TypeVar, Union)
 
 import more_itertools
 
@@ -75,16 +75,27 @@ def converter(func: Callable) -> Callable:
 
 """ Strict Simple Converters """
 
+# @converter
+# def default_dictionary_to_dyad(source: DefaultDictionary) -> Dyad:
+#     """Converts a DefaultDictionary to a Dyad."""
+#     return dictionary_to_dyad(source = source)
+
+@converter
+def dictionary_to_dyad(source: Dictionary) -> Dyad:
+    """Converts a Dictionary to a Dyad."""
+    return zip(*source)
+
 @converter
 def dyad_to_dictionary(source: Dyad) -> Dictionary:
     """Converts a Dyad to a Dictionary."""
     return dict(zip(source))
 
-@converter
-def dyad_to_default_dictionary(source: Dyad, 
-        default_factory: Any = None) -> DefaultDictionary:
-    """Converts a Dyad to a DefaultDictionary."""
-    return collections.defaultdict(default_factory, dict(zip(source)))
+# @converter
+# def dyad_to_default_dictionary(source: Dyad, 
+#         default_factory: Any = None) -> DefaultDictionary:
+#     """Converts a Dyad to a DefaultDictionary."""
+#     return collections.defaultdict(default_factory, 
+#                                    dyad_to_dictionary(source = source))
 
 @converter
 def integer_to_real(source: Integer) -> Real:
@@ -100,6 +111,10 @@ def integer_to_string(source: Integer) -> String:
 def listing_to_string(source: Listing) -> String:
     """Converts a Listing to a String."""
     return ', '.join(source)
+
+@converter
+def path_to_string(source: Path) -> String:
+    return str(source)
 
 @converter
 def real_to_integer(source: Real) -> Integer:
@@ -118,11 +133,11 @@ def string_to_integer(source: String) -> Integer:
 
 @converter
 def string_to_dictionary(source: String) -> Dictionary:
-    """Convets a String to a dictionary."""
+    """Converts a String to a dictionary."""
     return ast.literal_eval(source)
 
 @converter
-def string_to_disk(source: String) -> Path:
+def string_to_path(source: String) -> Path:
     """Converts a String to a Path."""
     return pathlib.Path(source)
 
@@ -224,9 +239,9 @@ def to_string(source: Any) -> String:
     else:
         return str(source)
 
-@converter    
-def to_dictionary(source: Any) -> Dictionary:
-    if isinstance(source, String):
-    try:
-        return ast.literal_eval()
-    except Tu
+# @converter    
+# def to_dictionary(source: Any) -> Dictionary:
+#     if isinstance(source, String):
+#     try:
+#         return ast.literal_eval()
+#     except Tu

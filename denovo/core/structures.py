@@ -35,16 +35,16 @@ import collections.abc
 import copy
 import dataclasses
 import itertools
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, Listing, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, list, 
+                    Mapping, MutableMapping, listing, Optional, 
+                    Sequence, set, tuple, Type, Union)
 
 import more_itertools
 
 import denovo
 from denovo.core.types import (Adjacency, Chain, Composite, Connections, 
                                DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
-                               Group, Index, Integer, Kind, Listing, Matrix, 
+                               Group, Index, Integer, Kind, listing, Matrix, 
                                Nodes, Path, Pipeline, Pipelines, Real, String)
 
       
@@ -63,8 +63,8 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout denovo. For example, if a denovo 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a settings instance, 'name' should 
+            match the appropriate section name in a settings instance. 
             Defaults to None. 
         contents (Any): any stored item(s). Defaults to None.
 
@@ -162,7 +162,7 @@ class Graph(denovo.Bunch, abc.ABC):
         pass
     
     @abc.abstractproperty
-    def nodes(self) -> Listing[Hashable]:
+    def nodes(self) -> listing[Hashable]:
         """Returns the nodes of the stored graph."""
         pass
 
@@ -380,7 +380,7 @@ class System(Graph):
         return denovo.converters.adjacency_to_edges(source = self.contents)
 
     @property
-    def endpoints(self) -> Set[Hashable]:
+    def endpoints(self) -> set[Hashable]:
         """Returns endpoint nodes in the stored graph in a list."""
         return {k for k in self.contents.keys() if not self.contents[k]}
 
@@ -390,7 +390,7 @@ class System(Graph):
         return denovo.converters.adjacency_to_matrix(source = self.contents)
                       
     @property
-    def nodes(self) -> Set[Hashable]:
+    def nodes(self) -> set[Hashable]:
         """Returns all stored nodes in a list."""
         return set(self.contents.keys())
 
@@ -400,7 +400,7 @@ class System(Graph):
         return self._find_all_paths(starts = self.roots, stops = self.endpoints)
        
     @property
-    def roots(self) -> Set[Hashable]:
+    def roots(self) -> set[Hashable]:
         """Returns root nodes in the stored graph in a list."""
         stops = list(itertools.chain.from_iterable(self.contents.values()))
         return {k for k in self.contents.keys() if k not in stops}
@@ -585,7 +585,7 @@ class System(Graph):
             adjacency = denovo.converters.edges_to_adjacency(source = item)
         elif isinstance(item, Matrix):
             adjacency = denovo.converters.matrix_to_adjacency(source = item)
-        elif isinstance(item, (Listing, Tuple, Set)):
+        elif isinstance(item, (listing, tuple, set)):
             adjacency = denovo.converters.pipeline_to_adjacency(source = item)
         elif isinstance(item, Hashable):
             adjacency = {item: set()}
@@ -807,7 +807,7 @@ class System(Graph):
 #         return adjacency_to_edges(source = self.contents)
 
 #     @property
-#     def endpoints(self) -> Listing[Hashable]:
+#     def endpoints(self) -> listing[Hashable]:
 #         """Returns a list of endpoint nodes in the stored graph.."""
 #         return [k for k in self.contents.keys() if not self.contents[k]]
 
@@ -836,11 +836,11 @@ class System(Graph):
 #         return {self._stringify(n): n for n in self.contents.keys()}
   
 #     @property
-#     def roots(self) -> Listing[Hashable]:
+#     def roots(self) -> listing[Hashable]:
 #         """Returns root nodes in the stored graph..
 
 #         Returns:
-#             Listing[Hashable]: root nodes.
+#             listing[Hashable]: root nodes.
             
 #         """
 #         stops = list(itertools.chain.from_iterable(self.contents.values()))
@@ -959,7 +959,7 @@ class System(Graph):
 #             raise KeyError(f'descendants {missing} are not in the stored graph.')
 #         if ancestors is not None:  
 #             if (isinstance(ancestors, Hashable) and ancestors in self
-#                     or (isinstance(ancestors, (Listing, Tuple, Set)) 
+#                     or (isinstance(ancestors, (listing, tuple, set)) 
 #                         and all(isinstance(n, Hashable) for n in ancestors)
 #                         and all(n in self.contents for n in ancestors))):
 #                 start = ancestors
@@ -1007,7 +1007,7 @@ class System(Graph):
 #         elif isinstance(source, Matrix):
 #             self.append(source = self.from_matrix(matrix = source))
 #         elif isinstance(source, Nodes):
-#             if isinstance(source, (Listing, Tuple, Set)):
+#             if isinstance(source, (listing, tuple, set)):
 #                 new_graph = Graph()
 #                 edges = more_itertools.windowed(source, 2)
 #                 for edge_pair in edges:
@@ -1257,12 +1257,12 @@ class System(Graph):
        
 #     def _depth_first_search(self, 
 #         node: Hashable, 
-#         visited: Listing[Hashable]) -> Pipeline:
+#         visited: listing[Hashable]) -> Pipeline:
 #         """Returns a depth first search path through the Graph.
 
 #         Args:
 #             node (Hashable): node to start the search from.
-#             visited (Listing[Hashable]): list of visited nodes.
+#             visited (listing[Hashable]): list of visited nodes.
 
 #         Returns:
 #             Pipeline: nodes in a path through the Graph.
@@ -1344,7 +1344,7 @@ class System(Graph):
 #             bool: [description]
             
 #         """
-#         if isinstance(nodes, (Listing, Tuple, Set)):
+#         if isinstance(nodes, (listing, tuple, set)):
 #             return all(n in self.contents for n in nodes)
 #         elif isinstance(nodes, Hashable):
 #             return nodes in self.contents
@@ -1364,7 +1364,7 @@ class System(Graph):
 #         return self.contents[key]
 
 #     def __setitem__(self, key: Hashable, value: Any) -> None:
-#         """Sets 'key' in 'contents' to 'value'.
+#         """sets 'key' in 'contents' to 'value'.
 
 #         Args:
 #             key (Hashable): key to set in 'contents'.
@@ -1384,11 +1384,11 @@ class System(Graph):
 #         del self.contents[key]
 #         return self
 
-#     def __missing__(self) -> List:
+#     def __missing__(self) -> list:
 #         """Returns an empty list when a key doesn't exist.
 
 #         Returns:
-#             List: an empty list.
+#             list: an empty list.
 
 #         """
 #         return []

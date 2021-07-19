@@ -27,9 +27,9 @@ import dataclasses
 import importlib
 import inspect
 import logging
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import more_itertools
 
@@ -84,8 +84,8 @@ class Element(Quirk, abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout denovo. For example, if a denovo 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a settings instance, 'name' should 
+            match the appropriate section name in a settings instance. 
             Defaults to None. 
 
     Namespaces: name, __post_init__, and _get_name
@@ -97,7 +97,7 @@ class Element(Quirk, abc.ABC):
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
-        # Sets 'name' attribute.
+        # sets 'name' attribute.
         if not hasattr(self, 'name') or self.name is None:  
             self.name = self._get_name()
         # Calls parent and/or mixin initialization method(s).

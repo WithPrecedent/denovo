@@ -15,7 +15,7 @@ Contents:
     Converter (ABC):
 
 ToDo:
-    Validator support for complex types like List[List[str]]
+    Validator support for complex types like list[list[str]]
     Add deannotation ability to Validator to automatically determine needed
         converters
     
@@ -26,8 +26,8 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
-                    List, Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, TypeVar, Union)
+                    list, Mapping, MutableMapping, MutableSequence, Optional, 
+                    Sequence, set, tuple, Type, TypeVar, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
@@ -85,13 +85,13 @@ def build_keystone(name: str,
 class Kind(object):
     
     name: str
-    comparison: Union[Type, Tuple[Type]]
-    origins: List[Type] = dataclasses.field(default_factory = list)
+    comparison: Union[Type, tuple[Type]]
+    origins: list[Type] = dataclasses.field(default_factory = list)
     
     """ Properties """
     
     @property
-    def sources(self) -> Tuple[Type, ...]:
+    def sources(self) -> tuple[Type, ...]:
         return tuple(self.origins)
 
 
@@ -99,16 +99,16 @@ class Kind(object):
 class Dyad(object):
     
     name: str = 'dyad'
-    comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
+    comparison: Union[Type, tuple[Type]] = MutableMapping
+    origins: list[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
     
     
 @dataclasses.dataclass
 class Dictionary(object):
     
     name: str = 'dictionary'
-    comparison: Union[Type, Tuple[Type]] = MutableMapping
-    origins: List[Type] = dataclasses.field(default_factory = lambda: [Dyad])    
+    comparison: Union[Type, tuple[Type]] = MutableMapping
+    origins: list[Type] = dataclasses.field(default_factory = lambda: [Dyad])    
     
     
     
@@ -124,7 +124,7 @@ class Workshop(denovo.Lexicon):
     """ Properties """
     
     @property
-    def matches(self) -> Dict[Tuple[Type, ...], str]:
+    def matches(self) -> Dict[tuple[Type, ...], str]:
         return {tuple(k.origins): k.name for k in self.values()}
     
     @property
@@ -181,7 +181,7 @@ class Workshop(denovo.Lexicon):
 #     """Mixin for calling validation methods
 
 #     Args:
-#         validations (List[str]): a list of attributes that need validating.
+#         validations (list[str]): a list of attributes that need validating.
 #             Each item in 'validations' should have a corresponding method named 
 #             f'_validate_{name}' or match a key in 'converters'. Defaults to an 
 #             empty list. 
@@ -197,7 +197,7 @@ class Workshop(denovo.Lexicon):
 #         """Validates or converts stored attributes.
         
 #         Args:
-#             validations (List[str]): a list of attributes that need validating.
+#             validations (list[str]): a list of attributes that need validating.
 #                 Each item in 'validations' should have a corresponding method 
 #                 named f'_validate_{name}' or match a key in 'converters'. If not 
 #                 passed, the 'validations' attribute will be used instead. 
@@ -325,8 +325,8 @@ class Workshop(denovo.Lexicon):
 #                 elif inspect.isclass(item) and issubclass(item, base):
 #                     validated = item(**kwargs)
 #                 elif (isinstance(item, str) 
-#                         or isinstance(item, List)
-#                         or isinstance(item, Tuple)):
+#                         or isinstance(item, list)
+#                         or isinstance(item, tuple)):
 #                     validated = base.library.select(names = item)(**kwargs)
 #                 elif isinstance(item, self.alternatives) and self.alternatives:
 #                     validated = base(item, **kwargs)

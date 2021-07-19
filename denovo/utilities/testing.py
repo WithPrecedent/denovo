@@ -33,16 +33,16 @@ import inspect
 import pathlib
 import sys
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import denovo
 
 
 def get_testers(package: object, 
                 folder: Union[str, pathlib.Path], 
-                prefix: str = 'test_') -> List[pathlib.Path]:
+                prefix: str = 'test_') -> list[pathlib.Path]:
     """[summary]
 
     Args:
@@ -51,7 +51,7 @@ def get_testers(package: object,
         prefix (str): [description]
 
     Returns:
-        List[pathlib.Path]: [description]
+        list[pathlib.Path]: [description]
         
     """
     name = package.__package__
@@ -96,7 +96,7 @@ def testify(target_module: types.ModuleType,
 
 def get_testables(module: types.ModuleType, 
                   prefix: str = 'test',
-                  include_private: bool = False) -> List[str]:
+                  include_private: bool = False) -> list[str]:
     """Returns list of testing function names based on 'module' and 'prefix'.
 
     Args:

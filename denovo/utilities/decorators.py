@@ -22,9 +22,9 @@ import inspect
 import functools
 import time
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+                    Sequence, Type, Union)
 
 import denovo
 
@@ -76,7 +76,7 @@ def register(func: Callable) -> Callable:
     return wrapper
 
 def set_registry(registry: MutableMapping[str, Callable]) -> None:
-    """Sets registry for the 'register' decorator.
+    """sets registry for the 'register' decorator.
     
     Args:
         registry (MutableMapping[str, Callable]): dict or dict-like item to use

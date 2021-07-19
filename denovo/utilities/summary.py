@@ -34,9 +34,9 @@ import dataclasses
 import inspect
 import textwrap
 from types import FunctionType
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import denovo
 
@@ -202,13 +202,13 @@ def beautify_object(item: MutableSequence,
         summary.append(beautify(item = contents, offsets = inner_offsets))
     return ''.join(summary)
 
-def beautify_sequence(item: Union[MutableSequence, Set, Tuple], 
+def beautify_sequence(item: Union[MutableSequence, set, tuple], 
                       kind: Union[SummaryKind, Type], 
                       offsets: int) -> str:
     """Returns a beautiful string representation of a 1-dimensional data type.
 
     Args:
-        item (Union[MutableSequence, Set, Tuple]): the list, set, tuple, or 
+        item (Union[MutableSequence, set, tuple]): the list, set, tuple, or 
             similar object to return a str representation for.
         kind (Union[SummaryKind, Type]): 
         offsets (int): [description]
@@ -316,7 +316,7 @@ kinds[Sequence] = SummaryKind(name = 'tuple',
                               method = beautify_sequence, 
                               start = '(',
                               end = ')')
-kinds[Set] = SummaryKind(name = 'set',
+kinds[set] = SummaryKind(name = 'set',
                          method = beautify_sequence,
                          start = '{',
                          end = '}')

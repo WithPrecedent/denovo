@@ -4,13 +4,10 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-import collections
+import collections.abc
 import dataclasses
 import pathlib
 import sys
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Text, Tuple, Type, Union)
 
 import denovo
 from denovo.typing.types import *
@@ -22,7 +19,7 @@ class NewString(denovo.types.String):
     
 
 def test_kind():
-    assert 'default_dictionary' in denovo.types.catalog
+    assert 'dictionary' in denovo.types.catalog
     a_string = 'blah'
     assert isinstance(a_string, String)
     a_dict = {a_string: 'something'}
@@ -34,8 +31,8 @@ def test_kind():
     assert not isinstance(an_int, Real)
     a_real = 3.14
     assert isinstance(a_real, Real)
-    a_default = collections.defaultdict(None, {'tree': 'house'})
-    assert isinstance(a_default, DefaultDictionary)
+    # a_default = collections.defaultdict(None, {'tree': 'house'})
+    # assert isinstance(a_default, DefaultDictionary)
     a_listing = ['abc', '123']
     assert isinstance(a_listing, Listing)
     a_disk = pathlib.Path('.')

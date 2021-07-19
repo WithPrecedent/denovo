@@ -35,9 +35,9 @@ import collections.abc
 import copy
 import dataclasses
 import inspect
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import more_itertools
 
@@ -46,10 +46,10 @@ import denovo
 
 Keys: Type = Union[Hashable, Sequence[Hashable]] 
  
-ALL_KEYS: List[Any] = ['all', 'All', ['all'], ['All']]
-DEFAULT_KEYS: List[Any] = ['default', 'defaults', 'Default', 'Defaults', 
+ALL_KEYS: list[Any] = ['all', 'All', ['all'], ['All']]
+DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults', 
                            ['default'], ['defaults'], ['Default'], ['Defaults']]
-NONE_KEYS: List[Any] = ['none', 'None', ['none'], ['None']]
+NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
 
 
 @dataclasses.dataclass
@@ -120,7 +120,7 @@ class Proxy(collections.abc.Container):
                 f'{object.__getattribute__(self, "__name__")}') 
 
     def __setattr__(self, attribute: str, value: Any):
-        """Sets 'attribute' to 'value'.
+        """sets 'attribute' to 'value'.
         
         If 'attribute' exists in this class instance, its new value is set to
         'value.' Otherwise, 'attribute' and 'value' are set in what is stored
@@ -172,7 +172,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
             'update', etc.) remain, but 'add' allows a subclass to designate the
             preferred method of adding to the iterable's stored data.
         2) It allows the '+' operator to be used to join a Bunch subclass 
-            instance of the same general type (Mapping, Sequence, Tuple, etc.). 
+            instance of the same general type (Mapping, Sequence, tuple, etc.). 
             The '+' operator calls the Bunch subclass 'add' method to implement 
             how the added item(s) is/are added to the Bunch subclass instance.
         3) The internally stored iterable is located in the 'contents' 
@@ -339,7 +339,7 @@ class Manifest(Bunch, collections.abc.MutableSequence):
         return self.contents[key]
             
     def __setitem__(self, key: int, value: Any) -> None:
-        """Sets 'key' in 'contents' to 'value'.
+        """sets 'key' in 'contents' to 'value'.
 
         Args:
             key (int): index to set 'value' to in 'contents'.
@@ -430,7 +430,7 @@ class Hybrid(Manifest):
         """
         return tuple(zip(self.keys(), self.values()))
 
-    def keys(self) -> Tuple(Any):
+    def keys(self) -> tuple(Any):
         """Emulates python dict 'keys' method.
         
         Returns:
@@ -442,7 +442,7 @@ class Hybrid(Manifest):
         return tuple([self._hashify(item = c) for c in self.contents])
 
     def setdefault(self, value: Any) -> None:
-        """Sets default value to return when 'get' method is used.
+        """sets default value to return when 'get' method is used.
         
         Args:
             value (Any): default value to return.
@@ -544,7 +544,7 @@ class Hybrid(Manifest):
                 return matches
             
     def __setitem__(self, key: Union[Any, int], value: Any) -> None:
-        """Sets 'key' in 'contents' to 'value'.
+        """sets 'key' in 'contents' to 'value'.
 
         Args:
             key (Union[Any, int]): if key isn't an int, it is ignored (since the
@@ -667,7 +667,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         """
         return tuple(zip(self.keys(), self.values()))
 
-    def keys(self) -> Tuple(Any):
+    def keys(self) -> tuple(Any):
         """Returns 'contents' keys as a tuple.
         
         Returns:
@@ -679,7 +679,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         return tuple(self.contents.keys())
 
     def setdefault(self, value: Any) -> None:
-        """Sets default value to return when 'get' method is used.
+        """sets default value to return when 'get' method is used.
         
         Args:
             value (Any): default value to return.
@@ -745,7 +745,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         return self.contents[key]
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
-        """Sets 'key' in 'contents' to 'value'.
+        """sets 'key' in 'contents' to 'value'.
 
         Args:
             key (Hashable): key to set in 'contents'.
@@ -852,7 +852,7 @@ class Catalog(Lexicon):
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
     def __setitem__(self, key: Keys, value: Union[Any, Sequence[Any]]) -> None:
-        """Sets 'key' in 'contents' to 'value'.
+        """sets 'key' in 'contents' to 'value'.
 
         Args:
             key (Keys): key(s) to set in 
@@ -894,7 +894,7 @@ class Library(Lexicon):
             Catalog
         instances (Catalog): a catalog of stored class instances. Defaults to an
             empty Catalog.
-        collections (MutableMapping[str, Set[str]]): a defaultdict with keys
+        collections (MutableMapping[str, set[str]]): a defaultdict with keys
             that are the different kinds of stored items and values which are
             sets of names of items that are of that kind. Defaults to an empty
             defaultdict which autovivifies sets as values.
@@ -902,12 +902,12 @@ class Library(Lexicon):
     """
     classes: Catalog = Catalog()
     instances: Catalog = Catalog()
-    collections: MutableMapping[str, Set[str]] = dataclasses.field(
+    collections: MutableMapping[str, set[str]] = dataclasses.field(
         default_factory = lambda: collections.defaultdict(set))
 
     """ Public Methods """
     
-    def classify(self, item: Union[str, object, Type]) -> Tuple[str]:
+    def classify(self, item: Union[str, object, Type]) -> tuple[str]:
         """Returns kind or kinds of 'item' based on 'collections.'
         
         Args:
@@ -915,7 +915,7 @@ class Library(Lexicon):
                 or Type to be classified.
                 
         Returns:
-            Tuple[str]: collections of which 'item' is part of.
+            tuple[str]: collections of which 'item' is part of.
  
         """
         if not isinstance(item, str):

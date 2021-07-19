@@ -19,14 +19,14 @@ import dataclasses
 import inspect
 import pathlib
 from types import ModuleType
-from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
-                    List, Literal, Mapping, MutableMapping, MutableSequence, 
-                    Optional, Sequence, Set, Tuple, Type, TypeVar, Union)
+from typing import (Any, Callable, ClassVar, Generic, Hashable, Iterable, 
+                    list, Literal, Mapping, MutableMapping, MutableSequence, 
+                    Optional, Sequence, set, tuple, Type, TypeVar, Union)
 
 import denovo
 from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
-                                 DefaultDictionary, Dictionary, Dyad, Edge, 
-                                 Edges, Group, Index, Integer, Kind, Listing, 
+                                 dict, Dyad, Edge, 
+                                 Edges, Group, Index, Integer, Kind, listing, 
                                  Matrix, Nodes, Path, Pipeline, Pipelines, Real, 
                                  String)
 
@@ -37,20 +37,18 @@ class Workshop(object):
     
     
     """
-    kinds: Dict[str, Kind] = dataclasses.field(
+    kinds: dict[str, Kind] = dataclasses.field(
         default_factory = lambda: denovo.types.catalog)
-    converters: Dict[str, Callable] = dataclasses.field(
-        default_factory = lambda: denovo.converters.catalog)
     
     """ Properties """
     
     @property
-    def matchers(self) -> Dict[Tuple[Type, ...], str]:
+    def matchers(self) -> dict[tuple[Type, ...], str]:
         return {denovo.converters.to_tuple(item = k.sources): k.name 
                 for k in self.kinds.values()}
     
     @property
-    def names(self) -> Dict[Kind, str]:
+    def names(self) -> dict[Kind, str]:
         labels = {}
         for key, value in self.kinds.items():
             for item in denovo.converters.to_tuple(item = value.comparison):
@@ -58,7 +56,7 @@ class Workshop(object):
         return labels
         
     @property
-    def types(self) -> Dict[str, Type]:
+    def types(self) -> dict[str, Type]:
         return {k.name: denovo.converters.to_tuple(item = k.comparison) 
                 for k in self.kinds.values()}
     
@@ -116,7 +114,7 @@ class Workshop(object):
 #     """Mixin for calling validation methods
 
 #     Args:
-#         validations (List[str]): a list of attributes that need validating.
+#         validations (list[str]): a list of attributes that need validating.
 #             Each item in 'validations' should have a corresponding method named 
 #             f'_validate_{name}' or match a key in 'converters'. Defaults to an 
 #             empty list. 
@@ -132,7 +130,7 @@ class Workshop(object):
 #         """Validates or converts stored attributes.
         
 #         Args:
-#             validations (List[str]): a list of attributes that need validating.
+#             validations (list[str]): a list of attributes that need validating.
 #                 Each item in 'validations' should have a corresponding method 
 #                 named f'_validate_{name}' or match a key in 'converters'. If not 
 #                 passed, the 'validations' attribute will be used instead. 
@@ -204,12 +202,12 @@ class Workshop(object):
 
 #     Args:
 #         base (str): 
-#         parameters (Dict[str, Any]):
+#         parameters (dict[str, Any]):
 #         alternatives (tuple[Type])
         
 #     """
 #     base: str = None
-#     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
+#     parameters: dict[str, Any] = dataclasses.field(default_factory = dict)
 #     alterantives: tuple[Type] = dataclasses.field(default_factory = tuple)
 #     default: Type = None
 
@@ -260,8 +258,8 @@ class Workshop(object):
 #                 elif inspect.isclass(item) and issubclass(item, base):
 #                     validated = item(**kwargs)
 #                 elif (isinstance(item, str) 
-#                         or isinstance(item, List)
-#                         or isinstance(item, Tuple)):
+#                         or isinstance(item, list)
+#                         or isinstance(item, tuple)):
 #                     validated = base.library.select(names = item)(**kwargs)
 #                 elif isinstance(item, self.alternatives) and self.alternatives:
 #                     validated = base(item, **kwargs)

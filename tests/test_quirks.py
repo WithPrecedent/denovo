@@ -6,9 +6,9 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
 import dataclasses
 import sys
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import denovo
 
@@ -18,7 +18,7 @@ class Bases(denovo.quirks.Importer):
     
     clerk: Union[str, Type] = denovo.filing.Clerk
     library: Union[str, Type] = 'denovo.containers.Library'
-    settings: Union[str, Type] = 'denovo.configuration.Settings'
+    settings: Union[str, Type] = 'denovo.configuration.settings'
     
 
 def test_importer():

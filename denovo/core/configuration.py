@@ -5,7 +5,7 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Settings (Lexicon): stores configuration settings after either loading 
+    settings (Lexicon): stores configuration settings after either loading 
         them from disk or by the passed arguments.    
          
 """
@@ -16,9 +16,9 @@ import importlib
 import importlib.util
 import json
 import pathlib
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Set, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+                    Union)
 
 import more_itertools
 
@@ -29,16 +29,16 @@ TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
 
 
 @dataclasses.dataclass
-class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
+class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     """Loads and stores configuration settings.
 
-    To create Settings instance, a user can pass a:
+    To create settings instance, a user can pass a:
         1) file path to a compatible file type;
         2) string containing a a file path to a compatible file type;
                                 or,
         3) 2-level nested dict.
 
-    If 'contents' is imported from a file, Settings creates a dict and can 
+    If 'contents' is imported from a file, settings creates a dict and can 
     convert the dict values to appropriate datatypes. Currently, supported file 
     types are: ini, json, toml, and python.
 
@@ -48,7 +48,7 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     if the source file is a python module (assuming the user has properly set
     the types of the stored python dict).
 
-    Because Settings uses ConfigParser for .ini files, by default it stores 
+    Because settings uses ConfigParser for .ini files, by default it stores 
     a 2-level dict. The desire for accessibility and simplicity denovoted this 
     limitation. A greater number of levels can be achieved by having separate
     sections with names corresponding to the strings in the values of items in 
@@ -94,27 +94,27 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     """ Class Methods """
 
     @classmethod
-    def from_dictionary(cls, dictionary: TwoLevel, **kwargs) -> Settings:
+    def from_dictionary(cls, dictionary: TwoLevel, **kwargs) -> settings:
         """[summary]
 
         Args:
             path (Union[str, pathlib.Path]): [description]
 
         Returns:
-            Settings: [description]
+            settings: [description]
             
         """        
         return cls(contents = dictionary, **kwargs)
     
     @classmethod
-    def from_path(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
+    def from_path(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
         """[summary]
 
         Args:
             path (Union[str, pathlib.Path]): [description]
 
         Returns:
-            Settings: [description]
+            settings: [description]
             
         """
         path = denovo.tools.pathlibify(item = path)   
@@ -123,8 +123,8 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
         return load_method(path = path, **kwargs)
     
     @classmethod
-    def from_ini(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
-        """Returns Settings from an .ini file.
+    def from_ini(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
+        """Returns settings from an .ini file.
 
         Args:
             path (str): path to configparser-compatible .ini file.
@@ -148,8 +148,8 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_json(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
-        """Returns Settings from an .json file.
+    def from_json(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
+        """Returns settings from an .json file.
 
         Args:
             path (str): path to configparser-compatible .json file.
@@ -172,13 +172,13 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_py(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
+    def from_py(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
         """Returns a settings dictionary from a .py file.
 
         Args:
             path (str): path to python module with '__dict__' defined and an 
                 attribute named 'settings' that contains the settings to use for 
-                creating a Settings instance..
+                creating a settings instance..
 
         Returns:
             Mapping[Any, Any] of contents.
@@ -202,8 +202,8 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_toml(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
-        """Returns Settings from a .toml file.
+    def from_toml(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
+        """Returns settings from a .toml file.
 
         Args:
             path (str): path to configparser-compatible .toml file.
@@ -225,8 +225,8 @@ class Settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             raise FileNotFoundError(f'settings file {path} not found')
    
     @classmethod
-    def from_yaml(cls, path: Union[str, pathlib.Path], **kwargs) -> Settings:
-        """Returns Settings from a .yaml file.
+    def from_yaml(cls, path: Union[str, pathlib.Path], **kwargs) -> settings:
+        """Returns settings from a .yaml file.
 
         Args:
             path (str): path to configparser-compatible .toml file.
