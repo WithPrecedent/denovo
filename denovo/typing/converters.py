@@ -45,80 +45,13 @@ from denovo.typing.types import (Adjacency, Composite, Connections,
                                  Pipeline, Pipelines, Real, String)
 
 
-""" String Format Templates for Converter Function Names """
-
-PREFIX: str = 'to_'
-CONNECTOR: str = '_to_'
-FLEXIBLE: Callable = lambda: 'to_{}'.format
-STRICT: Callable = lambda: '{}_to_{}'.format
-
 """ Converter Registry and Registry Decorator """
 
 catalog: denovo.containers.Catalog = denovo.containers.Catalog()
-
-def converter(dispatcher: Callable) -> Callable:
-    """Decorator for a converter registry and dispatcher.
-    
-    This decorator is similar to python's singledispatch but it uses isintance
-    checks to determint the approriate function to call. The code is adapted
-    from the python source code for singledisptach.
-    
-    Args:
-        dispatcher (Callable): a callable converter.
-        
-    Returns:
-        Callable: with passed arguments.
-        
-    """
-    # Creates a registry for dispatchers.
-    registry = {}
-    # Stores 'dispatcher' in the module level 'catalog' of converters.
-    if dispatcher.__name__.startswith(PREFIX):
-        name = dispatcher.__name__[3:]
-    else:
-        name = dispatcher.__name__
-    catalog[name] = dispatcher
-    
-    def categorize(item: Any) -> str:
-        """Determines the Kind of 'item' and returns its str name."""
-        if inspect.isclass(item):
-            checker = issubclass
-        else:
-            checker = isinstance
-        for value in denovo.typing.types.catalog.values():
-            print('test catalog kinds', value.__name__, value)
-            if checker(item, value):
-                return denovo.tools.snakify(value.__name__)
-        raise KeyError(f'item does not match any recognized type')
-        
-    def dispatch(source: Any, *args, **kwargs) -> Callable:
-        print('test registry', registry)
-        kind = categorize(item = source)
-        try:
-            dispatched = registry[kind]
-        except KeyError:
-            dispatched = dispatcher
-        return dispatched(source, *args, **kwargs)
-
-    def register(dispatched: Callable) -> None:
-        source, _ = dispatched.__name__.split(CONNECTOR)
-        registry[source] = dispatched
-        return
-    
-    def wrapper(*args, **kwargs):
-        if not args:
-            args = tuple([kwargs.pop('source')])
-        return dispatch(*args, **kwargs)
-
-    wrapper.register = register
-    wrapper.dispatch = dispatch
-    wrapper.registry = registry
-    functools.update_wrapper(wrapper, dispatcher)
-    return wrapper   
  
 """ Converters """
 
-@converter 
+@denovo.decorators.dispatcher 
 def to_adjacency(source: Any) -> Adjacency:
     """Converts 'source' to an Adjacency.
     
@@ -178,7 +111,7 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
         adjacency[edge_pair[0]] = {edge_pair[1]}
     return adjacency
 
-@converter   
+@denovo.decorators.dispatcher   
 def to_dictionary(source: Any) -> Dictionary:
     """Converts 'source' to a Dictionary.
     
@@ -203,8 +136,7 @@ def dyad_to_dictionary(source: Dyad) -> Dictionary:
     """Converts a Dyad to a Dictionary."""
     return dict(zip(source))
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_dyad(source: Any) -> Dyad:
     """Converts 'source' to a Dyad.
     
@@ -229,8 +161,7 @@ def dictionary_to_dyad(source: Dictionary) -> Dyad:
     """Converts a Dictionary to a Dyad."""
     return zip(*source)
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_edges(source: Any) -> Edges:
     """Converts 'source' to an Edges.
     
@@ -259,8 +190,7 @@ def adjacency_to_edges(source: Adjacency) -> Edges:
             edges.append(tuple(node, connection))
     return edges
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_index(source: Any) -> Index:
     """Converts 'source' to an Index.
     
@@ -296,8 +226,7 @@ def string_to_index(source: String) -> Index:
     """Converts a String to an Index."""
     return source
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_integer(source: Any) -> Integer:
     """Converts 'source' to a Path.
     
@@ -327,8 +256,7 @@ def real_to_integer(source: Real) -> Integer:
     """Converts a Real to an Integer."""
     return int(source)
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_listing(source: Any) -> Listing:
     """Converts 'source' to a Listing.
     
@@ -353,8 +281,7 @@ def string_to_listing(source: String) -> Listing:
     """Converts a String to a Listing."""
     return ast.literal_eval(source)
 
-
-@converter   
+@denovo.decorators.dispatcher   
 def to_matrix(source: Any) -> Matrix:
     """Converts 'source' to a Edges.
     
@@ -385,7 +312,7 @@ def adjacency_to_matrix(source: Adjacency) -> Matrix:
             matrix[i][j] = 1
     return tuple(matrix, names)
 
-@converter   
+@denovo.decorators.dispatcher   
 def to_real(source: Any) -> Real:
     """Converts 'source' to a Real.
     
@@ -415,7 +342,7 @@ def string_to_real(source: String) -> Real:
     """Converts a String to a Real."""
     return float(source)
 
-@converter   
+@denovo.decorators.dispatcher   
 def to_path(source: Any) -> Path:
     """Converts 'source' to a Path.
     
@@ -440,7 +367,7 @@ def string_to_path(source: String) -> Path:
     """Converts a String to a Path."""
     return pathlib.Path(source)
 
-@converter   
+@denovo.decorators.dispatcher   
 def to_string(source: Any) -> String:
     """Converts 'source' to a String.
     

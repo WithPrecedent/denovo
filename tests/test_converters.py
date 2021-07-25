@@ -29,13 +29,16 @@ def test_to_adjacency():
     return
 
 def test_to_string():
+    print('testing to_string')
     listing = ['stuff', 'more_stuff', 'even_more']
     converted = denovo.converters.to_string(listing)
     assert converted == 'stuff, more_stuff, even_more'
     return
 
 if __name__ == '__main__':
+    print('testing')
     testables = denovo.testing.get_testables(module = denovo.converters)
+    print('testing testables', testables)
     denovo.testing.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

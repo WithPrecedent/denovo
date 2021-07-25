@@ -116,28 +116,36 @@ def timer(process: Callable) -> Callable:
     return shell_timer
 
 
-@dataclasses.dataclass
-class Dispatcher(abc.ABC):
+class Dispatcher(object):
     """Decorator for a dispatcher.
     
     This decorator is similar to python's singledispatch but it uses isintance
     checks to determint the approriate function to call. The code is adapted
     from the python source code for singledisptach.
     
+    This class doesn't follow the normal python naming convention for a class
+    because it is only designed to be used as a decorator. But rather than 
+    creating a nested function dispatcher (which cannot be inherited and
+    extended), 'dispatcher' is a class.
+    
     Args:
         wrapped (Callable): a callable dispatcher.
+        registry (dict[str, denovo.typing.types.Kind]): registry for different
+            functions that may be called based on the first parameter's type.
+            Defaults to an empty dict.
         
     Returns:
         Callable: with passed arguments.
         
     """
-    wrapped: Callable
+    # wrapped: Callable
+    # registry: dict[str, Callable] = dataclasses.field(default_factory = dict)
     
     """ Initialization Methods """
     
-    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+    def __init__(self, wrapped: Callable):
         """Allows class to be called as a function decorator."""
-        # Creates a registry for dispatchers.
+        self.wrapped = wrapped
         self.registry = {}
         # Copies key attributes and functions to wrapped function.
         self.wrapped.register = self.register
@@ -145,6 +153,9 @@ class Dispatcher(abc.ABC):
         self.wrapped.registry = self.registry
         # Updates wrapper information for tracebacks and introspection.
         functools.update_wrapper(self, self.wrapped)
+        
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+
         return self.wrapped(*args, **kwargs)
     
     """ Public Methods """
@@ -157,10 +168,9 @@ class Dispatcher(abc.ABC):
             checker = isinstance
         for value in denovo.typing.types.catalog.values():
             if checker(item, value):
-                try:
-                    return denovo.tools.snakify(value.__name__)
-                except AttributeError:
-                    return denovo.tools.snakify(value.__class__.__name__)
+                return denovo.tools.snakify(value.__name__)
+                # except AttributeError:
+                #     return denovo.tools.snakify(value.__class__.__name__)
         raise KeyError(f'item does not match any recognized type')
            
     def dispatch(self, source: Any, *args, **kwargs) -> Callable:
@@ -201,4 +211,60 @@ class Dispatcher(abc.ABC):
             del kwargs[parameter]
             args = tuple([argument])
         return self.dispatch(*args, **kwargs)  
- 
+
+def dispatcher(dispatcher: Callable) -> Callable:
+    """Decorator for a converter registry and dispatcher.
+    
+    This decorator is similar to python's singledispatch but it uses isintance
+    checks to determint the approriate function to call. The code is adapted
+    from the python source code for singledisptach.
+    
+    Args:
+        dispatcher (Callable): a callable converter.
+        
+    Returns:
+        Callable: with passed arguments.
+        
+    """
+    # Creates a registry for dispatchers.
+    registry = {}
+    
+    def categorize(item: Any) -> str:
+        """Determines the kind of 'item' and returns its str name."""
+        if inspect.isclass(item):
+            checker = issubclass
+        else:
+            checker = isinstance
+        for value in denovo.typing.types.catalog.values():
+            if checker(item, value):
+                return denovo.tools.snakify(value.__name__)
+                # except AttributeError:
+                #     return denovo.tools.snakify(value.__class__.__name__)
+        raise KeyError(f'item does not match any recognized type')
+        
+    def dispatch(source: Any, *args, **kwargs) -> Callable:
+        key = categorize(item = source)
+        try:
+            dispatched = registry[key]
+        except KeyError:
+            dispatched = dispatcher
+        return dispatched(source, *args, **kwargs)
+
+    def register(dispatched: Callable) -> None:
+        _, kind = next(iter(get_type_hints(dispatched).items()))
+        key = kind.__name__
+        registry[key] = dispatched
+        return dispatched
+    
+    def wrapper(*args, **kwargs):
+        if not args:
+            parameter, argument = next(iter(kwargs.items()))
+            del kwargs[parameter]
+            args = tuple([argument])
+        return dispatch(*args, **kwargs)  
+
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = registry
+    functools.update_wrapper(wrapper, dispatcher)
+    return wrapper   
