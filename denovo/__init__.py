@@ -59,7 +59,7 @@ the lazy importation system used throughout denovo.
 """
 importables: Dict[str, str] = {
     'utilities': 'utilities',
-    'converters': 'converters',
+    'converters': 'typing.converters',
     'decorators': 'utilities.decorators',
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',

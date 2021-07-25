@@ -17,6 +17,8 @@ ToDo:
 
 """
 from __future__ import annotations
+import abc
+import dataclasses
 import datetime
 import inspect
 import functools
@@ -24,7 +26,7 @@ import time
 import types
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Type, Union)
+                    Sequence, Type, Union, get_type_hints)
 
 import denovo
 
@@ -68,10 +70,10 @@ def register(func: Callable) -> Callable:
         Callable: with passed arguments.
         
     """
+    name = func.__name__
+    REGISTRY[name] = func
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        name = func.__name__
-        REGISTRY[name] = func
         return func(*args, **kwargs)
     return wrapper
 
@@ -85,7 +87,7 @@ def set_registry(registry: MutableMapping[str, Callable]) -> None:
     """
     globals().REGISTRY = registry
     return
-    
+   
 def timer(process: Callable) -> Callable:
     """Decorator for computing the length of time a process takes.
 
@@ -112,3 +114,91 @@ def timer(process: Callable) -> Callable:
             return result
         return decorated
     return shell_timer
+
+
+@dataclasses.dataclass
+class Dispatcher(abc.ABC):
+    """Decorator for a dispatcher.
+    
+    This decorator is similar to python's singledispatch but it uses isintance
+    checks to determint the approriate function to call. The code is adapted
+    from the python source code for singledisptach.
+    
+    Args:
+        wrapped (Callable): a callable dispatcher.
+        
+    Returns:
+        Callable: with passed arguments.
+        
+    """
+    wrapped: Callable
+    
+    """ Initialization Methods """
+    
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
+        """Allows class to be called as a function decorator."""
+        # Creates a registry for dispatchers.
+        self.registry = {}
+        # Copies key attributes and functions to wrapped function.
+        self.wrapped.register = self.register
+        self.wrapped.dispatch = self.dispatch
+        self.wrapped.registry = self.registry
+        # Updates wrapper information for tracebacks and introspection.
+        functools.update_wrapper(self, self.wrapped)
+        return self.wrapped(*args, **kwargs)
+    
+    """ Public Methods """
+    
+    def categorize(self, item: Any) -> str:
+        """Determines the kind of 'item' and returns its str name."""
+        if inspect.isclass(item):
+            checker = issubclass
+        else:
+            checker = isinstance
+        for value in denovo.typing.types.catalog.values():
+            if checker(item, value):
+                try:
+                    return denovo.tools.snakify(value.__name__)
+                except AttributeError:
+                    return denovo.tools.snakify(value.__class__.__name__)
+        raise KeyError(f'item does not match any recognized type')
+           
+    def dispatch(self, source: Any, *args, **kwargs) -> Callable:
+        """[summary]
+
+        Args:
+            source (Any): [description]
+
+        Returns:
+            Callable: [description]
+            
+        """
+        key = self.categorize(item = source)
+        try:
+            dispatched = self.registry[key]
+        except KeyError:
+            dispatched = self.dispatcher
+        return dispatched(source, *args, **kwargs)
+
+    def register(self, dispatched: Callable) -> Callable:
+        """[summary]
+
+        Args:
+            dispatched (Callable): [description]
+
+        Returns:
+            Callable: [description]
+            
+        """
+        _, kind = next(iter(get_type_hints(dispatched).items()))
+        key = kind.__name__
+        self.registry[key] = dispatched
+        return dispatched
+    
+    def wrapper(self, *args, **kwargs):
+        if not args:
+            parameter, argument = next(iter(kwargs.items()))
+            del kwargs[parameter]
+            args = tuple([argument])
+        return self.dispatch(*args, **kwargs)  
+ 

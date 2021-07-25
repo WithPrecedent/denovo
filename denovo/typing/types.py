@@ -36,6 +36,7 @@ from collections.abc import (Container, Hashable, Iterable, Iterator,
 import dataclasses
 import itertools
 import pathlib
+from types import GenericAlias
 from typing import (Annotated, Any, ClassVar, Generic, Literal, Optional, Type,
                     TypeVar, Union)
 
@@ -50,7 +51,7 @@ catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 """ Base Type """
 
 @dataclasses.dataclass
-class Kind(abc.ABC):
+class Kind(GenericAlias, abc.ABC):
     """Base class for generic types used by denovo.
     
     Args:
@@ -66,24 +67,24 @@ class Kind(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         """Adds 'cls' to 'catalog' dict."""
         super().__init_subclass__(**kwargs)
-        # Adds concrete subclasses to 'library'.
+        # Adds \subclasses to 'catalog'.
         catalog[cls.name] = cls
-
+        # Stores 'name' in '__name__' to make Kind subclasses act the same as
+        # builtin python types.
+        cls.__name__ = cls.name
+        
     """ Dunder Methods """
     
     @classmethod
-    def __class_getitem__(cls, item) -> str:
-        """Returns annotation type for the class."""
-        return str(cls.hint[item])
-    
-    @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is an instance of 'comparison'."""
         return isinstance(instance, denovo.tools.tuplify(cls.comparison))
     
     @classmethod
     def __subclasscheck__(cls, subclass: Type) -> bool:
+        """Returns whether 'subclass' is an instance of 'comparison'."""
         return issubclass(subclass, denovo.tools.tuplify(cls.comparison))
-    
+
     
 """ Basic Types """
          
@@ -93,64 +94,15 @@ class String(Kind):
     name: ClassVar[str] = 'string'
     comparison: ClassVar[Union[Type, tuple[Type]]] = str
     hint: ClassVar[Annotated] = str
-    
-    """ Static Methods """
 
-    @staticmethod
-    def from_integer(source: Integer) -> String:
-        """Converts an Integer to a String."""
-        return denovo.typing.converters.integer_to_string(source = source)
 
-    @staticmethod
-    def from_listing(source: Listing) -> String:
-        """Converts a Listing to a String."""
-        return denovo.typing.converters.listing_to_string(source = source)
-    
-    @staticmethod
-    def from_path(source: Path) -> String:
-        """Converts a Path to a String."""
-        return denovo.typing.converters.path_to_string(source = source)
-
-    @staticmethod
-    def from_real(source: Real) -> String:
-        """Converts a Real to a String."""
-        return denovo.typing.converters.real_to_string(source = source)
-    
-    @staticmethod
-    def to_dictionary(source: String) -> Dictionary:
-        """Converts a String to a dictionary."""
-        return denovo.typing.converters.string_to_dictionary(source = source)
-
-    @staticmethod
-    def to_path(source: String) -> Path:
-        """Converts a String to a Path."""
-        return denovo.typing.converters.string_to_path(source = source)
-
-    @staticmethod
-    def to_listing(source: String) -> Listing:
-        """Converts String to a Listing."""
-        return denovo.typing.converters.string_to_listing(source = source)
-
-    @staticmethod
-    def to_real(source: String) -> Real:
-        """Converts a String to a Real."""
-        return denovo.typing.converters.string_to_real(source = source)
-    
-    
 @dataclasses.dataclass
 class Path(Kind):
     
     name: ClassVar[str] = 'path'
     comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([pathlib.Path, str])
     hint: ClassVar[Annotated] = Union[pathlib.Path, str]
-    
-    """ Static Methods """
-    
-    @staticmethod
-    def to_string(source: Path) -> String:
-        """Converts a Path to a String."""
-        return denovo.typing.converters.path_to_string(source = source)  
-       
+      
     
 @dataclasses.dataclass
 class Index(Kind):
@@ -167,28 +119,6 @@ class Integer(Kind):
     comparison: ClassVar[Union[Type, tuple[Type]]] = int
     hint: ClassVar[Annotated] = int 
     
-    """ Static Methods """
-    
-    @staticmethod
-    def from_real(source: Real) -> Integer:
-        """Converts a Real to an Integer."""
-        return denovo.typing.converters.real_to_integer(source = source)
-    
-    @staticmethod
-    def from_string(source: String) -> Integer:
-        """Converts an Integer to a String."""
-        return denovo.typing.converters.string_to_integer(source = source)
-        
-    @staticmethod
-    def to_real(source: Integer) -> Real:
-        """Converts an Integer to a String."""
-        return denovo.typing.converters.integer_to_real(source = source)
-    
-    @staticmethod
-    def to_string(source: Integer) -> String:
-        """Converts an Integer to a String."""
-        return denovo.typing.converters.integer_to_string(source = source)
-
 
 @dataclasses.dataclass
 class Real(Kind):
@@ -197,29 +127,7 @@ class Real(Kind):
     comparison: ClassVar[Union[Type, tuple[Type]]] = float
     hint: ClassVar[Annotated] = float
     
-    """ Static Methods """
     
-    @staticmethod
-    def from_real(source: Real) -> Integer:
-        """Converts a Real to an Integer."""
-        return denovo.typing.converters.real_to_integer(source = source)
-    
-    @staticmethod
-    def from_string(source: String) -> Real:
-        """Converts a Real to a String."""
-        return denovo.typing.converters.string_to_real(source = source)
-        
-    @staticmethod
-    def to_integer(source: Real) -> Integer:
-        """Converts a Real to an Integer."""
-        return denovo.typing.converters.real_to_integer(source = source)
-    
-    @staticmethod
-    def to_string(source: Real) -> String:
-        """Converts a Real to a String."""
-        return denovo.typing.converters.real_to_string(source = source)
-
-
 """ Container Types """
 
 @dataclasses.dataclass
@@ -229,18 +137,6 @@ class Dictionary(Kind):
     comparison: ClassVar[Union[Type, tuple[Type]]] = MutableMapping
     hint: ClassVar[Annotated] = MutableMapping[Hashable, Any] 
 
-    """ Static Methods """
-    
-    @staticmethod
-    def from_dyad(source: Dyad) -> Dictionary:
-        """Converts a Dyad to a Dictionary."""
-        return denovo.typing.converters.dyad_to_dictionary(source = source)   
-    
-    @staticmethod
-    def to_dyad(source: Dictionary) -> Dyad:
-        """Converts a Dictionary to a Dyad."""
-        return denovo.typing.converters.dictionary_to_dyad(source = source)   
-    
     
 # @dataclasses.dataclass
 # class DefaultDictionary(Kind):
@@ -269,19 +165,19 @@ class Dictionary(Kind):
 #         return denovo.typing.converters.dictionary_to_dyad(source = source)   
     
 
-@dataclasses.dataclass
-class Chain(Kind, abc.ABC):
+# @dataclasses.dataclass
+# class Chain(Kind, abc.ABC):
     
-    name: ClassVar[str] = 'chain'
-    comparison: ClassVar[Union[Type, tuple[Type]]] = Sequence
-    hint: ClassVar[Annotated] = Sequence 
+#     name: ClassVar[str] = 'chain'
+#     comparison: ClassVar[Union[Type, tuple[Type]]] = Sequence
+#     hint: ClassVar[Annotated] = Sequence 
     
-    """ Dunder Methods """
+#     """ Dunder Methods """
     
-    @classmethod
-    def __instancecheck__(cls, instance: Any) -> bool:
-        return (isinstance(instance, cls.comparison)
-                and not isinstance(instance, String))
+#     @classmethod
+#     def __instancecheck__(cls, instance: Any) -> bool:
+#         return (isinstance(instance, cls.comparison)
+#                 and not isinstance(instance, String))
         
         
 @dataclasses.dataclass
@@ -295,6 +191,7 @@ class Listing(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is a Listing."""
         return (isinstance(instance, cls.comparison)
                 and not isinstance(instance, String))
             
@@ -310,6 +207,7 @@ class Dyad(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is an instance of Dyad."""
         return (isinstance(instance, denovo.tools.tuplify(cls.comparison)) 
                 and len(instance) == 2
                 and isinstance(instance[0], cls.comparison)
@@ -320,8 +218,8 @@ class Dyad(Kind):
 class Group(Kind):
     
     name: ClassVar[str] = 'group'
-    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([set, tuple, Chain])
-    hint: ClassVar[Annotated] = Union[set, tuple, Chain]
+    comparison: ClassVar[Union[Type, tuple[Type]]] = tuple([set, tuple, Listing])
+    hint: ClassVar[Annotated] = Union[set, tuple, Listing]
 
      
 """ Composite Types """
@@ -337,6 +235,7 @@ class Adjacency(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is an instance of Adjacency."""
         if isinstance(instance, cls.comparison):
             edges = list(instance.values())
             nodes = list(itertools.chain(instance.values()))
@@ -357,7 +256,7 @@ class Edge(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is an edge."""
+        """Returns whether 'instance' is an instance of Edge."""
         return (isinstance(instance, cls.comparison)
                 and len(instance) == 2 
                 and all(isinstance(i, Index) for i in instance))      
@@ -367,14 +266,14 @@ class Edge(Kind):
 class Edges(Kind):
     
     name: ClassVar[str] = 'edges'
-    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Listing
     hint: ClassVar[Annotated] = Sequence[Edge]    
 
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is an edge list."""
+        """Returns whether 'instance' is an instance of Edges."""
         return (isinstance(instance, Listing) 
                 and all(isinstance(i, Edge) for i in instance))
  
@@ -390,7 +289,7 @@ class Connections(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is a set of connections."""
+        """Returns whether 'instance' is an instance of Connections."""
         return (isinstance(instance, Listing) 
                 and all(isinstance(i, Edge) for i in instance))       
  
@@ -407,7 +306,7 @@ class Matrix(Kind):
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is an adjacency matrix."""
+        """Returns whether 'instance' is an instance of Matrix."""
         return (isinstance(instance, cls.comparison) 
                 and len(instance) == 2
                 and isinstance(instance[1], Sequence) 
@@ -421,14 +320,14 @@ class Matrix(Kind):
 class Pipeline(Kind):
     
     name: ClassVar[str] = 'pipeline'
-    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Listing
     hint: ClassVar[Annotated] = Sequence[Index]  
 
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is a pipeline."""
+        """Returns whether 'instance' is an instance of Pipeline."""
         return (isinstance(instance, cls.comparison)
                 and all(isinstance(i, Index) for i in instance))           
  
@@ -437,14 +336,14 @@ class Pipeline(Kind):
 class Pipelines(Kind):
     
     name: ClassVar[str] = 'pipelines'
-    comparison: ClassVar[Union[Type, tuple[Type]]] = Chain
+    comparison: ClassVar[Union[Type, tuple[Type]]] = Listing
     hint: ClassVar[Annotated] = Sequence[Sequence[Index]]   
 
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
-        """Returns whether 'instance' is a pipeline."""
+        """Returns whether 'instance' is an instance of Pipelines."""
         return (isinstance(instance, cls.comparison)
                 and all(isinstance(i, Index) for i in instance))   
 
