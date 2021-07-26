@@ -16,7 +16,6 @@ ToDo:
 
 """
 from __future__ import annotations
-import dataclasses
 import importlib
 from importlib import util
 import pathlib
@@ -171,7 +170,7 @@ def importify(name: str, package: str, importables: Dict[str, str]) -> Any:
         raise AttributeError(f'module {package} has no attribute {name}')   
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Importer(object):
 #     """Descriptor for lazy importing.
     

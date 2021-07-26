@@ -15,7 +15,6 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
-import dataclasses
 import inspect
 import pathlib
 from types import ModuleType
@@ -31,7 +30,7 @@ from denovo.typing.types import (Adjacency, Chain, Composite, Connections,
                                  String)
 
 
-@dataclasses.dataclass
+@attr.s
 class Workshop(object):
     """Controls type conversion, class
     
@@ -109,7 +108,7 @@ class Workshop(object):
         return method(item = item, **kwargs)
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Validator(denovo.Quirk):
 #     """Mixin for calling validation methods
 
@@ -196,7 +195,7 @@ class Workshop(object):
 #         return converter()             
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Converter(abc.ABC):
 #     """Keystone class for type converters and validators.
 

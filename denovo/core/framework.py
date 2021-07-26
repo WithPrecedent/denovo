@@ -23,7 +23,6 @@ ToDo:
 from __future__ import annotations
 import abc
 import copy
-import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
                     list, Mapping, MutableMapping, MutableSequence, Optional, 
@@ -81,7 +80,7 @@ def build_keystone(name: str,
     return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
 
 
-@dataclasses.dataclass
+@attr.s
 class Kind(object):
     
     name: str
@@ -95,7 +94,7 @@ class Kind(object):
         return tuple(self.origins)
 
 
-@dataclasses.dataclass
+@attr.s
 class Dyad(object):
     
     name: str = 'dyad'
@@ -103,7 +102,7 @@ class Dyad(object):
     origins: list[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
     
     
-@dataclasses.dataclass
+@attr.s
 class Dictionary(object):
     
     name: str = 'dictionary'
@@ -116,7 +115,7 @@ def dyad_to_dictionary(source: Dyad) -> Dictionary:
     return dict(zip(source))
 
 
-@dataclasses.dataclass
+@attr.s
 class Workshop(denovo.Lexicon):
     
     contents: Dict[str, Kind] = dataclasses.field(default_factory = dict)
@@ -176,7 +175,7 @@ class Workshop(denovo.Lexicon):
         return method(item = item, **kwargs)
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Validator(denovo.Quirk):
 #     """Mixin for calling validation methods
 
@@ -263,7 +262,7 @@ class Workshop(denovo.Lexicon):
 #         return converter()             
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Converter(abc.ABC):
 #     """Keystone class for type converters and validators.
 

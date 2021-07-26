@@ -28,7 +28,6 @@ ToDo:
 
 """
 from __future__ import annotations
-import dataclasses
 import inspect
 import pathlib
 import sys
@@ -132,7 +131,7 @@ def run_tests(module: types.ModuleType,
     return
 
 
-@dataclasses.dataclass
+@attr.s
 class Testimony(object):
     """Automated unit tester for an entire python package.
     

@@ -11,7 +11,6 @@ Contents:
 """
 from __future__ import annotations
 import configparser
-import dataclasses
 import importlib
 import importlib.util
 import json
@@ -28,7 +27,7 @@ import denovo
 TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
 
 
-@dataclasses.dataclass
+@attr.s
 class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     """Loads and stores configuration settings.
 

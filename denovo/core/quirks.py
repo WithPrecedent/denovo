@@ -23,7 +23,6 @@ ToDo:
 from __future__ import annotations
 import abc
 from collections import defaultdict
-import dataclasses
 import importlib
 import inspect
 import logging
@@ -36,7 +35,7 @@ import more_itertools
 import denovo
 
 
-@dataclasses.dataclass
+@attr.s
 class Quirk(abc.ABC):
     """Base class for denovo quirks (mixin-approximations).
 
@@ -73,7 +72,7 @@ class Quirk(abc.ABC):
             denovo.framework.quirks[key] = cls
 
     
-@dataclasses.dataclass
+@attr.s
 class Element(Quirk, abc.ABC):
     """Mixin for classes that need a 'name' attribute.
     
@@ -121,7 +120,7 @@ class Element(Quirk, abc.ABC):
         return denovo.tools.snakify(self.__class__.__name__)
 
 
-@dataclasses.dataclass
+@attr.s
 class Factory(Quirk, abc.ABC):
     """Supports internal creation and automatic external parameterization.
     
@@ -168,7 +167,7 @@ class Factory(Quirk, abc.ABC):
                          'sources')  
 
 
-@dataclasses.dataclass
+@attr.s
 class Importer(Quirk, abc.ABC):
     """Faciliates lazy importing from modules.
 
@@ -210,7 +209,7 @@ class Importer(Quirk, abc.ABC):
         return value
    
 
-@dataclasses.dataclass
+@attr.s
 class Keystone(Quirk, abc.ABC):
     """Base mixin for automatic registration of subclasses and instances. 
     
@@ -261,7 +260,7 @@ class Keystone(Quirk, abc.ABC):
         self.library.deposit(item = self, collection = base)
 
        
-# @dataclasses.dataclass
+# @attr.s
 # class Coordinator(Quirk):
 #     """Supports internal creation and automatic external parameterization.
     
@@ -338,7 +337,7 @@ class Keystone(Quirk, abc.ABC):
 #         return kwargs
 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Logger(Quirk):
     
 #     @property
@@ -346,7 +345,7 @@ class Keystone(Quirk, abc.ABC):
 #         name = f'{self.__module__}.{self.__class__.__name__}'
 #         return logging.getLogger(name)
 
-# @dataclasses.dataclass
+# @attr.s
 # class Proxified(object):
 #     """ which creates a proxy name for a Element subclass attribute.
 

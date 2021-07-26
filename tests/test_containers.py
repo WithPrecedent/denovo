@@ -10,7 +10,6 @@ ToDo:
     test_library
     
 """
-import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
                     Union)
@@ -18,7 +17,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@dataclasses.dataclass
+@attr.s
 class TestClass(object):
     
     name: str = 'something'

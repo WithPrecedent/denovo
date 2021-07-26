@@ -8,7 +8,6 @@ ToDo:
     Add tests for the remaining functions in tools.
     
 """
-import dataclasses
 import sys
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
@@ -17,7 +16,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@dataclasses.dataclass
+@attr.s
 class TestClass(object):
     
     a_dict: Dict = dataclasses.field(default_factory = dict)

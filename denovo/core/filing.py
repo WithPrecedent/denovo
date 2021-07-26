@@ -18,7 +18,6 @@ Contents:
 from __future__ import annotations
 import abc
 import copy
-import dataclasses
 import importlib.util
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
@@ -28,7 +27,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@dataclasses.dataclass
+@attr.s
 class FileFormat(object):
     """File format information.
 
@@ -145,7 +144,7 @@ default_parameters: Dict[str, Any] = {
     'visual_format': 'png'}
 
    
-@dataclasses.dataclass
+@attr.s
 class Clerk(object):
     """File and folder management for denovo.
 
@@ -383,7 +382,7 @@ class Clerk(object):
                 return path
 
 
-@dataclasses.dataclass
+@attr.s
 class Distributor(abc.ABC):
     """Base class for loading and saving classes.
 
@@ -505,7 +504,7 @@ class Distributor(abc.ABC):
         return file_path, file_format
 
 
-@dataclasses.dataclass
+@attr.s
 class FileLoader(Distributor):
     """Manages file importing for denovo.
 
@@ -563,7 +562,7 @@ class FileLoader(Distributor):
         return tool(file_path, **parameters)
 
 
-@dataclasses.dataclass
+@attr.s
 class FileSaver(Distributor):
     """Manages file exporting for denovo.
 

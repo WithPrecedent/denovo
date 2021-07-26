@@ -33,7 +33,6 @@ from collections.abc import (Container, Hashable, Iterable, Iterator,
                              MutableSequence, MutableSet, Mapping, 
                              MutableMapping, MappingView, ItemsView, KeysView, 
                              ValuesView)
-import dataclasses
 import itertools
 import pathlib
 from types import GenericAlias
@@ -50,7 +49,7 @@ catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 
 """ Base Type """
 
-@dataclasses.dataclass
+@attr.s
 class Kind(GenericAlias, abc.ABC):
     """Base class for generic types used by denovo.
     
@@ -88,7 +87,7 @@ class Kind(GenericAlias, abc.ABC):
     
 """ Basic Types """
          
-@dataclasses.dataclass
+@attr.s
 class String(Kind):
     
     name: ClassVar[str] = 'string'
@@ -96,7 +95,7 @@ class String(Kind):
     hint: ClassVar[Annotated] = str
 
 
-@dataclasses.dataclass
+@attr.s
 class Path(Kind):
     
     name: ClassVar[str] = 'path'
@@ -104,7 +103,7 @@ class Path(Kind):
     hint: ClassVar[Annotated] = Union[pathlib.Path, str]
       
     
-@dataclasses.dataclass
+@attr.s
 class Index(Kind):
     
     name: ClassVar[str] = 'index'
@@ -112,7 +111,7 @@ class Index(Kind):
     hint: ClassVar[Annotated] = Hashable
 
 
-@dataclasses.dataclass
+@attr.s
 class Integer(Kind):
     
     name: ClassVar[str] = 'integer'
@@ -120,7 +119,7 @@ class Integer(Kind):
     hint: ClassVar[Annotated] = int 
     
 
-@dataclasses.dataclass
+@attr.s
 class Real(Kind):
     
     name: ClassVar[str] = 'real'
@@ -130,7 +129,7 @@ class Real(Kind):
     
 """ Container Types """
 
-@dataclasses.dataclass
+@attr.s
 class Dictionary(Kind):
     
     name: ClassVar[str] = 'dictionary'
@@ -138,7 +137,7 @@ class Dictionary(Kind):
     hint: ClassVar[Annotated] = MutableMapping[Hashable, Any] 
 
     
-# @dataclasses.dataclass
+# @attr.s
 # class DefaultDictionary(Kind):
     
 #     name: ClassVar[str] = 'default_dictionary'
@@ -165,7 +164,7 @@ class Dictionary(Kind):
 #         return denovo.typing.converters.dictionary_to_dyad(source = source)   
     
 
-# @dataclasses.dataclass
+# @attr.s
 # class Chain(Kind, abc.ABC):
     
 #     name: ClassVar[str] = 'chain'
@@ -180,7 +179,7 @@ class Dictionary(Kind):
 #                 and not isinstance(instance, String))
         
         
-@dataclasses.dataclass
+@attr.s
 class Listing(Kind):
     
     name: ClassVar[str] = 'listing'
@@ -196,7 +195,7 @@ class Listing(Kind):
                 and not isinstance(instance, String))
             
 
-@dataclasses.dataclass
+@attr.s
 class Dyad(Kind):
     
     name: ClassVar[str] = 'dyad'
@@ -214,7 +213,7 @@ class Dyad(Kind):
                 and isinstance(instance[1], cls.comparison))
 
 
-@dataclasses.dataclass
+@attr.s
 class Group(Kind):
     
     name: ClassVar[str] = 'group'
@@ -224,7 +223,7 @@ class Group(Kind):
      
 """ Composite Types """
 
-@dataclasses.dataclass
+@attr.s
 class Adjacency(Kind):
     
     name: ClassVar[str] = 'adjacency'
@@ -245,7 +244,7 @@ class Adjacency(Kind):
             return False
 
              
-@dataclasses.dataclass
+@attr.s
 class Edge(Kind):
     
     name: ClassVar[str] = 'edge'
@@ -262,7 +261,7 @@ class Edge(Kind):
                 and all(isinstance(i, Index) for i in instance))      
 
 
-@dataclasses.dataclass
+@attr.s
 class Edges(Kind):
     
     name: ClassVar[str] = 'edges'
@@ -278,7 +277,7 @@ class Edges(Kind):
                 and all(isinstance(i, Edge) for i in instance))
  
  
-@dataclasses.dataclass
+@attr.s
 class Connections(Kind):
     
     name: ClassVar[str] = 'connections'
@@ -294,7 +293,7 @@ class Connections(Kind):
                 and all(isinstance(i, Edge) for i in instance))       
  
  
-@dataclasses.dataclass
+@attr.s
 class Matrix(Kind):
     
     name: ClassVar[str] = 'matrix'
@@ -316,7 +315,7 @@ class Matrix(Kind):
                         for e in list(more_itertools.collapse(instance[0]))))
  
  
-@dataclasses.dataclass
+@attr.s
 class Pipeline(Kind):
     
     name: ClassVar[str] = 'pipeline'
@@ -332,7 +331,7 @@ class Pipeline(Kind):
                 and all(isinstance(i, Index) for i in instance))           
  
  
-@dataclasses.dataclass
+@attr.s
 class Pipelines(Kind):
     
     name: ClassVar[str] = 'pipelines'
@@ -348,7 +347,7 @@ class Pipelines(Kind):
                 and all(isinstance(i, Index) for i in instance))   
 
 
-@dataclasses.dataclass
+@attr.s
 class Nodes(Kind):
     
     name: ClassVar[str] = 'nodes'
@@ -356,7 +355,7 @@ class Nodes(Kind):
     hint: ClassVar[Annotated] = Union[Hashable, Sequence] 
 
 
-@dataclasses.dataclass
+@attr.s
 class Composite(Kind):
     
     name: ClassVar[str] = 'graphs'

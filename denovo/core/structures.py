@@ -33,22 +33,22 @@ import abc
 import collections
 import collections.abc
 import copy
-import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, list, 
                     Mapping, MutableMapping, listing, Optional, 
                     Sequence, set, tuple, Type, Union)
 
+import attr
 import more_itertools
 
 import denovo
-from denovo.core.types import (Adjacency, Chain, Composite, Connections, 
+from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
                                DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
                                Group, Index, Integer, Kind, listing, Matrix, 
                                Nodes, Path, Pipeline, Pipelines, Real, String)
 
       
-@dataclasses.dataclass
+@attr.s
 class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
     """Vertex wrapper to provide hashability to any object.
     
@@ -130,7 +130,7 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
         return not(self == other)
 
 
-@dataclasses.dataclass
+@attr.s
 class Graph(denovo.Bunch, abc.ABC):
     """Base class for denovo graph data structures.
     
@@ -349,7 +349,7 @@ class Graph(denovo.Bunch, abc.ABC):
         return denovo.tools.beautify(item = self, package = 'denovo')  
 
     
-@dataclasses.dataclass
+@attr.s
 class System(Graph):
     """Base class for denovo directed graphs.
     
@@ -744,7 +744,7 @@ class System(Graph):
         self.prepend(item = other)     
         return self 
 
-# @dataclasses.dataclass
+# @attr.s
 # class Network(Graph):
 #     """Base class for connected denovo data structures.
     

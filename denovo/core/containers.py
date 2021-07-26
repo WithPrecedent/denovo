@@ -33,7 +33,6 @@ import abc
 import collections
 import collections.abc
 import copy
-import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
@@ -52,7 +51,7 @@ DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults',
 NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
 
 
-@dataclasses.dataclass
+@attr.s
 class Proxy(collections.abc.Container):
     """Basic wrapper class.
     
@@ -161,7 +160,7 @@ class Proxy(collections.abc.Container):
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
                         
 
-@dataclasses.dataclass
+@attr.s
 class Bunch(collections.abc.Iterable, abc.ABC):
     """Abstract base class for denovo list and dict replacements.
   
@@ -246,7 +245,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
         return len(self.contents)
     
  
-@dataclasses.dataclass
+@attr.s
 class Manifest(Bunch, collections.abc.MutableSequence):
     """Basic denovo list replacement.
     
@@ -359,7 +358,7 @@ class Manifest(Bunch, collections.abc.MutableSequence):
         del self.contents[key]
 
    
-@dataclasses.dataclass
+@attr.s
 class Hybrid(Manifest):
     """Iterable that has both a dict and list interfaces.
     
@@ -580,7 +579,7 @@ class Hybrid(Manifest):
         return self
 
  
-@dataclasses.dataclass
+@attr.s
 class Lexicon(Bunch, collections.abc.MutableMapping):
     """Basic denovo dict replacement.
     
@@ -766,7 +765,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         return self
     
 
-@dataclasses.dataclass
+@attr.s
 class Catalog(Lexicon):
     """Wildcard and list-accepting dictionary.
 
@@ -883,7 +882,7 @@ class Catalog(Lexicon):
         return self
 
  
-@dataclasses.dataclass
+@attr.s
 class Library(Lexicon):
     """Stores classes and class instances.
     
