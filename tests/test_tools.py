@@ -16,7 +16,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@attr.s
+@dataclasses.dataclass
 class TestClass(object):
     
     a_dict: Dict = dataclasses.field(default_factory = dict)

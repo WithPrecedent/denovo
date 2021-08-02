@@ -30,11 +30,12 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
+import dataclasses
 import functools
 import inspect
 import pathlib
 import types
-from typing import Any, Callable, Union
+from typing import Any, Callable, Optional, Union
 
 import more_itertools
 
@@ -49,6 +50,43 @@ from denovo.typing.types import (Adjacency, Composite, Connections,
 
 catalog: denovo.containers.Catalog = denovo.containers.Catalog()
  
+ 
+def bondafide(_wrapped: Optional[dataclasses.dataclass] = None, 
+              *,
+              include: Optional[list[str]] = None, 
+              exclude: Optional[list[str]] = None):
+    """Wraps a python dataclass and validates/converts attributes.
+    
+    """
+    include = include or []
+    exclude = exclude or []
+    def validator(wrapped: dataclasses.dataclass):
+        @functools.wraps(wrapped)
+        def wrapper(*args, **kwargs):
+            kwargs.update(denovo.tools.kwargify(args = args, item = wrapped))
+            instance = wrapped(**kwargs)
+            attributes = include or wrapped.__annotations__.keys()
+            attributes = [a for a in attributes if a not in exclude]  
+            for attribute in attributes:
+                try:
+                    kind = wrapped.__annotations__[attribute]
+                    key = kind.__name__
+                    value = getattr(instance, attribute)
+                    if not isinstance(value, kind):
+                        converter = catalog[key]
+                        new_value = converter(source = value)
+                        setattr(instance, attribute, new_value)
+                except KeyError:
+                    pass
+            return instance
+        return wrapper
+    if _wrapped is None:
+        return validator
+    else:
+        return validator(wrapped = _wrapped)
+    
+                    
+      
 """ Converters """
 
 @denovo.decorators.dispatcher 

@@ -12,7 +12,7 @@ import denovo
 from denovo.typing.types import *
 
 
-@attr.s
+@dataclasses.dataclass
 class NewString(denovo.types.String):
     pass
     

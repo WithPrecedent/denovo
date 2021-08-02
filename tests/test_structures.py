@@ -9,19 +9,19 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import denovo
 
 
-@attr.s
+@dataclasses.dataclass
 class Something(denovo.structures.Node):
     
     pass
 
 
-@attr.s
+@dataclasses.dataclass
 class AnotherThing(denovo.structures.Node):
     
     pass
 
 
-@attr.s
+@dataclasses.dataclass
 class EvenAnother(denovo.structures.Node):
     
     pass

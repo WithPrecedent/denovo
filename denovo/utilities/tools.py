@@ -101,7 +101,21 @@ def instancify(item: Union[Type, object], **kwargs) -> object:
         return item
     else:
         raise TypeError('item must be a class or class instance')
-            
+
+def kwargify(args: tuple, item: Type) -> dict[Hashable, Any]:
+    """Converts args to kwargs.
+    
+    Args:
+        args (tuple): arguments without keywords passed to 'item'.
+        item (Type): the item with annotations used to construct kwargs.
+        
+    Returns
+        dict[Hashable, Any]: kwargs based on 'args' and 'item'.
+    
+    """
+    annotations = item.__annotations__.keys()
+    return dict(zip(annotations, args))
+           
 def listify(item: Any, default_value: Any = None) -> list[Any]:
     """Returns passed item as a list (if not already a list).
 

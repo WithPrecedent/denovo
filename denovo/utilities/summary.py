@@ -53,7 +53,7 @@ VERTICAL: bool = True
 """ Public Classes """
 
 
-@attr.s
+@dataclasses.dataclass
 class SummaryKind(object):
     """Contains formating information for different data types.
     

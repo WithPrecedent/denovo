@@ -18,6 +18,7 @@ ToDo:
 """
 from __future__ import annotations
 import abc
+import dataclasses
 import datetime
 import inspect
 import functools
@@ -234,7 +235,9 @@ def dispatcher(dispatcher: Callable) -> Callable:
             checker = issubclass
         else:
             checker = isinstance
+        print('test kind catalog', denovo.typing.types.catalog)
         for value in denovo.typing.types.catalog.values():
+            print('test kind name', value.__name__)
             if checker(item, value):
                 return denovo.tools.snakify(value.__name__)
                 # except AttributeError:

@@ -12,7 +12,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@attr.s
+@dataclasses.dataclass
 class Bases(denovo.quirks.Importer):
     
     clerk: Union[str, Type] = denovo.filing.Clerk

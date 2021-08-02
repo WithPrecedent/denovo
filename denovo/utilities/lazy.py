@@ -170,7 +170,7 @@ def importify(name: str, package: str, importables: Dict[str, str]) -> Any:
         raise AttributeError(f'module {package} has no attribute {name}')   
 
 
-# @attr.s
+# @dataclasses.dataclass
 # class Importer(object):
 #     """Descriptor for lazy importing.
     

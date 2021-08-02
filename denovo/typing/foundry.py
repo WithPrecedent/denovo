@@ -30,7 +30,7 @@ from denovo.typing.types import (Adjacency, Chain, Composite, Connections,
                                  String)
 
 
-@attr.s
+@dataclasses.dataclass
 class Workshop(object):
     """Controls type conversion, class
     
@@ -108,7 +108,7 @@ class Workshop(object):
         return method(item = item, **kwargs)
 
 
-# @attr.s
+# @dataclasses.dataclass
 # class Validator(denovo.Quirk):
 #     """Mixin for calling validation methods
 
@@ -195,7 +195,7 @@ class Workshop(object):
 #         return converter()             
 
 
-# @attr.s
+# @dataclasses.dataclass
 # class Converter(abc.ABC):
 #     """Keystone class for type converters and validators.
 

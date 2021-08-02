@@ -27,7 +27,7 @@ import denovo
 TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
 
 
-@attr.s
+@dataclasses.dataclass
 class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
     """Loads and stores configuration settings.
 

@@ -17,7 +17,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-@attr.s
+@dataclasses.dataclass
 class TestClass(object):
     
     name: str = 'something'
