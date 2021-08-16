@@ -13,26 +13,28 @@ import denovo
 from denovo.typing.types import *
 
 
-def test_to_adjacency():
+def test_to_adjacency() -> None:
     adjacency = {'node': {'another_node'},
                  'another_node': {'some_node'},
                  'some_node': set()}
-    converted = denovo.converters.to_adjacency(adjacency)
+    converted = denovo.typing.converters.to_adjacency(adjacency)
     assert converted == {'node': {'another_node'},
                          'another_node': {'some_node'},
                          'some_node': set()}
     matrix = tuple([[[0, 1], [1,0]], ['tree', 'house']])
     print('test matrix', matrix)
-    print('test registry', denovo.converters.to_adjacency.registry.keys())
-    print('test string registry', denovo.converters.to_string.registry.keys())
+    print('test registry', 
+          denovo.typing.converters.to_adjacency.registry.keys())
+    print('test string registry', 
+          denovo.typing.converters.to_string.registry.keys())
     assert isinstance(matrix, denovo.types.Matrix)
-    converted = denovo.converters.to_adjacency(matrix)
+    converted = denovo.typing.converters.to_adjacency(matrix)
     return
 
-def test_to_string():
+def test_to_string() -> None:
     print('testing to_string')
     listing = ['stuff', 'more_stuff', 'even_more']
-    converted = denovo.converters.to_string(listing)
+    converted = denovo.typing.converters.to_string(listing)
     assert converted == 'stuff, more_stuff, even_more'
     return
 

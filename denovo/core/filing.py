@@ -18,6 +18,7 @@ Contents:
 from __future__ import annotations
 import abc
 import copy
+import dataclasses
 import importlib.util
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
@@ -206,7 +207,7 @@ class Clerk(object):
         # files.
         self.loader = FileLoader(clerk = self)
         self.saver = FileSaver(clerk = self)
-        return self
+        return
 
     """ Public Methods """
   
@@ -278,7 +279,7 @@ class Clerk(object):
                             file_name = file_name,
                             file_format = file_format,
                             **kwargs)
-        return self
+        return
 
     def validate(self, path: Union[str, pathlib.Path],
                  test: bool = True,
@@ -342,7 +343,7 @@ class Clerk(object):
         for section in ['files', 'filer', 'clerk']:
             if section in self.settings:
                 self.parameters.update(self.settings[section])
-        return self
+        return
 
     def _write_folder(self, folder: Union[str, pathlib.Path]) -> None:
         """Writes folder to disk.
@@ -354,7 +355,7 @@ class Clerk(object):
 
         """
         pathlib.Path.mkdir(folder, parents = True, exist_ok = True)
-        return self
+        return
 
     def _make_unique_path(self, 
                           folder: Union[pathlib.Path, str],
@@ -615,4 +616,4 @@ class FileSaver(Distributor):
             getattr(item, file_format.export_method)(item, **parameters)
         else:
             getattr(self, file_format.export_method)(item, **parameters)
-        return self
+        return

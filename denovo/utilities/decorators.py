@@ -32,7 +32,7 @@ import denovo
 
 """ Type Annotations """
 
-Processes: Type = Union[object, Type, Callable]
+Processes = Union[object, Type[Any], Callable]
 
 """ Module-Level Attributes """
 

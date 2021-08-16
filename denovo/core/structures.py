@@ -35,22 +35,20 @@ import collections.abc
 import copy
 import dataclasses
 import itertools
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, list, 
-                    Mapping, MutableMapping, listing, Optional, 
-                    Sequence, set, tuple, Type, Union)
+from typing import Any, Callable, Optional, Type, Union
 
-import attr
 import more_itertools
 
 import denovo
-from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
-                               DefaultDictionary, Dictionary, Dyad, Edge, Edges, 
-                               Group, Index, Integer, Kind, listing, Matrix, 
-                               Nodes, Path, Pipeline, Pipelines, Real, String)
+from denovo.typing.types import (Adjacency, Composite, Connections, Dyad, Edge, 
+                                 Edges, Group, Kind, Listing, Matrix, Node, 
+                                 Nodes, Order, Pipeline, Pipelines, Repeater)
 
       
 @dataclasses.dataclass
-class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
+class Node(denovo.core.quirks.Element, # type: ignore 
+           denovo.core.containers.Proxy, # type: ignore 
+           collections.abc.Hashable): 
     """Vertex wrapper to provide hashability to any object.
     
     Node acts a basic wrapper for any item stored in a denovo Structure. An
@@ -70,8 +68,8 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
         contents (Any): any stored item(s). Defaults to None.
 
     """
-    name: str = None
-    contents: Any = None
+    name: Optional[str] = None
+    contents: Optional[Any] = None
 
     """ Initialization Methods """
     
@@ -90,7 +88,7 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
         
     """ Dunder Methods """
 
-    def __hash__(self) -> Hashable:
+    def __hash__(self) -> collections.abc.Hashable:
         """Makes Node hashable so that it can be used as a key in a dict.
 
         Rather than using the object ID, this method prevents too Nodes with
@@ -131,8 +129,8 @@ class Node(denovo.quirks.Element, denovo.Proxy, collections.abc.Hashable):
         return not(self == other)
 
 
-@dataclasses.dataclass
-class Graph(denovo.Bunch, abc.ABC):
+@dataclasses.dataclass # type: ignore
+class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
     """Base class for denovo graph data structures.
     
     Graph supports '+' to join. using the 'merge' method, two Graph instances or 
@@ -163,7 +161,7 @@ class Graph(denovo.Bunch, abc.ABC):
         pass
     
     @abc.abstractproperty
-    def nodes(self) -> listing[Hashable]:
+    def nodes(self) -> Listing[collections.abc.Hashable]:
         """Returns the nodes of the stored graph."""
         pass
 
@@ -193,7 +191,7 @@ class Graph(denovo.Bunch, abc.ABC):
     
     @abc.abstractmethod
     def add(self, 
-            node: Hashable,
+            node: collections.abc.Hashable,
             ancestors: Nodes = None,
             descendants: Nodes = None) -> None:
         """Adds 'node' to the stored graph.
@@ -320,7 +318,7 @@ class Graph(denovo.Bunch, abc.ABC):
             
         """
         self.merge(item = other)        
-        return self
+        return
 
     def __contains__(self, nodes: Nodes) -> bool:
         """Returns whether 'nodes' is in or equivalent to 'contents'.
@@ -476,7 +474,7 @@ class System(Graph):
             for starting in start:
                 if node not in self[starting]:
                     self.connect(start = starting, stop = node)                 
-        return self 
+        return 
 
     def append(self, item: Union[Composite]) -> None:
         """Appends 'item' to the endpoints of the stored graph.
@@ -504,7 +502,7 @@ class System(Graph):
         else:
             raise TypeError('item must be a System, Adjacency, Edges, '
                             'Matrix, Pipeline, or Hashable type')
-        return self
+        return
   
     def connect(self, start: Hashable, stop: Hashable) -> None:
         """Adds an edge from 'start' to 'stop'.
@@ -526,7 +524,7 @@ class System(Graph):
             self.add(node = stop)
         if stop not in self.contents[start]:
             self.contents[start].add(self._stringify(stop))
-        return self
+        return
 
     def delete(self, node: Hashable) -> None:
         """Deletes node from graph.
@@ -543,7 +541,7 @@ class System(Graph):
         except KeyError:
             raise KeyError(f'{node} does not exist in the graph')
         self.contents = {k: v.discard(node) for k, v in self.contents.items()}
-        return self
+        return
 
     def disconnect(self, start: Hashable, stop: Hashable) -> None:
         """Deletes edge from graph.
@@ -560,7 +558,7 @@ class System(Graph):
             self.contents[start].discard(stop)
         except KeyError:
             raise KeyError(f'{start} does not exist in the graph')
-        return self
+        return
 
     def merge(self, item: Union[Composite]) -> None:
         """Adds 'item' to this Graph.
@@ -594,7 +592,7 @@ class System(Graph):
             raise TypeError('item must be a System, Adjacency, Edges, '
                             'Matrix, Pipeline, or Hashable type')
         self.contents.update(adjacency)
-        return self
+        return
 
     def prepend(self, item: Union[Composite]) -> None:
         """Prepends 'item' to the roots of the stored graph.
@@ -621,7 +619,7 @@ class System(Graph):
         else:
             raise TypeError('item must be a System, Adjacency, Edges, '
                             'Matrix, Pipeline, or Hashable type')
-        return self
+        return
       
     def subset(self, 
                include: Union[Any, Sequence[Any]] = None,
@@ -732,7 +730,7 @@ class System(Graph):
             
         """
         self.append(item = other)     
-        return self 
+        return 
 
     def __radd__(self, other: Union[Composite]) -> None:
         """Adds 'other' to the stored graph using the 'prepend' method.
@@ -743,7 +741,7 @@ class System(Graph):
             
         """
         self.prepend(item = other)     
-        return self 
+        return 
 
 # @dataclasses.dataclass
 # class Network(Graph):
@@ -774,7 +772,7 @@ class System(Graph):
 #     @property
 #     def adjacency(self) -> Adjacency:
 #         """Returns the stored graph as an adjacency list."""
-#         return self.contents
+#         return.contents
 
 #     @property
 #     def breadths(self) -> Pipeline:
@@ -785,7 +783,7 @@ class System(Graph):
 #                 of lists of nodes.
                 
 #         """
-#         return self._find_all_paths(starts = self.roots, 
+#         return._find_all_paths(starts = self.roots, 
 #                                     ends = self.endpoints,
 #                                     depth_first = False)
 
@@ -798,7 +796,7 @@ class System(Graph):
 #                 of lists of nodes.
                 
 #         """
-#         return self._find_all_paths(starts = self.roots, 
+#         return._find_all_paths(starts = self.roots, 
 #                                     ends = self.endpoints,
 #                                     depth_first = True)
      
@@ -973,7 +971,7 @@ class System(Graph):
 #             for starting in more_itertools.always_iterable(start):
 #                 if node not in [starting]:
 #                     self.connect(start = starting, stop = node)                 
-#         return self 
+#         return 
 
 #     def append(self, 
 #                source: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
@@ -1020,7 +1018,7 @@ class System(Graph):
 #             raise TypeError(
 #                 'source must be a Graph, Adjacency, Edges, Matrix, or Nodes '
 #                 'type')
-#         return self
+#         return
   
 #     def connect(self, start: Hashable, stop: Hashable) -> None:
 #         """Adds an edge from 'start' to 'stop'.
@@ -1043,7 +1041,7 @@ class System(Graph):
 #                 self.add(node = start)
 #             if stop not in self.contents[start]:
 #                 self.contents[start].append(self._stringify(stop))
-#         return self
+#         return
 
 #     def delete(self, node: Hashable) -> None:
 #         """Deletes node from graph.
@@ -1061,7 +1059,7 @@ class System(Graph):
 #             raise KeyError(f'{node} does not exist in the graph')
 #         self.contents = {
 #             k: v.remove(node) for k, v in self.contents.items() if node in v}
-#         return self
+#         return
 
 #     def disconnect(self, start: Hashable, stop: Hashable) -> None:
 #         """Deletes edge from graph.
@@ -1081,7 +1079,7 @@ class System(Graph):
 #             raise KeyError(f'{start} does not exist in the graph')
 #         except ValueError:
 #             raise ValueError(f'{stop} is not connected to {start}')
-#         return self
+#         return
 
 #     def merge(self, source: Union[Graph, Adjacency, Edges, Matrix]) -> None:
 #         """Adds 'source' to this Graph.
@@ -1114,7 +1112,7 @@ class System(Graph):
 #                 'source must be a Graph, Adjacency, Edges, or Matrix type to '
 #                 'update')
 #         self.contents.update(source)
-#         return self
+#         return
   
 #     def subgraph(self, 
 #                  include: Union[Any, Sequence[Any]] = None,
@@ -1319,7 +1317,7 @@ class System(Graph):
             
 #         """
 #         self.join(graph = other)        
-#         return self
+#         return
 
 #     def __iadd__(self, other: Graph) -> None:
 #         """Adds 'other' Graph to this Graph.
@@ -1333,7 +1331,7 @@ class System(Graph):
             
 #         """
 #         self.join(graph = other)        
-#         return self
+#         return
 
 #     def __contains__(self, nodes: Nodes) -> bool:
 #         """[summary]
@@ -1362,7 +1360,7 @@ class System(Graph):
 #             Any: value stored in 'contents'.
 
 #         """
-#         return self.contents[key]
+#         return.contents[key]
 
 #     def __setitem__(self, key: Hashable, value: Any) -> None:
 #         """sets 'key' in 'contents' to 'value'.
@@ -1373,7 +1371,7 @@ class System(Graph):
 
 #         """
 #         self.contents[key] = value
-#         return self
+#         return
 
 #     def __delitem__(self, key: Hashable) -> None:
 #         """Deletes 'key' in 'contents'.
@@ -1383,7 +1381,7 @@ class System(Graph):
 
 #         """
 #         del self.contents[key]
-#         return self
+#         return
 
 #     def __missing__(self) -> list:
 #         """Returns an empty list when a key doesn't exist.

@@ -44,7 +44,7 @@ import more_itertools
 import denovo
 
 
-Keys: Type = Union[Hashable, Sequence[Hashable]] 
+Keys = Union[Hashable, Sequence[Hashable]] 
  
 ALL_KEYS: list[Any] = ['all', 'All', ['all'], ['All']]
 DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults', 
@@ -53,7 +53,7 @@ NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
 
 
 @dataclasses.dataclass
-class Proxy(collections.abc.Container):
+class Proxy(collections.abc.Container[Any]):
     """Basic wrapper class.
     
     A Proxy differs than an ordinary container in 2 significant ways:
@@ -161,8 +161,8 @@ class Proxy(collections.abc.Container):
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
                         
 
-@dataclasses.dataclass
-class Bunch(collections.abc.Iterable, abc.ABC):
+@dataclasses.dataclass #type: ignore
+class Bunch(collections.abc.Iterable[Any], abc.ABC):
     """Abstract base class for denovo list and dict replacements.
   
     A Bunch differs from a general python iterable in 3 ways:
@@ -183,7 +183,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
         contents (Iterable[Any]): stored iterable. Defaults to None.
               
     """
-    contents: Iterable[Any] = None
+    contents: Iterable[Any]
    
     """ Required Subclass Methods """
     
@@ -215,7 +215,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
 
         """
         self.add(item = other)
-        return self
+        return
 
     def __iadd__(self, other: Any) -> None:
         """Combines argument with 'contents' using the 'add' method.
@@ -225,7 +225,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
 
         """
         self.add(item = other)
-        return self
+        return
 
     def __iter__(self) -> Iterable[Any]:
         """Returns iterable of 'contents'.
@@ -247,7 +247,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
     
  
 @dataclasses.dataclass
-class Manifest(Bunch, collections.abc.MutableSequence):
+class Manifest(Bunch, collections.abc.MutableSequence[Any]):
     """Basic denovo list replacement.
     
     A Manifest differs from an ordinary python list only in ways inherited
@@ -267,23 +267,21 @@ class Manifest(Bunch, collections.abc.MutableSequence):
 
     """ Public Methods """
 
-    def add(self, item: Union[Any, Sequence[Any]], **kwargs) -> None:
+    def add(self, item: Union[Any, Sequence[Any]]) -> None:
         """Tries to extend 'contents' with 'item'. Otherwise, appends.
 
         Args:
             item (Union[Any, Sequence[Any]]): item(s) to add to the 'contents' 
                 attribute.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
                 
         """
         if isinstance(item, Sequence) and not isinstance(item, str):
-            self.contents.extend(item, **kwargs)
+            self.contents.extend(item)
         else:
-            self.contents.append(item, **kwargs)
-        return self  
+            self.contents.append(item)
+        return
 
-    def insert(self, index: int, item: Any, **kwargs) -> None:
+    def insert(self, index: int, item: Any) -> None:
         """Inserts 'item' at 'index' in 'contents'.
 
         Args:
@@ -291,8 +289,8 @@ class Manifest(Bunch, collections.abc.MutableSequence):
             item (Any): object to be inserted.
             
         """
-        self.contents.insert(index, item, **kwargs)
-        return self
+        self.contents.insert(index, item)
+        return
                
     def subset(self, include: Keys = None, exclude: Keys = None) -> Manifest:
         """Returns a new instance with a subset of 'contents'.
@@ -326,37 +324,38 @@ class Manifest(Bunch, collections.abc.MutableSequence):
                        
     """ Dunder Methods """
 
-    def __getitem__(self, key: int) -> Any:
+    def __getitem__(self, index: Any) -> Any:
         """Returns value(s) for 'key' in 'contents'.
 
         Args:
-            key (int): index to search for in 'contents'.
+            index (Any): index to search for in 'contents'.
 
         Returns:
             Any: item stored in 'contents' at key.
 
         """
-        return self.contents[key]
+        return self.contents[index]
             
-    def __setitem__(self, key: int, value: Any) -> None:
+    def __setitem__(self, index: Any, value: Any) -> None:
         """sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (int): index to set 'value' to in 'contents'.
+            index (Any): index to set 'value' to in 'contents'.
             value (Any): value to be set at 'key' in 'contents'.
 
         """
-        self.contents[key] = value
-        return self
+        self.contents[index] = value
+        return
 
-    def __delitem__(self, key: Union[Any, int]) -> None:
+    def __delitem__(self, index: Any) -> None:
         """Deletes item at 'key' index in 'contents'.
 
         Args:
-            key (int): index in 'contents' to delete.
+            index (Any): index in 'contents' to delete.
 
         """
-        del self.contents[key]
+        del self.contents[index]
+        return
 
    
 @dataclasses.dataclass
@@ -415,11 +414,11 @@ class Hybrid(Manifest):
                 'default_factory' attribute. 
         """
         try:
-            return self[key]
+            return[key]
         except KeyError:
             return self.default_factory
 
-    def items(self) -> tuple[tuple[Any]]:
+    def items(self) -> tuple[tuple[Hashable, Any], ...]:
         """Emulates python dict 'items' method.
         
         Returns:
@@ -430,7 +429,7 @@ class Hybrid(Manifest):
         """
         return tuple(zip(self.keys(), self.values()))
 
-    def keys(self) -> tuple(Any):
+    def keys(self) -> tuple[Hashable, ...]:
         """Emulates python dict 'keys' method.
         
         Returns:
@@ -449,7 +448,7 @@ class Hybrid(Manifest):
             
         """
         self.default_factory = value 
-        return self
+        return
 
     def update(self, items: Mapping[Any, Any], **kwargs) -> None:
         """Mimics the dict 'update' method by extending 'contents' with 'items'.
@@ -464,9 +463,9 @@ class Hybrid(Manifest):
         
         """
         self.extend(item = list(items.values()), **kwargs)
-        return self
+        return
 
-    def values(self) -> tuple[Any]:
+    def values(self) -> tuple[Any, ...]:
         """Emulates python dict 'values' method.
         
         Returns:
@@ -559,7 +558,7 @@ class Hybrid(Manifest):
             self.contents[key] = value
         else:
             self.add(value)
-        return self
+        return
 
     def __delitem__(self, key: Union[Any, int]) -> None:
         """Deletes item matching 'key' in 'contents'.
@@ -577,7 +576,7 @@ class Hybrid(Manifest):
         else:
             self.contents = [c for c in self.contents 
                              if self._hashify(c) != key]
-        return self
+        return
 
  
 @dataclasses.dataclass
@@ -633,7 +632,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
                 
         """
         self.contents.update(item, **kwargs)
-        return self
+        return
 
     def get(self, key: Hashable) -> Any:
         """Returns value in 'contents' or value in 'default_factory' attribute.
@@ -646,7 +645,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             
         """
         try:
-            return self[key]
+            return[key]
         except (KeyError, TypeError):
             if self.default_factory is None:
                 raise KeyError(f'{key} is not in {self.__class__}')
@@ -686,7 +685,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             
         """
         self.default_factory = value 
-        return self
+        return
                
     def subset(self, include: Keys = None, exclude: Keys = None) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
@@ -753,7 +752,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
 
         """
         self.contents[key] = value
-        return self
+        return
 
     def __delitem__(self, key: Hashable) -> None:
         """Deletes 'key' in 'contents'.
@@ -763,7 +762,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
 
         """
         del self.contents[key]
-        return self
+        return
     
 
 @dataclasses.dataclass
@@ -831,7 +830,7 @@ class Catalog(Lexicon):
         # Returns a list of values for keys listed in 'default' attribute.
         elif key in DEFAULT_KEYS:
             try:
-                return self[self.default]
+                return[self.default]
             except KeyError:
                 matches = {k: self.contents[k] for k in self.default}
                 return list(matches.values())
@@ -868,7 +867,7 @@ class Catalog(Lexicon):
                 self.contents[key] = value
             except TypeError:
                 self.contents.update(dict(zip(key, value)))
-        return self
+        return
 
     def __delitem__(self, key: Keys) -> None:
         """Deletes 'key' in 'contents'.
@@ -880,7 +879,7 @@ class Catalog(Lexicon):
         """
         self.contents = {i: self.contents[i] for i in self.contents 
                          if i not in more_itertools.always_iterable(key)}
-        return self
+        return
 
  
 @dataclasses.dataclass
@@ -957,7 +956,7 @@ class Library(Lexicon):
                 self.collections[classification].add(key)
                 if base_key is not None:
                     self.collections[classification].add(base_key)
-        return self
+        return
     
     def remove(self, name: str) -> None:
         """Removes an item from 'instances' or 'classes.'
@@ -979,7 +978,7 @@ class Library(Lexicon):
                 del self.classes[name]
             except KeyError:
                 raise KeyError(f'{name} is not found in the library')
-        return self    
+        return    
 
     def withdraw(self, 
                  name: Union[str, Sequence[str]], 
@@ -1027,4 +1026,3 @@ class Library(Lexicon):
                 for key, value in kwargs.items():
                     setattr(item, key, value)  
         return item
-

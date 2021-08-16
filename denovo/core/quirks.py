@@ -23,6 +23,7 @@ ToDo:
 from __future__ import annotations
 import abc
 from collections import defaultdict
+import dataclasses
 import importlib
 import inspect
 import logging
@@ -397,7 +398,7 @@ class Keystone(Quirk, abc.ABC):
 #         self._proxify_attribute(proxy = proxy)
 #         if proxify_methods:
 #             self._proxify_methods(proxy = proxy)
-#         return self
+#         return
 
 #     """ Proxy Property Methods """
 
@@ -418,12 +419,12 @@ class Keystone(Quirk, abc.ABC):
 
 #         """
 #         setattr(self, self._proxied_attribute, value)
-#         return self
+#         return
 
 #     def _proxy_deleter(self) -> None:
 #         """Proxy deleter for '_proxied_attribute'."""
 #         setattr(self, self._proxied_attribute, self._default_proxy_value)
-#         return self
+#         return
 
 #     """ Other Private Methods """
 
@@ -438,7 +439,7 @@ class Keystone(Quirk, abc.ABC):
 #             fget = self._proxy_getter,
 #             fset = self._proxy_setter,
 #             fdel = self._proxy_deleter))
-#         return self
+#         return
 
 #     def _proxify_methods(self, proxy: str) -> None:
 #         """Creates proxy method with an alternate name.
@@ -453,6 +454,6 @@ class Keystone(Quirk, abc.ABC):
 #                     and callable(item)):
 #                 self.__dict__[item.replace(self._proxied_attribute, proxy)] = (
 #                     getattr(self, item))
-#         return self
+#         return
  
       

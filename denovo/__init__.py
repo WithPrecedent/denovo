@@ -22,14 +22,32 @@ __package__ = 'denovo'
 
 __author__ = 'Corey Rayburn Yung'
 
+# from . import core
+# from . import typing
+# from . import utilities
+# from .core import *
+# from .typing import *
+# from .utilities import *
+
+
+
+
+
+
 import abc
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
                     Mapping, MutableMapping, MutableSequence, Optional, 
                     Sequence, Type, Union)
 
+
+
+
+
 from .utilities import lazy
 from .core import containers
 from .typing import types
+
+
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 

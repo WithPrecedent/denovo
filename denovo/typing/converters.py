@@ -30,26 +30,24 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
+from collections.abc import Hashable, MutableMapping, MutableSequence
 import dataclasses
 import functools
-import inspect
 import pathlib
-import types
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Type, Union
 
 import more_itertools
 
 import denovo
-from denovo.typing.types import (Adjacency, Composite, Connections, 
-                                 Dictionary, Dyad, Edge, Edges, Group, Index, 
-                                 Integer, Kind, Listing, Matrix, Nodes, Path, 
-                                 Pipeline, Pipelines, Real, String)
+from denovo.typing.types import (Adjacency, Composite, Connections, Dyad, Edge, 
+                                 Edges, Group, Kind, Listing, Matrix, Nodes, 
+                                 Order, Pipeline, Pipelines, Repeater)
 
 
 """ Converter Registry and Registry Decorator """
 
 catalog: denovo.containers.Catalog = denovo.containers.Catalog()
- 
+
  
 def bondafide(_wrapped: Optional[dataclasses.dataclass] = None, 
               *,
@@ -85,8 +83,7 @@ def bondafide(_wrapped: Optional[dataclasses.dataclass] = None,
     else:
         return validator(wrapped = _wrapped)
     
-                    
-      
+                
 """ Converters """
 
 @denovo.decorators.dispatcher 
@@ -150,28 +147,28 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
     return adjacency
 
 @denovo.decorators.dispatcher   
-def to_dictionary(source: Any) -> Dictionary:
-    """Converts 'source' to a Dictionary.
+def to_dict(source: Any) -> MutableMapping[Hashable, Any]:
+    """Converts 'source' to a MutableMapping.
     
     Args:
-        source (Any): source to convert to a Dictionary.
+        source (Any): source to convert to a MutableMapping.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Dictionary: derived from 'source'.
+        MutableMapping: derived from 'source'.
 
     """
-    if isinstance(source, Dictionary):
+    if isinstance(source, MutableMapping):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
-@to_dictionary.register   
-def dyad_to_dictionary(source: Dyad) -> Dictionary:
-    """Converts a Dyad to a Dictionary."""
+@to_dict.register   
+def dyad_to_dict(source: Dyad) -> MutableMapping[Hashable, Any]:
+    """Converts a Dyad to a MutableMapping."""
     return dict(zip(source))
 
 @denovo.decorators.dispatcher   
@@ -195,8 +192,8 @@ def to_dyad(source: Any) -> Dyad:
                         f'unsupported type: {type(source).__name__}')
     
 @to_dyad.register
-def dictionary_to_dyad(source: Dictionary) -> Dyad:
-    """Converts a Dictionary to a Dyad."""
+def dict_to_dyad(source: MutableMapping) -> Dyad:
+    """Converts a MutableMapping to a Dyad."""
     return zip(*source)
 
 @denovo.decorators.dispatcher   
@@ -229,20 +226,20 @@ def adjacency_to_edges(source: Adjacency) -> Edges:
     return edges
 
 @denovo.decorators.dispatcher   
-def to_index(source: Any) -> Index:
-    """Converts 'source' to an Index.
+def to_index(source: Any) -> Hashable:
+    """Converts 'source' to an Hashable.
     
     Args:
-        source (Any): source to convert to a Index.
+        source (Any): source to convert to a Hashable.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Index: derived from 'source'.
+        Hashable: derived from 'source'.
 
     """
-    if isinstance(source, Index):
+    if isinstance(source, Hashable):
         return source
     else:
         try:
@@ -257,45 +254,46 @@ def to_index(source: Any) -> Index:
                     return denovo.tools.snakify(source.__class__.__name__)
                 except AttributeError:
                     raise TypeError(f'source cannot be converted because it is ' 
-                                    f'an unsupported type: {type(source).__name__}')
+                                    f'an unsupported type: '
+                                    f'{type(source).__name__}')
 
 @to_index.register
-def string_to_index(source: String) -> Index:
-    """Converts a String to an Index."""
+def str_to_index(source: str) -> Hashable:
+    """Converts a str to an Hashable."""
     return source
 
 @denovo.decorators.dispatcher   
-def to_integer(source: Any) -> Integer:
-    """Converts 'source' to a Path.
+def to_int(source: Any) -> int:
+    """Converts 'source' to a pathlib.Path.
     
     Args:
-        source (Any): source to convert to a Integer.
+        source (Any): source to convert to a int.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Integer: derived from 'source'.
+        int: derived from 'source'.
 
     """
-    if isinstance(source, Integer):
+    if isinstance(source, int):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
-@to_integer.register
-def string_to_integer(source: String) -> Integer:
-    """Converts a String to an Integer."""
+@to_int.register
+def str_to_int(source: str) -> int:
+    """Converts a str to an int."""
     return int(source)
 
-@to_integer.register
-def real_to_integer(source: Real) -> Integer:
-    """Converts a Real to an Integer."""
+@to_int.register
+def float_to_int(source: float) -> int:
+    """Converts a float to an int."""
     return int(source)
 
 @denovo.decorators.dispatcher   
-def to_listing(source: Any) -> Listing:
+def to_list(source: Any) -> Listing:
     """Converts 'source' to a Listing.
     
     Args:
@@ -314,9 +312,9 @@ def to_listing(source: Any) -> Listing:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
-@to_listing.register
-def string_to_listing(source: String) -> Listing:
-    """Converts a String to a Listing."""
+@to_list.register
+def str_to_listing(source: str) -> Listing:
+    """Converts a str to a Listing."""
     return ast.literal_eval(source)
 
 @denovo.decorators.dispatcher   
@@ -351,97 +349,101 @@ def adjacency_to_matrix(source: Adjacency) -> Matrix:
     return tuple(matrix, names)
 
 @denovo.decorators.dispatcher   
-def to_real(source: Any) -> Real:
-    """Converts 'source' to a Real.
+def to_float(source: Any) -> float:
+    """Converts 'source' to a float.
     
     Args:
-        source (Any): source to convert to a Real.
+        source (Any): source to convert to a float.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Real: derived from 'source'.
+        float: derived from 'source'.
 
     """
-    if isinstance(source, Real):
+    if isinstance(source, float):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
-@to_real.register
-def integer_to_real(source: Integer) -> Real:
-    """Converts an Integer to a Real."""
+@to_float.register
+def int_to_float(source: int) -> float:
+    """Converts an int to a float."""
     return float(source)
 
-@to_real.register
-def string_to_real(source: String) -> Real:
-    """Converts a String to a Real."""
+@to_float.register
+def str_to_float(source: str) -> float:
+    """Converts a str to a float."""
     return float(source)
 
 @denovo.decorators.dispatcher   
-def to_path(source: Any) -> Path:
-    """Converts 'source' to a Path.
+def to_path(source: Any) -> pathlib.Path:
+    """Converts 'source' to a pathlib.Path.
     
     Args:
-        source (Any): source to convert to a Path.
+        source (Any): source to convert to a pathlib.Path.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Path: derived from 'source'.
+        pathlib.Path: derived from 'source'.
 
     """
-    if isinstance(source, Path):
+    if isinstance(source, pathlib.Path):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
 @to_path.register   
-def string_to_path(source: String) -> Path:
-    """Converts a String to a Path."""
-    return pathlib.Path(source)
+def str_to_path(source: str) -> pathlib.Path:
+    """Converts a str to a pathlib.Path."""
+    return pathlib.pathlib.Path(source)
 
 @denovo.decorators.dispatcher   
-def to_string(source: Any) -> String:
-    """Converts 'source' to a String.
+def to_str(source: Any) -> str:
+    """Converts 'source' to a str.
     
     Args:
-        source (Any): source to convert to a String.
+        source (Any): source to convert to a str.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        String: derived from 'source'.
+        str: derived from 'source'.
 
     """
-    if isinstance(source, String):
+    if isinstance(source, str):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
-@to_string.register
-def integer_to_string(source: Integer) -> String:
+@to_str.register
+def int_to_str(source: int) -> str:
+    """Converts an int to a str."""
     return str(source)
 
-@to_string.register
-def real_to_string(source: Real) -> String:
+@to_str.register
+def float_to_str(source: float) -> str:
+    """Converts an float to a str."""
     return str(source)
 
-@to_string.register 
-def listing_to_string(source: Listing) -> String:
+@to_str.register 
+def list_to_str(source: Listing) -> str:
+    """Converts a list to a str."""
     return ', '.join(source)
    
-@to_string.register 
-def none_to_string(source: None) -> String:
+@to_str.register 
+def none_to_str(source: None) -> str:
+    """Converts None to a str."""
     return 'None'
 
-@to_string.register
-def path_to_string(source: Path) -> String:
-    """Converts a Path to a String."""
+@to_str.register
+def path_to_str(source: pathlib.Path) -> str:
+    """Converts a pathlib.Path to a str."""
     return str(source)

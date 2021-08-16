@@ -40,10 +40,10 @@ def acquire(path: Union[str, pathlib.Path]) -> Any:
             module = None
         return fetch(item = item, module = module, package = package)
 
-def fetch(item: str, 
-          module: str = None, 
-          package: str = None,
-          file_path: Union[str, pathlib.Path] = None) -> Any:
+def fetch(item: Optional[str] = None, 
+          module: Optional[str] = None, 
+          package: Optional[str] = None,
+          file_path: Optional[Union[str, pathlib.Path]] = None) -> Any:
     """Lazily imports 'item'.
     
     If 'file_path' is passed, the function will import a module at that location

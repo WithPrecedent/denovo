@@ -9,13 +9,12 @@ Contents:
     catalog (Catalog): a catalog of all Kind subclasses.
     Kind (KindType, ABC): base class for denovo typing system.
     
-    Adjacency (Kind, Protocol): annotation type for an adjacency list.
-    Matrix (Kind, Protocol): annotation type for an adjacency matrix.
-    Edge (Kind, Protocol): annotation type for a tuple of edge endpoints.
-    Edges (Kind, Protocol): annotation type for an edge list.
-    Pipeline (Kind, Protocol): annotation type for a pipeline.
-    Pipelines (Kind, Protocol): annotation type for pipelines.
-    Nodes (Kind, Protocol): annotation type for one or more nodes.
+    Adjacency (Kind): annotation type for an adjacency list.
+    Matrix (Kind): annotation type for an adjacency matrix.
+    Edge (Kind): annotation type for a tuple of edge endpoints.
+    Edges (Kind): annotation type for an edge list.
+    Pipeline (Kind): annotation type for a pipeline.
+    Pipelines (Kind): annotation type for pipelines.
 
 ToDo:
     Add date types and appropriate conversion functions
@@ -36,49 +35,65 @@ from collections.abc import (Container, Hashable, Iterable, Iterator,
 import dataclasses
 import itertools
 import pathlib
-from types import GenericAlias
 from typing import (Annotated, Any, ClassVar, Literal, Optional, Protocol, Type,
                     TypeVar, Union, runtime_checkable)
+from typing_extensions import runtime
 
 import more_itertools
 
 import denovo
 
 
-catalog: denovo.containers.Catalog = denovo.containers.Catalog()
-
+catalog: denovo.containers.Catalog = denovo.containers.Catalog() # type: ignore
 
 
 """ Base Protocol """
 
-@dataclasses.dataclass
 class Kind(abc.ABC):
-    """Base class for generic types used by denovo.
-    
-    Args:
-    
-    
-    """
+    """Base class for type protocols used by denovo."""
     
     """ Initialization Methods """
     
-    def __init_subclass__(cls, *args, **kwargs):
+    def __init_subclass__(cls, 
+                          *args: Optional[tuple[Any, ...]], 
+                          **kwargs: Optional[dict[Hashable, Any]]) -> None:
         """Adds 'cls' to 'catalog' dict."""
-        super().__init_subclass__(*args, **kwargs)
-        # Adds subclasses to 'catalog'.
-        name = denovo.tools.snakify(cls.__name__)
-        catalog[cls.name] = name
+        super().__init_subclass__(*args, **kwargs) # type: ignore
+        # Adds subclasses to 'catalog' amd 'names'.
+        name = denovo.utilities.tools.snakify(cls.__name__)
+        catalog[name] = cls
         # Stores 'name' in '__name__' to make Kind subclasses act the same as
         # builtin python types.
-        cls.__name__ = name
+        if not hasattr(cls, '__name__') or not cls.__name__:
+            cls.__name__ = name
 
 
-""" General Protocols and Type Aliases """
+""" Basic Protocols, Types, and Type Aliases """
 
+    
+class Group(Collection[Any], Kind, abc.ABC):
+    """Collection (not necessarily ordered) protocol that excludes strings."""
+    
+    """ Dunder Methods """
+    
+    @classmethod
+    def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is a Group."""
+        return (isinstance(instance, Collection) 
+                and not isinstance(instance, str))
 
-@dataclasses.dataclass
-class Listing(Kind):
-
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Group."""
+        return (issubclass(subclass, Collection) 
+                and not issubclass(subclass, str))
+ 
+ 
+class Listing(MutableSequence[Any], Kind, abc.ABC):
+    """MutableSequence protocol that excludes strings."""
+    
+    __name__: str = 'list'
+    
     """ Dunder Methods """
     
     @classmethod
@@ -86,30 +101,215 @@ class Listing(Kind):
         """Returns whether 'instance' is a Listing."""
         return (isinstance(instance, MutableSequence) 
                 and not isinstance(instance, str))
+
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Listing."""
+        return (issubclass(subclass, MutableSequence) 
+                and not issubclass(subclass, str))
+
+
+class Order(Sequence[Any], Kind, abc.ABC):
+    """Sequence protocol that excludes strings."""
     
+    __name__: str = 'tuple'
+    
+    """ Dunder Methods """
+    
+    @classmethod
+    def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is a Sequence."""
+        return (isinstance(instance, Sequence) 
+                and not isinstance(instance, str))
 
-Group: Type = Union[set, tuple, Listing]
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Sequence."""
+        return (issubclass(subclass, Sequence) 
+                and not issubclass(subclass, str))
+ 
+
+class Repeater(Iterable[Any], Kind, abc.ABC):
+    """Iterable protocol that excludes strings."""
+    
+    __name__: str = 'Iterable'
+    
+    """ Dunder Methods """
+    
+    @classmethod
+    def __instancecheck__(cls, instance: Any) -> bool:
+        """Returns whether 'instance' is an Iterable."""
+        return (isinstance(instance, Iterable) 
+                and not isinstance(instance, str))
+
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is an Iterable."""
+        return (issubclass(subclass, Iterable) 
+                and not issubclass(subclass, str))
         
-
-@dataclasses.dataclass
-class Dyad(Protocol[Listing[Listing]]):
-
+   
+class Dyad(Kind):
+    """Protocol for two Orders that may be zipped into a dict."""
+    
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
         """Returns whether 'instance' is an instance of Dyad."""
-        return (isinstance(instance, denovo.tools.tuplify(Listing)) 
+        return (isinstance(instance, Order) 
                 and len(instance) == 2
-                and isinstance(instance[0], Listing)
-                and isinstance(instance[1], Listing))
+                and isinstance(instance[0], Order)
+                and isinstance(instance[1], Order))
 
-
-""" Structure Protocols and Type Aliases """
-
-
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Dyad."""
+        return (issubclass(subclass, Order) 
+                and not issubclass(subclass, str))
+     
+         
+""" Composite Protocols, Types, and Type Aliases """
+   
+        
 @runtime_checkable
-class Adjacency(Protocol[MutableMapping]):
+class Node(Protocol):
+    """Protocol requirements for a Node in a Composite."""
+        
+    """ Required Methods """
+
+    def __hash__(self) -> int:
+        """Nodes must be hashable for indexing.
+        
+        Returns:
+            int: to identify node.
+            
+        """
+        pass
+
+    def __eq__(self, other: Node) -> bool:
+        """Nodes must be able to be compared.
+
+        Args:
+            other (Node): other Node instance to test for equivalance.
+            
+        Returns:
+            bool: of whether the 'other' and self are equivalent.
+            
+        """
+        pass
+
+    def __ne__(self, other: Node) -> bool:
+        """Nodes must be able to be compared.
+
+        Args:
+            other (Node): other Node instance to test for equivalance.
+            
+        Returns:
+            bool: of whether the 'other' and self are not equivalent.
+            
+        """
+        pass
+
+    def __str__(self) -> str:
+        """Nodes must be able to be represented as strings."""
+        pass   
+
+   
+@runtime_checkable
+class Composite(Protocol):
+    
+    contents: Repeater
+      
+    """ Required Methods """
+    
+    @classmethod
+    def create(cls, source: Any) -> Composite:
+        """Creates an instance of a Composite from 'source'.
+        
+        Args:
+            source (Any): supported data structure.
+                
+        Returns:
+            Composite: a Composite instance created based on 'source'.
+                
+        """
+        pass
+       
+    def add(self, 
+            node: Node,
+            ancestors: Optional[Union[Node, Pipeline]] = None,
+            descendants: Optional[Union[Node, Pipeline]] = None) -> None:
+        """Adds 'node' to the stored Composite.
+        
+        Args:
+            node (Node): a node to add to the stored Composite.
+            ancestors (Union[Node, Pipeline]): node(s) from which 'node' should 
+                be connected.
+            descendants (Union[Node, Pipeline]): node(s) to which 'node' should 
+                be connected.
+
+        """
+        pass
+
+    def connect(self, start: Node, stop: Node) -> None:
+        """Adds an edge from 'start' to 'stop'.
+
+        Args:
+            start (Node): name of node for edge to start.
+            stop (Node): name of node for edge to stop.
+
+        """
+        pass
+
+    def delete(self, node: Node) -> None:
+        """Deletes node from Composite.
+        
+        Args:
+            node (Node): node to delete from 'contents'.
+  
+        """
+        pass
+
+    def disconnect(self, start: Node, stop: Node) -> None:
+        """Deletes edge from Composite.
+
+        Args:
+            start (Node): starting node for the edge to delete.
+            stop (Node): ending node for the edge to delete.
+
+        """
+        pass
+
+    def merge(self, item: Any) -> None:
+        """Adds 'item' to this Composite.
+
+        This method is roughly equivalent to a dict.update, adding nodes to the 
+        existing Composite. 
+        
+        Args:
+            item (Any): another Composite or supported data structure.
+            
+        """
+        pass
+
+    def subset(self, 
+               include: Optional[Group] = None,
+               exclude: Optional[Group] = None) -> Composite:
+        """Returns a Composite with some items removed from 'contents'.
+        
+        Args:
+            include (Optional[Group]): nodes to include in the new Composite.
+                Defaults to None.
+            exclude (Group[Node]): nodes to exclude in the new Composite.
+                Defaults to None.
+                  
+        """
+        pass
+
+
+class Adjacency(Kind):
+    """Protocol for an adjacency list representation of a Composite."""
     
     """ Dunder Methods """
     
@@ -120,26 +320,36 @@ class Adjacency(Protocol[MutableMapping]):
             edges = list(instance.values())
             nodes = list(itertools.chain(instance.values()))
             return (all(isinstance(e, (set)) for e in edges)
-                    and all(isinstance(n, Hashable) for n in nodes))   
+                    and all(isinstance(n, Node) for n in nodes))   
         else:
             return False
 
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is an Adjacency."""
+        return issubclass(subclass, MutableMapping)
+        
 
-@runtime_checkable
-class Connections(Protocol[set[Hashable]]):
-
+class Connections(Kind):
+    """Protocol for a Group of hashable items in a composite structure."""
+    
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
         """Returns whether 'instance' is an instance of Connections."""
-        return (isinstance(instance, set) 
-                and all(isinstance(i, Hashable) for i in instance))       
- 
-             
-@runtime_checkable
-class Edge(Protocol[tuple[Hashable]]):
+        return (isinstance(instance, Group) 
+                and all(isinstance(i, Node) for i in instance))       
 
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Connections."""
+        return issubclass(subclass, Group)
+    
+                
+class Edge(Kind):
+    """Protocol for an edge in a Composite."""
+    
     """ Dunder Methods """
     
     @classmethod
@@ -147,12 +357,17 @@ class Edge(Protocol[tuple[Hashable]]):
         """Returns whether 'instance' is an instance of Edge."""
         return (isinstance(instance, tuple)
                 and len(instance) == 2 
-                and all(isinstance(i, Hashable) for i in instance))      
+                and all(isinstance(i, Node) for i in instance))      
 
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is an Edge."""
+        return issubclass(subclass, tuple)
+    
 
-@runtime_checkable
-class Edges(Protocol[Listing[Edge]]):
-
+class Edges(Kind):
+    """Protocol for a Group of Edge in a Composite."""
+    
     """ Dunder Methods """
     
     @classmethod
@@ -160,11 +375,16 @@ class Edges(Protocol[Listing[Edge]]):
         """Returns whether 'instance' is an instance of Edges."""
         return (isinstance(instance, Group) 
                 and all(isinstance(i, Edge) for i in instance))
- 
 
-@runtime_checkable
-class Matrix(Protocol[tuple]):
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is an Edges."""
+        return issubclass(subclass, Group)
+     
 
+class Matrix(Kind):
+    """Protocol for an adjacency matrix representation of a Composite."""
+    
     """ Dunder Methods """
     
     @classmethod
@@ -172,27 +392,38 @@ class Matrix(Protocol[tuple]):
         """Returns whether 'instance' is an instance of Matrix."""
         return (isinstance(instance, tuple) 
                 and len(instance) == 2
-                and isinstance(instance[1], Sequence) 
-                and all(isinstance(i, Sequence) for i in instance[0])
-                and all(isinstance(n, Hashable) for n in instance[1])
+                and isinstance(instance[1], Order) 
+                and all(isinstance(i, Order) for i in instance[0])
+                and all(isinstance(n, Node) for n in instance[1])
                 and all(isinstance(e, int) 
                         for e in list(more_itertools.collapse(instance[0]))))
- 
-@runtime_checkable
-class Pipeline(Protocol[Listing[Hashable]]):
-    
+
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Matrix."""
+        return issubclass(subclass, tuple)
+       
+
+class Pipeline(Kind):
+    """Protocol for an Order of hashable items."""
+        
     """ Dunder Methods """
     
     @classmethod
     def __instancecheck__(cls, instance: Any) -> bool:
         """Returns whether 'instance' is an instance of Pipeline."""
-        return (isinstance(instance, Listing)
-                and all(isinstance(i, Hashable) for i in instance))           
- 
- 
-@runtime_checkable
-class Pipelines(Protocol[Group[Pipeline]]):
+        return (isinstance(instance, Order)
+                and all(isinstance(i, Node) for i in instance))           
 
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Pipeline."""
+        return issubclass(subclass, Order)
+     
+ 
+class Pipelines(Kind):
+    """Protocol for a Group of Pipeline."""
+    
     """ Dunder Methods """
     
     @classmethod
@@ -201,7 +432,10 @@ class Pipelines(Protocol[Group[Pipeline]]):
         return (isinstance(instance, Group)
                 and all(isinstance(i, Pipeline) for i in instance))   
 
+    @classmethod
+    def __subclasscheck__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a Pipelines."""
+        return issubclass(subclass, Group)
+    
 
-Nodes: Type = Union[Hashable, Pipeline]
-
-Composite: Type = Union[Adjacency, Edges,Matrix, Nodes]
+Nodes = Union[Node, Connections]   

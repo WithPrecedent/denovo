@@ -11,6 +11,7 @@ Contents:
 """
 from __future__ import annotations
 import configparser
+import dataclasses
 import importlib
 import importlib.util
 import json
@@ -28,7 +29,7 @@ TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
 
 
 @dataclasses.dataclass
-class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
+class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
     """Loads and stores configuration settings.
 
     To create settings instance, a user can pass a:
@@ -215,7 +216,7 @@ class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
 
         """
         import toml
-        path = denovo.tools.pathlibify(item = path) 
+        path = denovo.utilities.tools.pathlibify(item = path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
@@ -238,7 +239,7 @@ class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
 
         """
         import yaml
-        path = denovo.tools.pathlibify(item = path) 
+        path = denovo.utilities.tools.pathlibify(item = path) 
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = False
         try:
@@ -261,7 +262,7 @@ class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             self[section].update(contents)
         except KeyError:
             self[section] = contents
-        return self
+        return
 
     def inject(self, 
                instance: object,
@@ -361,4 +362,4 @@ class settings(denovo.containers.Lexicon, denovo.quirks.Factory):
             except TypeError:
                 raise TypeError('key must be a str and value must be a dict '
                                 'type')
-        return self
+        return

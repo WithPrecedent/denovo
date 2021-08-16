@@ -23,6 +23,7 @@ ToDo:
 from __future__ import annotations
 import abc
 import copy
+import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Generic, Hashable, Iterable, 
                     list, Mapping, MutableMapping, MutableSequence, Optional, 
@@ -34,22 +35,22 @@ import more_itertools
 import denovo
 
 
-keystones: denovo.Library = denovo.quirks.Keystone.library
+keystones: denovo.Library = denovo.core.quirks.Keystone.library
 kinds: denovo.Catalog[str, Kind] = denovo.Catalog()
 quirks: denovo.Catalog[str, denovo.Quirk] = denovo.Catalog()
 
 
 def build_keystone(name: str,
-                   keystone: Union[str, denovo.quirks.Keystone] = None, 
+                   keystone: Union[str, denovo.core.quirks.Keystone] = None, 
                    quirks: Union[str, 
                                  denovo.Quirk, 
                                  Sequence[Union[str, denovo.Quirk]]] = None,
-                   **kwargs) -> denovo.quirks.Keystone:
+                   **kwargs) -> denovo.core.quirks.Keystone:
     """[summary]
 
     Args:
         name (str): [description]
-        keystone (Union[str, denovo.quirks.Keystone], optional): [description]. 
+        keystone (Union[str, denovo.core.quirks.Keystone], optional): [description]. 
             Defaults to None.
         quirks (Union[str, denovo.Quirk, Sequence[Union[str, denovo.Quirk]]], 
             optional): [description]. Defaults to None.
@@ -59,7 +60,7 @@ def build_keystone(name: str,
             not a str or Keystone type.
 
     Returns:
-        denovo.quirks.Keystone: dataclass of Keystone subclass with 'quirks'
+        denovo.core.quirks.Keystone: dataclass of Keystone subclass with 'quirks'
             added.
         
     """
@@ -73,46 +74,11 @@ def build_keystone(name: str,
             raise TypeError('All quirks must be str or Quirk type')
     if isinstance(keystone, str):
         bases.append(keystones.classes[keystone])
-    elif isinstance(keystone, denovo.quirks.Keystone):
+    elif isinstance(keystone, denovo.core.quirks.Keystone):
         bases.append(keystone)
     else:
         raise TypeError('keystone must be a str or Keystone type')
-    return @dataclasses.dataclass(type(name, tuple(bases), **kwargs))
-
-
-@dataclasses.dataclass
-class Kind(object):
-    
-    name: str
-    comparison: Union[Type, tuple[Type]]
-    origins: list[Type] = dataclasses.field(default_factory = list)
-    
-    """ Properties """
-    
-    @property
-    def sources(self) -> tuple[Type, ...]:
-        return tuple(self.origins)
-
-
-@dataclasses.dataclass
-class Dyad(object):
-    
-    name: str = 'dyad'
-    comparison: Union[Type, tuple[Type]] = MutableMapping
-    origins: list[Type] = dataclasses.field(default_factory = lambda: [Dyad])  
-    
-    
-@dataclasses.dataclass
-class Dictionary(object):
-    
-    name: str = 'dictionary'
-    comparison: Union[Type, tuple[Type]] = MutableMapping
-    origins: list[Type] = dataclasses.field(default_factory = lambda: [Dyad])    
-    
-    
-    
-def dyad_to_dictionary(source: Dyad) -> Dictionary:
-    return dict(zip(source))
+    return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
 
 
 @dataclasses.dataclass
@@ -219,7 +185,7 @@ class Workshop(denovo.Lexicon):
 #                 except AttributeError:
 #                     validated = getattr(self, name)
 #             setattr(self, name, validated)
-#         return self     
+#         return     
 
 # #     def deannotate(self, annotation: Any) -> tuple[Any]:
 # #         """Returns type annotations as a tuple.

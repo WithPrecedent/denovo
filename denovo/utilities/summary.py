@@ -30,6 +30,7 @@ ToDo:
     
 """
 from __future__ import annotations
+import dataclasses
 import inspect
 import textwrap
 from types import FunctionType

@@ -15,6 +15,7 @@ ToDo:
 from __future__ import annotations
 import ast
 import collections
+import dataclasses
 import inspect
 import pathlib
 from types import ModuleType
@@ -152,7 +153,7 @@ class Workshop(object):
 #                 except AttributeError:
 #                     validated = getattr(self, name)
 #             setattr(self, name, validated)
-#         return self     
+#         return     
 
 # #     def deannotate(self, annotation: Any) -> tuple[Any]:
 # #         """Returns type annotations as a tuple.

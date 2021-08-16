@@ -22,7 +22,7 @@ def test_kind():
     a_string = 'blah'
     assert isinstance(a_string, String)
     a_dict = {a_string: 'something'}
-    assert isinstance(a_dict, Dictionary)
+    assert isinstance(a_dict, MutableMapping)
     a_dyad = [['a', 'b', 'c'], ['d', 'e', 'f']]
     assert isinstance(a_dyad, Dyad)
     an_int = 4
@@ -31,7 +31,7 @@ def test_kind():
     a_real = 3.14
     assert isinstance(a_real, Real)
     # a_default = collections.defaultdict(None, {'tree': 'house'})
-    # assert isinstance(a_default, DefaultDictionary)
+    # assert isinstance(a_default, DefaultMutableMapping)
     a_listing = ['abc', '123']
     assert isinstance(a_listing, Listing)
     a_disk = pathlib.Path('.')

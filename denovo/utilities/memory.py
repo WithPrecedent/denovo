@@ -11,12 +11,13 @@ ToDo:
 
 """
 from __future__ import annotations
+import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
                     Union)
 
 
-def add_slots(item: Type) -> Type:
+def add_slots(item: Type[Any]) -> Type[Any]:
     """Adds slots to dataclass with default values.
     
     Derived from code here: 
@@ -36,13 +37,13 @@ def add_slots(item: Type) -> Type:
         raise TypeError(f'{item.__name__} already contains __slots__')
     else:
         item_dict = dict(item.__dict__)
-        field_names = tuple(f.name for f in dataclasses.field(item))
+        field_names = tuple(f.name for f in dataclasses.fields(item))
         item_dict['__slots__'] = field_names
         for field_name in field_names:
             item_dict.pop(field_name, None)
         item_dict.pop('__dict__', None)
         qualname = getattr(item, '__qualname__', None)
-        item = type(item)(item.__name__, item.__bases__, item_dict)
+        item = type(item)(item.__name__, item.__bases__, item_dict) # type: ignore
         if qualname is not None:
             item.__qualname__ = qualname
     return item

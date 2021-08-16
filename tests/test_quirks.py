@@ -13,7 +13,7 @@ import denovo
 
 
 @dataclasses.dataclass
-class Bases(denovo.quirks.Importer):
+class Bases(denovo.core.quirks.Importer):
     
     clerk: Union[str, Type] = denovo.filing.Clerk
     library: Union[str, Type] = 'denovo.containers.Library'
