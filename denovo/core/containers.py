@@ -96,8 +96,11 @@ class Proxy(collections.abc.Container[Any]):
         try:
             return item in self.contents
         except TypeError:
-            return item == self.contents
-
+            try:
+                return item is self.contents
+            except TypeError:
+                return item == self.contents # type: ignore
+                
     def __getattr__(self, attribute: str) -> Any:
         """Looks for 'attribute' in 'contents'.
 
@@ -119,7 +122,7 @@ class Proxy(collections.abc.Container[Any]):
                 f'{attribute} is not in '
                 f'{object.__getattribute__(self, "__name__")}') 
 
-    def __setattr__(self, attribute: str, value: Any):
+    def __setattr__(self, attribute: str, value: Any) -> None:
         """sets 'attribute' to 'value'.
         
         If 'attribute' exists in this class instance, its new value is set to
@@ -136,7 +139,7 @@ class Proxy(collections.abc.Container[Any]):
         else:
             object.__setattr__(self.contents, attribute, value)
             
-    def __delattr__(self, attribute: str):
+    def __delattr__(self, attribute: str) -> None:
         """Deletes 'attribute'.
         
         If 'attribute' exists in this class instance, it is deleted. Otherwise, 

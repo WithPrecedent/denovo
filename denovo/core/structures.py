@@ -9,7 +9,7 @@ the provided subclasses assume that all edges in a composite structure are
 unweighted and directed.
 
 Classes:
-    Node (Element, Proxy, collections.abc.Hashable): Wrapper for non-hashable 
+    Node (Element, Proxy, collections.abc.Node): Wrapper for non-hashable 
         objections that a user wishes to store as nodes. It can be subclassed,
         but a subclass must be a dataclass and call super().__post_init__ to 
         ensure that the hash equivalence methods are added to subclasses.
@@ -44,90 +44,6 @@ from denovo.typing.types import (Adjacency, Composite, Connections, Dyad, Edge,
                                  Edges, Group, Kind, Listing, Matrix, Node, 
                                  Nodes, Order, Pipeline, Pipelines, Repeater)
 
-      
-@dataclasses.dataclass
-class Node(denovo.core.quirks.Element, # type: ignore 
-           denovo.core.containers.Proxy, # type: ignore 
-           collections.abc.Hashable): 
-    """Vertex wrapper to provide hashability to any object.
-    
-    Node acts a basic wrapper for any item stored in a denovo Structure. An
-    denovo Structure does not require Node instances to be stored. Rather, they
-    are offered as a convenient type which is also used internally in denovo.
-    
-    By inheriting from Proxy, a Node will act as a pass-through class for access
-    methods seeking attributes not in a Node instance but rather stored in 
-    'contents'.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout denovo. For example, if a denovo 
-            instance needs settings from a settings instance, 'name' should 
-            match the appropriate section name in a settings instance. 
-            Defaults to None. 
-        contents (Any): any stored item(s). Defaults to None.
-
-    """
-    name: Optional[str] = None
-    contents: Optional[Any] = None
-
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, *args, **kwargs):
-        """Forces subclasses to use the same hash methods as Node.
-        
-        This is necessary because dataclasses, by design, do not automatically 
-        inherit the hash and equivalance dunder methods from their super 
-        classes.
-        
-        """
-        super().__init_subclass__(*args, **kwargs)
-        cls.__hash__ = Node.__hash__
-        cls.__eq__ = Node.__eq__
-        cls.__ne__ = Node.__ne__
-        
-    """ Dunder Methods """
-
-    def __hash__(self) -> collections.abc.Hashable:
-        """Makes Node hashable so that it can be used as a key in a dict.
-
-        Rather than using the object ID, this method prevents too Nodes with
-        the same name from being used in a composite object that uses a dict as
-        its base storage type.
-        
-        Returns:
-            Hashable: of Node 'name'.
-            
-        """
-        return hash(self.name)
-
-    def __eq__(self, other: Node) -> bool:
-        """Makes Node hashable so that it can be used as a key in a dict.
-
-        Args:
-            other (Node): other Node instance to test for equivalance.
-            
-        Returns:
-            bool: whether 'name' is the same as 'other.name'.
-            
-        """
-        try:
-            return str(self.name) == str(other.name)
-        except AttributeError:
-            return str(self.name) == other
-
-    def __ne__(self, other: Node) -> bool:
-        """Completes equality test dunder methods.
-
-        Args:
-            other (Node): other Node instance to test for equivalance.
-           
-        Returns:
-            bool: whether 'name' is not the same as 'other.name'.
-            
-        """
-        return not(self == other)
-
 
 @dataclasses.dataclass # type: ignore
 class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
@@ -161,7 +77,7 @@ class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
         pass
     
     @abc.abstractproperty
-    def nodes(self) -> Listing[collections.abc.Hashable]:
+    def nodes(self) -> Listing[Node]:
         """Returns the nodes of the stored graph."""
         pass
 
@@ -191,13 +107,13 @@ class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
     
     @abc.abstractmethod
     def add(self, 
-            node: collections.abc.Hashable,
+            node: collections.abc.Node,
             ancestors: Nodes = None,
             descendants: Nodes = None) -> None:
         """Adds 'node' to the stored graph.
         
         Args:
-            node (Hashable): a node to add to the stored graph.
+            node (Node): a node to add to the stored graph.
             ancestors (Nodes): node(s) from which 'node' should be connected.
             descendants (Nodes): node(s) to which 'node' should be connected.
 
@@ -205,33 +121,33 @@ class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
         pass
 
     @abc.abstractmethod
-    def connect(self, start: Hashable, stop: Hashable) -> None:
+    def connect(self, start: Node, stop: Node) -> None:
         """Adds an edge from 'start' to 'stop'.
 
         Args:
-            start (Hashable): name of node for edge to start.
-            stop (Hashable): name of node for edge to stop.
+            start (Node): name of node for edge to start.
+            stop (Node): name of node for edge to stop.
 
         """
         pass
 
     @abc.abstractmethod
-    def delete(self, node: Hashable) -> None:
+    def delete(self, node: Node) -> None:
         """Deletes node from graph.
         
         Args:
-            node (Hashable): node to delete from 'contents'.
+            node (Node): node to delete from 'contents'.
   
         """
         pass
 
     @abc.abstractmethod
-    def disconnect(self, start: Hashable, stop: Hashable) -> None:
+    def disconnect(self, start: Node, stop: Node) -> None:
         """Deletes edge from graph.
 
         Args:
-            start (Hashable): starting node for the edge to delete.
-            stop (Hashable): ending node for the edge to delete.
+            start (Node): starting node for the edge to delete.
+            stop (Node): ending node for the edge to delete.
 
         """
         pass
@@ -296,7 +212,7 @@ class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
                 return node.name
             except AttributeError:
                 try:
-                    return hash(node)
+                    return str(hash(node))
                 except TypeError:
                     try:
                         return str(node)
@@ -332,7 +248,7 @@ class Graph(denovo.core.containers.Bunch, abc.ABC): # type: ignore
         """
         if isinstance(nodes, Group):
             return all(n in self.contents for n in nodes)
-        elif isinstance(nodes, Hashable):
+        elif isinstance(nodes, Node):
             return nodes in self.contents or nodes == self.contents
         else:
             return False   
@@ -379,7 +295,7 @@ class System(Graph):
         return denovo.converters.adjacency_to_edges(source = self.contents)
 
     @property
-    def endpoints(self) -> set[Hashable]:
+    def endpoints(self) -> set[Node]:
         """Returns endpoint nodes in the stored graph in a list."""
         return {k for k in self.contents.keys() if not self.contents[k]}
 
@@ -389,7 +305,7 @@ class System(Graph):
         return denovo.converters.adjacency_to_matrix(source = self.contents)
                       
     @property
-    def nodes(self) -> set[Hashable]:
+    def nodes(self) -> set[Node]:
         """Returns all stored nodes in a list."""
         return set(self.contents.keys())
 
@@ -399,7 +315,7 @@ class System(Graph):
         return self._find_all_paths(starts = self.roots, stops = self.endpoints)
        
     @property
-    def roots(self) -> set[Hashable]:
+    def roots(self) -> set[Node]:
         """Returns root nodes in the stored graph in a list."""
         stops = list(itertools.chain.from_iterable(self.contents.values()))
         return {k for k in self.contents.keys() if k not in stops}
@@ -432,13 +348,13 @@ class System(Graph):
     """ Public Methods """
 
     def add(self, 
-            node: Hashable,
+            node: Node,
             ancestors: Nodes = None,
             descendants: Nodes = None) -> None:
         """Adds 'node' to the stored graph.
         
         Args:
-            node (Hashable): a node to add to the stored graph.
+            node (Node): a node to add to the stored graph.
             ancestors (Nodes): node(s) from which 'node' should be connected.
             descendants (Nodes): node(s) to which 'node' should be connected.
 
@@ -501,15 +417,15 @@ class System(Graph):
                     self.connect(start = endpoint, stop = root)
         else:
             raise TypeError('item must be a System, Adjacency, Edges, '
-                            'Matrix, Pipeline, or Hashable type')
+                            'Matrix, Pipeline, or Node type')
         return
   
-    def connect(self, start: Hashable, stop: Hashable) -> None:
+    def connect(self, start: Node, stop: Node) -> None:
         """Adds an edge from 'start' to 'stop'.
 
         Args:
-            start (Hashable): name of node for edge to start.
-            stop (Hashable): name of node for edge to stop.
+            start (Node): name of node for edge to start.
+            stop (Node): name of node for edge to stop.
             
         Raises:
             ValueError: if 'start' is the same as 'stop'.
@@ -526,11 +442,11 @@ class System(Graph):
             self.contents[start].add(self._stringify(stop))
         return
 
-    def delete(self, node: Hashable) -> None:
+    def delete(self, node: Node) -> None:
         """Deletes node from graph.
         
         Args:
-            node (Hashable): node to delete from 'contents'.
+            node (Node): node to delete from 'contents'.
         
         Raises:
             KeyError: if 'node' is not in 'contents'.
@@ -543,12 +459,12 @@ class System(Graph):
         self.contents = {k: v.discard(node) for k, v in self.contents.items()}
         return
 
-    def disconnect(self, start: Hashable, stop: Hashable) -> None:
+    def disconnect(self, start: Node, stop: Node) -> None:
         """Deletes edge from graph.
 
         Args:
-            start (Hashable): starting node for the edge to delete.
-            stop (Hashable): ending node for the edge to delete.
+            start (Node): starting node for the edge to delete.
+            stop (Node): ending node for the edge to delete.
         
         Raises:
             KeyError: if 'start' is not a node in the stored graph..
@@ -586,11 +502,11 @@ class System(Graph):
             adjacency = denovo.converters.matrix_to_adjacency(source = item)
         elif isinstance(item, (listing, tuple, set)):
             adjacency = denovo.converters.pipeline_to_adjacency(source = item)
-        elif isinstance(item, Hashable):
+        elif isinstance(item, Node):
             adjacency = {item: set()}
         else:
             raise TypeError('item must be a System, Adjacency, Edges, '
-                            'Matrix, Pipeline, or Hashable type')
+                            'Matrix, Pipeline, or Node type')
         self.contents.update(adjacency)
         return
 
@@ -618,7 +534,7 @@ class System(Graph):
                     self.connect(start = endpoint, stop = root)
         else:
             raise TypeError('item must be a System, Adjacency, Edges, '
-                            'Matrix, Pipeline, or Hashable type')
+                            'Matrix, Pipeline, or Node type')
         return
       
     def subset(self, 
@@ -656,16 +572,16 @@ class System(Graph):
         return new_graph
     
     def walk(self, 
-             start: Hashable, 
-             stop: Hashable, 
+             start: Node, 
+             stop: Node, 
              path: Pipeline = None) -> Pipeline:
         """Returns all paths in graph from 'start' to 'stop'.
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
         Args:
-            start (Hashable): node to start paths from.
-            stop (Hashable): node to stop paths.
+            start (Node): node to start paths from.
+            stop (Node): node to stop paths.
             path (Pipeline): a path from 'start' to 'stop'. Defaults to an 
                 empty list. 
 
@@ -698,9 +614,9 @@ class System(Graph):
         """Returns all paths between 'starts' and 'stops'.
 
         Args:
-            start (Union[Hashable, Sequence[Hashable]]): starting points for 
+            start (Union[Node, Sequence[Node]]): starting points for 
                 paths through the System.
-            ends (Union[Hashable, Sequence[Hashable]]): endpoints for paths 
+            ends (Union[Node, Sequence[Node]]): endpoints for paths 
                 through the System.
 
         Returns:
@@ -713,7 +629,7 @@ class System(Graph):
             for end in more_itertools.always_iterable(stops):
                 paths = self.walk(start = start, stop = end)
                 if paths:
-                    if all(isinstance(path, Hashable) for path in paths):
+                    if all(isinstance(path, Node) for path in paths):
                         all_paths.append(paths)
                     else:
                         all_paths.extend(paths)
@@ -806,7 +722,7 @@ class System(Graph):
 #         return adjacency_to_edges(source = self.contents)
 
 #     @property
-#     def endpoints(self) -> listing[Hashable]:
+#     def endpoints(self) -> listing[Node]:
 #         """Returns a list of endpoint nodes in the stored graph.."""
 #         return [k for k in self.contents.keys() if not self.contents[k]]
 
@@ -816,10 +732,10 @@ class System(Graph):
 #         return adjacency_to_matrix(source = self.contents)
                       
 #     @property
-#     def nodes(self) -> Dict[str, Hashable]:
+#     def nodes(self) -> Dict[str, Node]:
 #         """Returns a dict of node names as keys and nodes as values.
         
-#         Because Graph allows various Hashable objects to be used as keys,
+#         Because Graph allows various Node objects to be used as keys,
 #         including the Nodes class, there isn't an obvious way to access already
 #         stored nodes. This property creates a new dict with str keys derived
 #         from the nodes (looking first for a 'name' attribute) so that a user
@@ -828,18 +744,18 @@ class System(Graph):
 #         This property is not needed if the stored nodes are all strings.
         
 #         Returns:
-#             Dict[str, Hashable]: keys are the name or has of nodes and the 
+#             Dict[str, Node]: keys are the name or has of nodes and the 
 #                 values are the nodes themselves.
             
 #         """
 #         return {self._stringify(n): n for n in self.contents.keys()}
   
 #     @property
-#     def roots(self) -> listing[Hashable]:
+#     def roots(self) -> listing[Node]:
 #         """Returns root nodes in the stored graph..
 
 #         Returns:
-#             listing[Hashable]: root nodes.
+#             listing[Node]: root nodes.
             
 #         """
 #         stops = list(itertools.chain.from_iterable(self.contents.values()))
@@ -938,13 +854,13 @@ class System(Graph):
 #     """ Public Methods """
     
 #     def add(self, 
-#             node: Hashable,
+#             node: Node,
 #             ancestors: Nodes = None,
 #             descendants: Nodes = None) -> None:
 #         """Adds 'node' to 'contents' with no corresponding edges.
         
 #         Args:
-#             node (Hashable): a node to add to the stored graph.
+#             node (Node): a node to add to the stored graph.
 #             ancestors (Nodes): node(s) from which node should be connected.
 #             descendants (Nodes): node(s) to which node should be connected.
 
@@ -957,9 +873,9 @@ class System(Graph):
 #             missing = [n for n in descendants if n not in self.contents]
 #             raise KeyError(f'descendants {missing} are not in the stored graph.')
 #         if ancestors is not None:  
-#             if (isinstance(ancestors, Hashable) and ancestors in self
+#             if (isinstance(ancestors, Node) and ancestors in self
 #                     or (isinstance(ancestors, (listing, tuple, set)) 
-#                         and all(isinstance(n, Hashable) for n in ancestors)
+#                         and all(isinstance(n, Node) for n in ancestors)
 #                         and all(n in self.contents for n in ancestors))):
 #                 start = ancestors
 #             elif (hasattr(self.__class__, ancestors) 
@@ -1020,12 +936,12 @@ class System(Graph):
 #                 'type')
 #         return
   
-#     def connect(self, start: Hashable, stop: Hashable) -> None:
+#     def connect(self, start: Node, stop: Node) -> None:
 #         """Adds an edge from 'start' to 'stop'.
 
 #         Args:
-#             start (Hashable): name of node for edge to start.
-#             stop (Hashable): name of node for edge to stop.
+#             start (Node): name of node for edge to start.
+#             stop (Node): name of node for edge to stop.
             
 #         Raises:
 #             ValueError: if 'start' is the same as 'stop'.
@@ -1043,11 +959,11 @@ class System(Graph):
 #                 self.contents[start].append(self._stringify(stop))
 #         return
 
-#     def delete(self, node: Hashable) -> None:
+#     def delete(self, node: Node) -> None:
 #         """Deletes node from graph.
         
 #         Args:
-#             node (Hashable): node to delete from 'contents'.
+#             node (Node): node to delete from 'contents'.
         
 #         Raises:
 #             KeyError: if 'node' is not in 'contents'.
@@ -1061,12 +977,12 @@ class System(Graph):
 #             k: v.remove(node) for k, v in self.contents.items() if node in v}
 #         return
 
-#     def disconnect(self, start: Hashable, stop: Hashable) -> None:
+#     def disconnect(self, start: Node, stop: Node) -> None:
 #         """Deletes edge from graph.
 
 #         Args:
-#             start (Hashable): starting node for the edge to delete.
-#             stop (Hashable): ending node for the edge to delete.
+#             start (Node): starting node for the edge to delete.
+#             stop (Node): ending node for the edge to delete.
         
 #         Raises:
 #             KeyError: if 'start' is not a node in the stored graph..
@@ -1149,8 +1065,8 @@ class System(Graph):
 #         return new_graph
 
 #     def walk(self, 
-#              start: Hashable, 
-#              stop: Hashable, 
+#              start: Node, 
+#              stop: Node, 
 #              path: Pipeline = None,
 #              depth_first: bool = True) -> Pipeline:
 #         """Returns all paths in graph from 'start' to 'stop'.
@@ -1158,8 +1074,8 @@ class System(Graph):
 #         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
 #         Args:
-#             start (Hashable): node to start paths from.
-#             stop (Hashable): node to stop paths.
+#             start (Node): node to start paths from.
+#             stop (Node): node to stop paths.
 #             path (Pipeline): a path from 'start' to 'stop'. Defaults to an 
 #                 empty list. 
 
@@ -1203,7 +1119,7 @@ class System(Graph):
 #             str: [description]
             
 #         """        
-#         if isinstance(node, Hashable):
+#         if isinstance(node, Node):
 #             return node
 #         else:
 #             try:
@@ -1235,11 +1151,11 @@ class System(Graph):
 #                 visited.add(connected)   
 #         return []
 
-#     def _breadth_first_search(self, node: Hashable) -> Pipeline:
+#     def _breadth_first_search(self, node: Node) -> Pipeline:
 #         """Returns a breadth first search path through the Graph.
 
 #         Args:
-#             node (Hashable): node to start the search from.
+#             node (Node): node to start the search from.
 
 #         Returns:
 #             Pipeline: nodes in a path through the Graph.
@@ -1255,13 +1171,13 @@ class System(Graph):
 #         return list(visited)
        
 #     def _depth_first_search(self, 
-#         node: Hashable, 
-#         visited: listing[Hashable]) -> Pipeline:
+#         node: Node, 
+#         visited: listing[Node]) -> Pipeline:
 #         """Returns a depth first search path through the Graph.
 
 #         Args:
-#             node (Hashable): node to start the search from.
-#             visited (listing[Hashable]): list of visited nodes.
+#             node (Node): node to start the search from.
+#             visited (listing[Node]): list of visited nodes.
 
 #         Returns:
 #             Pipeline: nodes in a path through the Graph.
@@ -1274,15 +1190,15 @@ class System(Graph):
 #         return visited
   
 #     def _find_all_paths(self, 
-#         starts: Union[Hashable, Sequence[Hashable]],
-#         stops: Union[Hashable, Sequence[Hashable]],
+#         starts: Union[Node, Sequence[Node]],
+#         stops: Union[Node, Sequence[Node]],
 #         depth_first: bool = True) -> Pipeline:
 #         """[summary]
 
 #         Args:
-#             start (Union[Hashable, Sequence[Hashable]]): starting points for 
+#             start (Union[Node, Sequence[Node]]): starting points for 
 #                 paths through the Graph.
-#             ends (Union[Hashable, Sequence[Hashable]]): endpoints for paths 
+#             ends (Union[Node, Sequence[Node]]): endpoints for paths 
 #                 through the Graph.
 
 #         Returns:
@@ -1297,7 +1213,7 @@ class System(Graph):
 #                                   stop = end, 
 #                                   depth_first = depth_first)
 #                 if paths:
-#                     if all(isinstance(path, Hashable) for path in paths):
+#                     if all(isinstance(path, Node) for path in paths):
 #                         all_paths.append(paths)
 #                     else:
 #                         all_paths.extend(paths)
@@ -1345,16 +1261,16 @@ class System(Graph):
 #         """
 #         if isinstance(nodes, (listing, tuple, set)):
 #             return all(n in self.contents for n in nodes)
-#         elif isinstance(nodes, Hashable):
+#         elif isinstance(nodes, Node):
 #             return nodes in self.contents
 #         else:
 #             return False   
         
-#     def __getitem__(self, key: Hashable) -> Any:
+#     def __getitem__(self, key: Node) -> Any:
 #         """Returns value for 'key' in 'contents'.
 
 #         Args:
-#             key (Hashable): key in 'contents' for which a value is sought.
+#             key (Node): key in 'contents' for which a value is sought.
 
 #         Returns:
 #             Any: value stored in 'contents'.
@@ -1362,22 +1278,22 @@ class System(Graph):
 #         """
 #         return.contents[key]
 
-#     def __setitem__(self, key: Hashable, value: Any) -> None:
+#     def __setitem__(self, key: Node, value: Any) -> None:
 #         """sets 'key' in 'contents' to 'value'.
 
 #         Args:
-#             key (Hashable): key to set in 'contents'.
+#             key (Node): key to set in 'contents'.
 #             value (Any): value to be paired with 'key' in 'contents'.
 
 #         """
 #         self.contents[key] = value
 #         return
 
-#     def __delitem__(self, key: Hashable) -> None:
+#     def __delitem__(self, key: Node) -> None:
 #         """Deletes 'key' in 'contents'.
 
 #         Args:
-#             key (Hashable): key in 'contents' to delete the key/value pair.
+#             key (Node): key in 'contents' to delete the key/value pair.
 
 #         """
 #         del self.contents[key]

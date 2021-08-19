@@ -473,15 +473,15 @@ def drop_suffix(item: Union[str, Mapping[str, Any], Sequence[str]],
 
 """ Introspection Tools """
     
-def find_base(item: Type, match: Type) -> Type:
-    """Returns class containing 'match' in its 'bases'."""
-    if match in item.__bases__:
-        return item
-    else:
-        for base_class in item.__bases__:
-            find_base(item = base_class, match = match)
+# def find_base(item: Type[Any], match: Type[Any]) -> Type[Any]:
+#     """Returns class containing 'match' in its 'bases'."""
+#     if match in item.__bases__:
+#         return item
+#     else:
+#         for base_class in item.__bases__:
+#             find_base(item = base_class, match = match)
        
-def get_classes(module: types.ModuleType) -> list[Type]:
+def get_classes(module: types.ModuleType) -> list[Type[Any]]:
     """Returns list of string names of classes in a module."""
     return [m[0] for m in inspect.getmembers(module, inspect.isclass)
             if m[1].__module__ == module.__name__]
@@ -508,6 +508,21 @@ def is_iterable(item: Any) -> bool:
     """
     return (isinstance(item, collections.abc.Iterable) 
             and not isinstance(item, str))
+
+def is_method(item: Union[object, Type[Any]], 
+              method: Union[str, types.FunctionType]) -> bool:
+    """
+
+    Args:
+
+
+    Returns:
+        
+
+    """
+    if isinstance(method, str):
+        method = getattr(item, method)
+    return inspect.ismethod(method)
 
 def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
