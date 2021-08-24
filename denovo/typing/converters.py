@@ -39,10 +39,31 @@ from typing import Any, Callable, Optional, Type, Union
 import more_itertools
 
 import denovo
-from denovo.typing.types import (Adjacency, Composite, Connections, Dyad, Edge, 
-                                 Edges, Group, Kind, Listing, Matrix, Nodes, 
-                                 Order, Pipeline, Pipelines, Repeater)
+from denovo.typing.types import (Adjacency, Dyad, 
+                                 Edges, Matrix, 
+                                 Pipeline)
 
+    
+def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
+    """Converts string 'path' to pathlib.Path object.
+
+    Args:
+        item (Union[str, pathlib.Path]): either a string summary of a
+            path or a pathlib.Path object.
+
+    Returns:
+        pathlib.Path object.
+
+    Raises:
+        TypeError if 'path' is neither a str or pathlib.Path type.
+
+    """
+    if isinstance(item, str):
+        return pathlib.Path(item)
+    elif isinstance(item, pathlib.Path):
+        return item
+    else:
+        raise TypeError('item must be str or pathlib.Path type')
 
 """ Converter Registry and Registry Decorator """
 
@@ -62,7 +83,7 @@ def bondafide(_wrapped: Optional[dataclasses.dataclass] = None,
         @functools.wraps(wrapped)
         def wrapper(*args: Any, **kwargs: Any):
             kwargs.update(denovo.tools.kwargify(args = args, item = wrapped))
-            instance = wrapped(**kwargs: Any)
+            instance = wrapped(**kwargs)
             attributes = include or wrapped.__annotations__.keys()
             attributes = [a for a in attributes if a not in exclude]  
             for attribute in attributes:
@@ -293,28 +314,28 @@ def float_to_int(source: float) -> int:
     return int(source)
 
 @denovo.decorators.dispatcher   
-def to_list(source: Any) -> Listing:
-    """Converts 'source' to a Listing.
+def to_list(source: Any) -> list[Any]:
+    """Converts 'source' to a list.
     
     Args:
-        source (Any): source to convert to a Listing.
+        source (Any): source to convert to a list.
 
     Raises:
         TypeError: if 'source' is a type that is not registered.
 
     Returns:
-        Listing: derived from 'source'.
+        list[Any]: derived from 'source'.
 
     """
-    if isinstance(source, Listing):
+    if isinstance(source, list[Any]):
         return source
     else:
         raise TypeError(f'source cannot be converted because it is an '
                         f'unsupported type: {type(source).__name__}')
 
 @to_list.register
-def str_to_listing(source: str) -> Listing:
-    """Converts a str to a Listing."""
+def str_to_listing(source: str) -> list[Any]:
+    """Converts a str to a list."""
     return ast.literal_eval(source)
 
 @denovo.decorators.dispatcher   
@@ -434,7 +455,7 @@ def float_to_str(source: float) -> str:
     return str(source)
 
 @to_str.register 
-def list_to_str(source: Listing) -> str:
+def list_to_str(source: list[Any]) -> str:
     """Converts a list to a str."""
     return ', '.join(source)
    

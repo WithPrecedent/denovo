@@ -54,7 +54,7 @@ def add_name(process: Processes) -> Processes:
     @functools.wraps(process)
     def wrapped(*args: Any, **kwargs: Any):
         call_signature = inspect.signature(process)
-        arguments = dict(call_signature.bind(*args: Any, **kwargs: Any).arguments)
+        arguments = dict(call_signature.bind(*args, **kwargs).arguments)
         if not arguments.get('name'):
             arguments['name'] = denovo.tools.namify(item = process)
         return process(**arguments)
@@ -74,7 +74,7 @@ def register(func: Callable) -> Callable:
     REGISTRY[name] = func
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any):
-        return func(*args: Any, **kwargs: Any)
+        return func(*args, **kwargs)
     return wrapper
 
 def set_registry(registry: MutableMapping[str, Callable]) -> None:
@@ -107,7 +107,7 @@ def timer(process: Callable) -> Callable:
                 hours, minutes = divmod(minutes, 60)
                 return hours, minutes, seconds
             implement_time = time.time()
-            result = _function(*args: Any, **kwargs: Any)
+            result = _function(*args, **kwargs)
             total_time = time.time() - implement_time
             h, m, s = convert_time(total_time)
             print(f'{name} completed in %d:%02d:%02d' % (h, m, s))
@@ -156,7 +156,7 @@ class Dispatcher(object):
         
     def __call__(self, *args: Any, **kwargs: Any) -> Callable:
 
-        return self.wrapped(*args: Any, **kwargs: Any)
+        return self.wrapped(*args, **kwargs)
     
     """ Public Methods """
     
@@ -188,7 +188,7 @@ class Dispatcher(object):
             dispatched = self.registry[key]
         except KeyError:
             dispatched = self.dispatcher
-        return dispatched(source, *args: Any, **kwargs: Any)
+        return dispatched(source, *args, **kwargs)
 
     def register(self, dispatched: Callable) -> Callable:
         """[summary]
@@ -210,7 +210,7 @@ class Dispatcher(object):
             parameter, argument = next(iter(kwargs.items()))
             del kwargs[parameter]
             args = tuple([argument])
-        return self.dispatch(*args: Any, **kwargs: Any)  
+        return self.dispatch(*args, **kwargs)  
 
 def dispatcher(dispatcher: Callable) -> Callable:
     """Decorator for a converter registry and dispatcher.
@@ -250,7 +250,7 @@ def dispatcher(dispatcher: Callable) -> Callable:
             dispatched = registry[key]
         except KeyError:
             dispatched = dispatcher
-        return dispatched(source, *args: Any, **kwargs: Any)
+        return dispatched(source, *args, **kwargs)
 
     def register(dispatched: Callable) -> None:
         _, kind = next(iter(get_type_hints(dispatched).items()))
@@ -263,7 +263,7 @@ def dispatcher(dispatcher: Callable) -> Callable:
             parameter, argument = next(iter(kwargs.items()))
             del kwargs[parameter]
             args = tuple([argument])
-        return dispatch(*args: Any, **kwargs: Any)  
+        return dispatch(*args, **kwargs)
 
     wrapper.register = register
     wrapper.dispatch = dispatch

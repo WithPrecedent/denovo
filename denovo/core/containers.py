@@ -532,7 +532,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
             Lexicon: formed from 'keys' and 'value'.
             
         """
-        return cls(contents = dict.fromkeys(keys, value), **kwargs: Any)
+        return cls(contents = dict.fromkeys(keys, value), **kwargs)
     
     """ Public Methods """
      
@@ -545,7 +545,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
                 additional parameters.
                 
         """
-        self.contents.update(item, **kwargs: Any)
+        self.contents.update(item, **kwargs)
         return
 
     def get(self, key: Hashable) -> Any:
@@ -935,7 +935,7 @@ class Library(Lexicon):
             if 'name' in item.__annotations__.keys() and 'name' not in kwargs:
                 kwargs[name] = names[0]
             if inspect.isclass(item):
-                item = item(**kwargs: Any)
+                item = item(**kwargs)
             else:
                 for key, value in kwargs.items():
                     setattr(item, key, value)  

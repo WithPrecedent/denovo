@@ -234,7 +234,7 @@ class Node(Hashable, abc.ABC):
         classes.
         
         """
-        super().__init_subclass__(*args: Any, **kwargs: Any) # type: ignore
+        super().__init_subclass__(*args, **kwargs) # type: ignore
         cls.__hash__ = NodeWrapper.__hash__ # type: ignore
         cls.__eq__ = NodeWrapper.__eq__ # type: ignore
         cls.__ne__ = NodeWrapper.__ne__ # type: ignore
@@ -645,7 +645,7 @@ class Directed(Network, abc.ABC):
                     and denovo.tools.has_properties(item = subclass, # type: ignore
                                                     attributes = ['endpoints',
                                                                 'paths', 
-                                                                'roots']))
+                                                                'roots'])))
 
 @dataclasses.dataclass # type: ignore
 class Graph(Directed, abc.ABC):

@@ -19,94 +19,87 @@ import dataclasses
 import inspect
 import pathlib
 from types import ModuleType
-from typing import (Any, Callable, ClassVar, Generic, Hashable, Iterable, 
-                    list, Literal, Mapping, MutableMapping, MutableSequence, 
-                    Optional, Sequence, set, tuple, Type, TypeVar, Union)
+from typing import Any, Type, Union
 
 import denovo
-from denovo.typing.types import (Adjacency, Chain, Composite, Connections, 
-                                 dict, Dyad, Edge, 
-                                 Edges, Group, Index, Integer, Kind, listing, 
-                                 Matrix, Nodes, Path, Pipeline, Pipelines, Real, 
-                                 String)
 
 
-@dataclasses.dataclass
-class Workshop(object):
-    """Controls type conversion, class
+# @dataclasses.dataclass
+# class Workshop(object):
+#     """Controls type conversion, class
     
     
-    """
-    kinds: dict[str, Kind] = dataclasses.field(
-        default_factory = lambda: denovo.types.catalog)
+#     """
+#     kinds: dict[str, Kind] = dataclasses.field(
+#         default_factory = lambda: denovo.types.catalog)
     
-    """ Properties """
+#     """ Properties """
     
-    @property
-    def matchers(self) -> dict[tuple[Type, ...], str]:
-        return {denovo.converters.to_tuple(item = k.sources): k.name 
-                for k in self.kinds.values()}
+#     @property
+#     def matchers(self) -> dict[tuple[Type, ...], str]:
+#         return {denovo.converters.to_tuple(item = k.sources): k.name 
+#                 for k in self.kinds.values()}
     
-    @property
-    def names(self) -> dict[Kind, str]:
-        labels = {}
-        for key, value in self.kinds.items():
-            for item in denovo.converters.to_tuple(item = value.comparison):
-                labels[item] = key
-        return labels
+#     @property
+#     def names(self) -> dict[Kind, str]:
+#         labels = {}
+#         for key, value in self.kinds.items():
+#             for item in denovo.converters.to_tuple(item = value.comparison):
+#                 labels[item] = key
+#         return labels
         
-    @property
-    def types(self) -> dict[str, Type]:
-        return {k.name: denovo.converters.to_tuple(item = k.comparison) 
-                for k in self.kinds.values()}
+#     @property
+#     def types(self) -> dict[str, Type]:
+#         return {k.name: denovo.converters.to_tuple(item = k.comparison) 
+#                 for k in self.kinds.values()}
     
-    """Public Methods"""
+#     """Public Methods"""
     
-    def categorize(self, item: Any) -> str:
-        """[summary]
+#     def categorize(self, item: Any) -> str:
+#         """[summary]
 
-        Args:
-            item (Any): [description]
+#         Args:
+#             item (Any): [description]
 
-        Raises:
-            KeyError: [description]
+#         Raises:
+#             KeyError: [description]
 
-        Returns:
-            str: [description]
+#         Returns:
+#             str: [description]
             
-        """
-        if inspect.isclass(item):
-            method = issubclass
-        else:
-            method = isinstance
-        for key, value in self.kinds.items():
-            if method(item, key):
-                return value
-        raise KeyError(f'item does not match any recognized type')
+#         """
+#         if inspect.isclass(item):
+#             method = issubclass
+#         else:
+#             method = isinstance
+#         for key, value in self.kinds.items():
+#             if method(item, key):
+#                 return value
+#         raise KeyError(f'item does not match any recognized type')
        
-    def convert(self, item: Any, output: Union[Kind, String], **kwargs: Any) -> Any:
-        """[summary]
+#     def convert(self, item: Any, output: Union[Kind, String], **kwargs: Any) -> Any:
+#         """[summary]
 
-        Args:
-            item (Any): [description]
-            output (str): [description]
+#         Args:
+#             item (Any): [description]
+#             output (str): [description]
 
-        Returns:
-            Any: [description]
+#         Returns:
+#             Any: [description]
             
-        """
-        start = self.categorize(item = item)
-        if not isinstance(output, String):
-            stop = output
-        else:
-            stop = self.names[output]
-        try:
-            strict_key = denovo.typing.types.STRICT(start, stop)
-            method = self.converters[strict_key]
-        except KeyError:
-            flexible_key = denovo.typing.types.FLEXIBLE(stop)
-            method = self.converters[flexible_key]
-        return method(item = item, **kwargs: Any)
+#         """
+#         start = self.categorize(item = item)
+#         if not isinstance(output, String):
+#             stop = output
+#         else:
+#             stop = self.names[output]
+#         try:
+#             strict_key = denovo.typing.types.STRICT(start, stop)
+#             method = self.converters[strict_key]
+#         except KeyError:
+#             flexible_key = denovo.typing.types.FLEXIBLE(stop)
+#             method = self.converters[flexible_key]
+#         return method(item = item, **kwargs)
 
 
 # @dataclasses.dataclass

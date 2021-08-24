@@ -42,10 +42,10 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable,
 
 
 
-
+# from . import utilities
 from .utilities import lazy
-from .core import containers
-from .typing import types
+# from .core import containers
+# from .typing import types
 
 
 
@@ -76,9 +76,12 @@ the lazy importation system used throughout denovo.
 
 """
 importables: Dict[str, str] = {
-    'utilities': 'utilities',
+    'typing': 'typing',
     'converters': 'typing.converters',
+    'utilities': 'utilities',
+
     'decorators': 'utilities.decorators',
+    'introspection': 'utilities.introspection',
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
     'summary': 'utilities.summary',

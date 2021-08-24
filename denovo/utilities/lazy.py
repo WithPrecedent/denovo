@@ -21,24 +21,34 @@ from importlib import util
 import pathlib
 import sys
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
-                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
-                    Union)
+from typing import Any, Optional, Union
 
 """ Importing Tools """
 
-def acquire(path: Union[str, pathlib.Path]) -> Any:
+def acquire(path: Union[str, pathlib.Path]) -> Union[type.ModuleType, Any]:
     if isinstance(path, pathlib.Path) or '\\' in path or '\/' in path:
-        return fetch(file_path = path)
-    else:
-        parts = path.split('.')
-        package = parts.pop(0)
-        item = parts.pop(-1)
-        if parts:
-            module = '.'.join(parts)
+        imported = fetch(file_path = path)
+    elif isinstance(path, str):
+        if '.' in path:
+            parts = path.split('.')
+            if len(parts) > 2:
+                item = parts.pop(-1)
+                module = parts.pop(-1)
+                package = parts[0]
+            elif len(parts) == 2:
+                try:
+                    item = parts.pop(-1)
+                    module = parts[0]
+                    imported =  fetch(item = item, module = module)
+                except AttributeError:
+                    module = parts.pop(-1)
+                    package = parts[0]
+                    imported = fetch(module = module, package = package)
         else:
-            module = None
-        return fetch(item = item, module = module, package = package)
+            imported =  fetch(module = path)
+    else:
+        raise ValueError('path must be a str or pathlib.Path type')
+    return imported
 
 def fetch(item: Optional[str] = None, 
           module: Optional[str] = None, 
@@ -64,55 +74,38 @@ def fetch(item: Optional[str] = None,
         Any: imported python object from 'module'.
         
     """
-    if file_path is not None:
-        imported = from_path(name = module, file_path = file_path)
-    else:
-        if package is None and '.' in item:
-            package = item.split('.')[0]
-            item = item[len(package) + 1:]
-        if module is None and '.' in item:
-            module = item.split('.')[0]
-            item = item[len(module) + 1:]    
-        elif package is not None:
-            module = package
-            package = None  
-        if package is None:
-            kwargs = {}
+    if file_path is None:
+        if module is None:
+            raise ValueError('file_path or module must not be None')
+        elif package is None:
+            imported = importlib.import_module(module)
         else:
-            kwargs = {'package': package}
-        try:
-            imported = importlib.import_module(module, **kwargs: Any)
-        except (ImportError, AttributeError):
-            raise AttributeError(f'Failed to import {module}')
-    try:
+            imported = importlib.import_module(module, package = package)
+    else:
+        imported = from_path(file_path = file_path, name = module)
+    if item is None:
+        return imported
+    else:
         return getattr(imported, item)
-    except AttributeError:
-        raise AttributeError(f'Failed to import {item} from {module}')
-
-def from_path(name: str, 
-              file_path: Union[str, pathlib.Path]) -> types.ModuleType: 
+        
+def from_path(file_path: Union[str, pathlib.Path],
+              name: Optional[str] = None) -> types.ModuleType: 
     """[summary]
-
-    Args:
-        name (str): [description]
-        file_path (Union[str, pathlib.Path]): [description]
-
-    Raises:
-        ImportError: [description]
-
-    Returns:
-        types.ModuleType: [description]
     """
+    if isinstance(file_path, str):
+        file_path = pathlib.Path(file_path)
+    if name is None:
+        name = file_path.stem
     try:
         spec = util.spec_from_file_location(name, file_path)
-        imported = util.module_from_spec(spec)
+        imported = util.module_from_spec(spec) # type: ignore
         sys.modules[name] = imported
-        spec.loader.exec_module(imported)
+        spec.loader.exec_module(imported) # type: ignore
     except (ImportError, AttributeError):
         raise ImportError(f'Failed to import {name} from {file_path}')
     return imported
         
-def importify(name: str, package: str, importables: Dict[str, str]) -> Any:
+def importify(name: str, package: str, importables: dict[str, str]) -> Any:
     """Lazily imports modules and items within them.
     
     Lazy importing means that modules are only imported when they are first

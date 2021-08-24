@@ -115,6 +115,7 @@ def get_testables(module: types.ModuleType,
     if not include_private:
         testables = [i for i in testables if not i.startswith('_')]
     testables = denovo.tools.add_prefix(item = testables, prefix = prefix)
+    testables.append('test_all')
     return testables
 
 def run_tests(module: types.ModuleType, 
@@ -166,7 +167,7 @@ class Testimony(object):
             Callable: 'testify' method based on args and kwargs.
             
         """
-        instance  = cls(*args: Any, **kwargs: Any)
+        instance  = cls(*args, **kwargs)
         return instance.testify()
     
     """ Public Methods """

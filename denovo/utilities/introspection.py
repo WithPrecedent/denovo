@@ -20,19 +20,36 @@ import denovo
 
 """ Package Introspection Tools """
 
-def get_modules(folder: Union[str, pathlib.Path]) -> list[types.ModuleType]:  
+def get_modules(folder: Union[str, pathlib.Path],
+                recursive: bool = False) -> list[types.ModuleType]:  
     """Returns list of modules in 'folder'."""
-    return [denovo.tools.acquire(file_path = p) 
-            for p in get_module_paths(folder = folder)]
+    return [denovo.lazy.acquire(path = p) 
+            for p in get_paths(folder = folder, recursive = recursive)]
 
-def get_module_paths(folder: Union[str, pathlib.Path]) -> list[pathlib.Path]:  
+def get_paths(folder: Union[str, pathlib.Path], 
+              suffix: str = 'py',
+              recursive: bool = False) -> list[pathlib.Path]:  
     """Returns list of pathlib Paths of modules in 'folder'."""
-    folder = denovo.typing.pathlibify(item = folder)  
-    return list(folder.glob('*/*.py'))
+    folder = denovo.converters.pathlibify(item = folder) 
+    if recursive:
+        return  list(folder.rglob(f'*.{suffix}')) # type: ignore
+    else:
+        return list(folder.glob(f'*.{suffix}')) # type: ignore
 
-def name_modules(folder: Union[str, pathlib.Path]) -> list[str]:  
+def is_file(file_path: Union[str, pathlib.Path]) -> bool:
+    """Returns whether 'file_path' currently exists and is a file."""
+    folder = denovo.converters.pathlibify(item = file_path)
+    return folder.exists() and folder.is_file() # type: ignore
+
+def is_folder(folder: Union[str, pathlib.Path]) -> bool:
+    """Returns whether 'folder' currently exists and is a folder."""
+    folder = denovo.converters.pathlibify(item = folder)
+    return folder.exists() and folder.is_dir() # type: ignore
+    
+def name_modules(folder: Union[str, pathlib.Path],
+                 recursive: bool = False) -> list[str]:  
     """Returns list of str names of modules in 'folder'."""
-    return [p.stem for p in get_module_paths(folder = folder)]
+    return [p.stem for p in get_paths(folder = folder, recursive = recursive)]
 
 """ Module Introspection Tools """
           
@@ -59,35 +76,50 @@ def name_functions(module: types.ModuleType) -> list[str]:
 """ Class and Object Introspection Tools """
 
 def get_methods(item: Union[object, Type[Any]], 
-                exclude_private: bool = True) -> bool:
+                exclude_private: bool = True) -> list[types.FunctionType]:
     """Returns methods of 'item'."""
-    methods = [is_method(item = item, attribute = a) for a in item.__dir__]
-    if exclude_private:
-        methods = [m for m in methods if not m.__name__.startswith('_')]
-    return methods
-
-def name_methods(item: Union[object, Type[Any]], 
-                     exclude_private: bool = True) -> bool:
-    """Returns method names of 'item'."""
-    return [m.__name__ for m in get_methods(item = item, 
-                                            exclude_private = exclude_private)]
+    methods = name_methods(item = item, exclude_private = exclude_private)
+    return [getattr(item, m) for m in methods]
 
 def get_properties(item: Union[object, Type[Any]], 
-                   exclude_private: bool = True) -> bool:
+                   exclude_private: bool = True) -> list[Any]:
     """Returns properties of 'item'."""
-    properties = [is_property(item = item, attribute = a) for a in item.__dir__]
+    if not inspect.isclass(item):
+        item = item.__class__
+    properties = name_properties(item = item, exclude_private = exclude_private)
+    return [getattr(item, p) for p in properties]
+
+def name_methods(item: Union[object, Type[Any]], 
+                 exclude_private: bool = True) -> list[str]:
+    """Returns method names of 'item'."""
+    methods = [a for a in dir(item)
+               if is_method(item = item, attribute = a)]
     if exclude_private:
-        properties = [p for p in properties if not m.__name__.startswith('_')]
-    return properties
+        methods = [m for m in methods if not m.startswith('_')]
+    return methods
 
 def name_properties(item: Union[object, Type[Any]], 
-                       exclude_private: bool = True) -> bool:
+                    exclude_private: bool = True) -> list[str]:
     """Returns method names of 'item'."""
-    return [m.__name__ for m in get_properties(item = item, 
-                                               exclude_private = exclude_private)]
+    if not inspect.isclass(item):
+        item = item.__class__
+    properties = [a for a in dir(item)
+                  if is_property(item = item, attribute = a)]
+    if exclude_private:
+        properties = [p for p in properties if not p.startswith('_')]
+    return properties
     
 """ Attribute Introspection Tools """
-    
+
+def is_classvar(item: Union[object, Type[Any]], 
+                attribute: str) -> bool:
+    """Returns if 'attribute' is a class attribute of 'item'."""
+    if not inspect.isclass(item):
+        item = item.__class__
+    return (hasattr(item, attribute)
+            and not is_method(item = item, attribute = attribute)
+            and not is_property(item = item, attribute = attribute))
+
 def is_method(item: Union[object, Type[Any]], 
               attribute: Union[str, types.FunctionType]) -> bool:
     """Returns if 'attribute' is a method of 'item'."""
@@ -102,4 +134,4 @@ def is_property(item: Union[object, Type[Any]],
         item = item.__class__
     if isinstance(attribute, str):
         attribute = getattr(item, attribute)
-    return (isinstance(item, str) and isinstance(attribute, property))
+    return isinstance(attribute, property)
