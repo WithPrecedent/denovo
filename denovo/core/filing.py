@@ -216,7 +216,7 @@ class Clerk(object):
              folder: Union[str, pathlib.Path] = None,
              file_name: str = None,
              file_format: Union[str, FileFormat] = None,
-             **kwargs) -> Any:
+             **kwargs: Any) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
         If needed arguments are not passed, default values are used. If
@@ -244,7 +244,7 @@ class Clerk(object):
                                     folder = folder,
                                     file_name = file_name,
                                     file_format = file_format,
-                                    **kwargs)
+                                    **kwargs: Any)
 
     def save(self,
              item: Any,
@@ -252,7 +252,7 @@ class Clerk(object):
              folder: Union[str, pathlib.Path] = None,
              file_name: str = None,
              file_format: Union[str, FileFormat] = None,
-             **kwargs) -> None:
+             **kwargs: Any) -> None:
         """Exports file by calling appropriate method based on file_format.
 
         If needed arguments are not passed, default values are used. If
@@ -278,7 +278,7 @@ class Clerk(object):
                             folder = folder,
                             file_name = file_name,
                             file_format = file_format,
-                            **kwargs)
+                            **kwargs: Any)
         return
 
     def validate(self, path: Union[str, pathlib.Path],
@@ -449,7 +449,7 @@ class Distributor(abc.ABC):
     
     def _get_parameters(self,
                         file_format: FileFormat,
-                        **kwargs) -> Mapping[Any, Any]:
+                        **kwargs: Any) -> Mapping[Any, Any]:
         """Creates complete parameters for a file input/output method.
 
         Args:
@@ -517,16 +517,16 @@ class FileLoader(Distributor):
 
     """ Public Methods """
 
-    def load(self, **kwargs):
+    def load(self, **kwargs: Any):
         """Calls 'transfer' method with **kwargs."""
-        return self.transfer(**kwargs)
+        return self.transfer(**kwargs: Any)
 
     def transfer(self,
                  file_path: Union[str, pathlib.Path] = None,
                  folder: Union[str, pathlib.Path] = None,
                  file_name: str = None,
                  file_format: Union[str, FileFormat] = None,
-                 **kwargs) -> Any:
+                 **kwargs: Any) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
         If needed arguments are not passed, default values are used. If
@@ -555,7 +555,7 @@ class FileLoader(Distributor):
             folder = folder,
             file_name = file_name,
             file_format = file_format)
-        parameters = self._get_parameters(file_format = file_format, **kwargs)
+        parameters = self._get_parameters(file_format = file_format, **kwargs: Any)
         if file_format.module:
             tool = file_format.load('import_method')
         else:
@@ -575,9 +575,9 @@ class FileSaver(Distributor):
 
     """ Public Methods """
 
-    def save(self, **kwargs):
+    def save(self, **kwargs: Any):
         """Calls 'transfer' method with **kwargs."""
-        return self.transfer(**kwargs)
+        return self.transfer(**kwargs: Any)
 
     def transfer(self,
                  item: Any,
@@ -585,7 +585,7 @@ class FileSaver(Distributor):
                  folder: Union[str, pathlib.Path] = None,
                  file_name: str = None,
                  file_format: Union[str, FileFormat] = None,
-                 **kwargs) -> None:
+                 **kwargs: Any) -> None:
         """Exports file by calling appropriate method based on file_format.
 
         If needed arguments are not passed, default values are used. If
@@ -611,7 +611,7 @@ class FileSaver(Distributor):
             folder = folder,
             file_name = file_name,
             file_format = file_format)
-        parameters = self._get_parameters(file_format = file_format, **kwargs)
+        parameters = self._get_parameters(file_format = file_format, **kwargs: Any)
         if file_format.module:
             getattr(item, file_format.export_method)(item, **parameters)
         else:

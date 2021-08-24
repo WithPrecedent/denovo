@@ -60,9 +60,9 @@ def bondafide(_wrapped: Optional[dataclasses.dataclass] = None,
     exclude = exclude or []
     def validator(wrapped: dataclasses.dataclass):
         @functools.wraps(wrapped)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any):
             kwargs.update(denovo.tools.kwargify(args = args, item = wrapped))
-            instance = wrapped(**kwargs)
+            instance = wrapped(**kwargs: Any)
             attributes = include or wrapped.__annotations__.keys()
             attributes = [a for a in attributes if a not in exclude]  
             for attribute in attributes:

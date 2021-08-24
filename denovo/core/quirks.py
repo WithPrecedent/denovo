@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     Quirk (ABC): base class for quirks.
-    Element (Quirk): quirk that automatically assigns a 'name' attribute if 
+    Named (Quirk): quirk that automatically assigns a 'name' attribute if 
         none is passed. The default 'name' will be the snakecase name of the 
         class.
     Factory (Quirk): quirk that determines the appropriate constructor when a 
@@ -53,9 +53,9 @@ class Quirk(abc.ABC):
     
     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         """Adds 'cls' to 'quirks' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
+        super().__init_subclass__(**kwargs: Any) # type: ignore
         # Adds concrete quirks to 'quirks' using 'key'.
         if not abc.ABC in cls.__bases__:
             # Creates a snakecase key of the class name.
@@ -71,54 +71,6 @@ class Quirk(abc.ABC):
                 pass
             # Stores 'cls' in 'quirks'.
             denovo.framework.quirks[key] = cls
-
-    
-@dataclasses.dataclass
-class Element(Quirk, abc.ABC):
-    """Mixin for classes that need a 'name' attribute.
-    
-    Automatically provides a 'name' attribute to a subclass, if it isn't 
-    otherwise passed. This quirk is used for nodes stored in denovo's composite
-    structures.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout denovo. For example, if a denovo 
-            instance needs settings from a settings instance, 'name' should 
-            match the appropriate section name in a settings instance. 
-            Defaults to None. 
-
-    Namespaces: name, __post_init__, and _get_name
-
-    """
-    name: str = None
-    
-    """ Initialization Methods """
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # sets 'name' attribute.
-        if not hasattr(self, 'name') or self.name is None:  
-            self.name = self._get_name()
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-
-    """ Private Methods """
-    
-    def _get_name(self) -> str:
-        """Returns snakecase of the class name.
-
-        If a user wishes to use an alternate naming system, a subclass should
-        simply override this method. 
-        
-        Returns:
-            str: name of class for internal referencing and some access methods.
-        
-        """
-        return denovo.tools.snakify(self.__class__.__name__)
 
 
 @dataclasses.dataclass
@@ -139,7 +91,7 @@ class Factory(Quirk, abc.ABC):
     """ Class Methods """
 
     @classmethod
-    def create(cls, source: Any, **kwargs) -> Factory:
+    def create(cls, source: Any, **kwargs: Any) -> Factory:
         """Calls corresponding creation class method to instance a subclass.
         
         For create to work properly, there should be a corresponding classmethod
@@ -163,7 +115,7 @@ class Factory(Quirk, abc.ABC):
                 except AttributeError:
                     raise AttributeError(f'{method_name} does not exist')
                 kwargs[suffix] = source
-                return method(**kwargs)
+                return method(**kwargs: Any)
         raise ValueError(f'source does not match any recognized types in '
                          'sources')  
 
@@ -237,9 +189,9 @@ class Keystone(Quirk, abc.ABC):
     
     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs: Any):
         """Adds 'cls' to 'library'."""
-        super().__init_subclass__(**kwargs)
+        super().__init_subclass__(**kwargs: Any)
         # Adds concrete subclasses to 'library'.
         if not abc.ABC in cls.__bases__:
             if Keystone in cls.__bases__:
@@ -278,7 +230,7 @@ class Keystone(Quirk, abc.ABC):
 #     """ Class Methods """
 
 #     @classmethod
-#     def create(cls, source: Any, **kwargs) -> Factory:
+#     def create(cls, source: Any, **kwargs: Any) -> Factory:
 #         """Calls corresponding creation class method to instance a subclass.
         
 #         For create to work properly, there should be a corresponding classmethod
@@ -301,7 +253,7 @@ class Keystone(Quirk, abc.ABC):
 #             if need not in kwargs and need not in ['self']:
 #                 raise ValueError(f'The create method must include a {need} '
 #                                  f'argument')
-#         return method(**kwargs)      
+#         return method(**kwargs: Any)      
     
 #     @classmethod
 #     def parameterize(cls, instance: object) -> Mapping[str, Any]:
@@ -348,7 +300,7 @@ class Keystone(Quirk, abc.ABC):
 
 # @dataclasses.dataclass
 # class Proxified(object):
-#     """ which creates a proxy name for a Element subclass attribute.
+#     """ which creates a proxy name for a Named subclass attribute.
 
 #     The 'proxify' method dynamically creates a property to access the stored
 #     attribute. This allows class instances to customize names of stored

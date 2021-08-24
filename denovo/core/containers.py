@@ -13,9 +13,6 @@ Contents:
     Proxy (Container): basic wrapper for a stored python object. Dunder methods 
         attempt to intelligently apply access methods to either the wrapper or 
         the wrapped item.
-    Bunch (Iterable, ABC): abstract base class for denovo's replacements for 
-        lists and dicts. All subclasses must have an 'add' method, a 'subset' 
-        method, and store their contents in the 'contents' attribute.
     Manifest (MutableSequence, Bunch): denovo drop-in replacement for a python 
         list with additional functionality.
     Hybrid (Manifest): iterable with both dict and list interfaces.
@@ -29,7 +26,6 @@ Contents:
         
 """
 from __future__ import annotations
-import abc
 import collections
 import collections.abc
 import copy
@@ -164,93 +160,8 @@ class Proxy(collections.abc.Container[Any]):
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
                         
 
-@dataclasses.dataclass #type: ignore
-class Bunch(collections.abc.Iterable[Any], abc.ABC):
-    """Abstract base class for denovo list and dict replacements.
-  
-    A Bunch differs from a general python iterable in 3 ways:
-        1) It must include an 'add' method which provides the default mechanism
-            for adding new items to the iterable. All of the other appropriate
-            methods for adding to a python iterable ('append', 'extend', 
-            'update', etc.) remain, but 'add' allows a subclass to designate the
-            preferred method of adding to the iterable's stored data.
-        2) It allows the '+' operator to be used to join a Bunch subclass 
-            instance of the same general type (Mapping, Sequence, tuple, etc.). 
-            The '+' operator calls the Bunch subclass 'add' method to implement 
-            how the added item(s) is/are added to the Bunch subclass instance.
-        3) The internally stored iterable is located in the 'contents' 
-            attribute. This allows for consistent coordination among classes and
-            mixins.
-    
-    Args:
-        contents (Iterable[Any]): stored iterable. Defaults to None.
-              
-    """
-    contents: Iterable[Any]
-   
-    """ Required Subclass Methods """
-    
-    @abc.abstractmethod
-    def add(self, item: Any) -> None:
-        """Adds 'item' to 'contents'.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass
-    
-    @abc.abstractmethod
-    def subset(self, include: Sequence[Any], exclude: Sequence[Any]) -> Bunch:
-        """Returns a subclass with some items removed from 'contents'.
-        
-        Subclasses must provide their own methods.
-        
-        """
-        pass
-       
-    """ Dunder Methods """
-
-    def __add__(self, other: Any) -> None:
-        """Combines argument with 'contents' using the 'add' method.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(item = other)
-        return
-
-    def __iadd__(self, other: Any) -> None:
-        """Combines argument with 'contents' using the 'add' method.
-
-        Args:
-            other (Any): item to add to 'contents' using the 'add' method.
-
-        """
-        self.add(item = other)
-        return
-
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'contents'.
-
-        Returns:
-            Iterable: of 'contents'.
-
-        """
-        return iter(self.contents)
-
-    def __len__(self) -> int:
-        """Returns length of 'contents'.
-
-        Returns:
-            int: length of 'contents'.
-
-        """
-        return len(self.contents)
-    
- 
-@dataclasses.dataclass
-class Manifest(Bunch, collections.abc.MutableSequence[Any]):
+@dataclasses.dataclass # type: ignore
+class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence[Any]): # type: ignore
     """Basic denovo list replacement.
     
     A Manifest differs from an ordinary python list only in ways inherited
@@ -361,7 +272,7 @@ class Manifest(Bunch, collections.abc.MutableSequence[Any]):
         return
 
    
-@dataclasses.dataclass
+@dataclasses.dataclass # type: ignore
 class Hybrid(Manifest):
     """Iterable that has both a dict and list interfaces.
     
@@ -453,7 +364,7 @@ class Hybrid(Manifest):
         self.default_factory = value 
         return
 
-    def update(self, items: Mapping[Any, Any], **kwargs) -> None:
+    def update(self, items: Mapping[Any, Any]) -> None:
         """Mimics the dict 'update' method by extending 'contents' with 'items'.
         
         Args:
@@ -465,7 +376,7 @@ class Hybrid(Manifest):
                 method which adds the values to the end of 'contents'.           
         
         """
-        self.extend(item = list(items.values()), **kwargs)
+        self.extend(list(items.values()))
         return
 
     def values(self) -> tuple[Any, ...]:
@@ -481,7 +392,7 @@ class Hybrid(Manifest):
 
     """ Private Methods """
 
-    def _hashify(self, item: Any) -> str:
+    def _namify(self, item: Any) -> str:
         """Returns item as a str type.
 
         Args:
@@ -578,12 +489,12 @@ class Hybrid(Manifest):
             del self.contents[key]
         else:
             self.contents = [c for c in self.contents 
-                             if self._hashify(c) != key]
+                             if self._namify(c) != key]
         return
 
  
-@dataclasses.dataclass
-class Lexicon(Bunch, collections.abc.MutableMapping):
+@dataclasses.dataclass  # type: ignore
+class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # type: ignore
     """Basic denovo dict replacement.
     
     A Lexicon differs from an ordinary python dict in ways inherited from Bunch 
@@ -610,7 +521,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
     def fromkeys(cls, 
                  keys: Sequence[Hashable], 
                  value: Any, 
-                 **kwargs) -> Lexicon:
+                 **kwargs: Any) -> Lexicon:
         """Emulates the 'fromkeys' class method from a python dict.
 
         Args:
@@ -621,11 +532,11 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             Lexicon: formed from 'keys' and 'value'.
             
         """
-        return cls(contents = dict.fromkeys(keys, value), **kwargs)
+        return cls(contents = dict.fromkeys(keys, value), **kwargs: Any)
     
     """ Public Methods """
      
-    def add(self, item: Mapping[Hashable, Any], **kwargs) -> None:
+    def add(self, item: Mapping[Hashable, Any], **kwargs: Any) -> None:
         """Adds 'item' to the 'contents' attribute.
         
         Args:
@@ -634,7 +545,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
                 additional parameters.
                 
         """
-        self.contents.update(item, **kwargs)
+        self.contents.update(item, **kwargs: Any)
         return
 
     def get(self, key: Hashable) -> Any:
@@ -768,7 +679,7 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         return
     
 
-@dataclasses.dataclass
+@dataclasses.dataclass  # type: ignore
 class Catalog(Lexicon):
     """Wildcard and list-accepting dictionary.
 
@@ -885,7 +796,7 @@ class Catalog(Lexicon):
         return
 
  
-@dataclasses.dataclass
+@dataclasses.dataclass  # type: ignore
 class Library(Lexicon):
     """Stores classes and class instances.
     
@@ -1024,7 +935,7 @@ class Library(Lexicon):
             if 'name' in item.__annotations__.keys() and 'name' not in kwargs:
                 kwargs[name] = names[0]
             if inspect.isclass(item):
-                item = item(**kwargs)
+                item = item(**kwargs: Any)
             else:
                 for key, value in kwargs.items():
                     setattr(item, key, value)  

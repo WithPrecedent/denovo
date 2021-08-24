@@ -50,6 +50,9 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
                     Union)
 
+import more_itertools
+
+
 """ Module-Level Attributes """
 
 DIVIDER: str = '_'
@@ -57,7 +60,7 @@ TIME_FORMAT: str = '%Y-%m-%d_%H-%M'
 
 """ General Tools """
 
-def how_soon_is_now(prefix: str = None) -> str:
+def how_soon_is_now(prefix: Optional[str] = None) -> str:
     """Creates a string from current date and time.
 
     Args:
@@ -75,7 +78,7 @@ def how_soon_is_now(prefix: str = None) -> str:
 
 """ Conversion Tools """
 
-def instancify(item: Union[Type, object], **kwargs) -> object:
+def instancify(item: Union[Type[Any], object], **kwargs: Any) -> object:
     """Returns 'item' as an instance with 'kwargs' as parameters/attributes.
     
     If 'item' is already an instance, kwargs are added as attributes to the
@@ -496,21 +499,33 @@ def get_modules(folder: Union[str, pathlib.Path]) -> list[pathlib.Path]:
     folder = pathlibify(item = folder)  
     return list(folder.glob('*/*.py'))
 
+def has_methods(item: Union[object, Type[Any]], 
+                methods: Union[str, list[str]]) -> bool:
+    """Returns whether 'item' has 'methods' which are methods."""
+    methods = listify(item = methods)
+    return all(is_method(item = item, attribute = m) for m in methods)
+
+def has_properties(item: Union[object, Type[Any]], 
+                   properties: Union[str, list[str]]) -> bool:
+    """Returns whether 'item' has 'properties' which are properties."""
+    properties = listify(item = properties)
+    return all(is_property(item = item, attribute = p) for p in properties)
+ 
 def is_iterable(item: Any) -> bool:
-    """Returns if 'item' is iterable but is NOT a str type.
+    """Returns if 'item' is iterable and is NOT a str type.
 
     Args:
         item (Any): object to be tested.
 
     Returns:
-        bool: indicating whether 'item' is iterable but is not a str.
+        bool: indicating whether 'item' is iterable and not a str.
 
     """
     return (isinstance(item, collections.abc.Iterable) 
             and not isinstance(item, str))
 
 def is_method(item: Union[object, Type[Any]], 
-              method: Union[str, types.FunctionType]) -> bool:
+              attribute: Union[str, types.FunctionType]) -> bool:
     """
 
     Args:
@@ -520,9 +535,9 @@ def is_method(item: Union[object, Type[Any]],
         
 
     """
-    if isinstance(method, str):
-        method = getattr(item, method)
-    return inspect.ismethod(method)
+    if isinstance(attribute, str):
+        attribute = getattr(item, attribute)
+    return inspect.ismethod(attribute)
 
 def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
@@ -537,17 +552,31 @@ def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """
     return any(isinstance(v, dict) for v in dictionary.values())
 
-def is_property(item: Any, instance: object) -> bool:
+def is_property(item: Union[object, Type[Any]], 
+                attribute: Union[str, types.FunctionType]) -> bool:
     """Returns if 'item' is a property of 'instance'.
 
     Args:
-        item (Any): item to test to see if it is a property of 'instance'.
-        instance (object): object to see if 'item' is a property of.
+
 
     Returns:
-        bool: whether 'item' is a property of 'instance'.
 
     """
-    return (isinstance(item, str) 
-            and hasattr(instance.__class__, item) 
-            and isinstance(getattr(type(instance), item), property))
+    if not inspect.isclass(item):
+        item = item.__class__
+    if isinstance(attribute, str):
+        attribute = getattr(item, attribute)
+    return (isinstance(item, str) and isinstance(attribute, property))
+
+def is_subclass(item: Type[Any],
+                attributes: Optional[list[str]] = None,
+                methods: Optional[list[str]] = None,
+                properties: Optional[list[str]] = None) -> bool:
+    """Returns if 'item' has 'attributes', 'methods' and 'properties'."""
+    attributes = attributes or []
+    methods = methods or []
+    properties = properties or []
+    return (all(hasattr(item, a) for a in attributes)
+            and has_methods(item = item, methods = methods)
+            and has_properties(item = item, properties = properties))
+    

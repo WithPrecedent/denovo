@@ -81,7 +81,7 @@ def fetch(item: Optional[str] = None,
         else:
             kwargs = {'package': package}
         try:
-            imported = importlib.import_module(module, **kwargs)
+            imported = importlib.import_module(module, **kwargs: Any)
         except (ImportError, AttributeError):
             raise AttributeError(f'Failed to import {module}')
     try:

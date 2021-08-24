@@ -159,14 +159,14 @@ class Testimony(object):
     
     """ Initialization Methods """
     
-    def __call__(cls, *args, **kwargs) -> Callable:
+    def __call__(cls, *args: Any, **kwargs: Any) -> Callable:
         """Instances the class and calls testify method.
         
         Returns:
             Callable: 'testify' method based on args and kwargs.
             
         """
-        instance  = cls(*args, **kwargs)
+        instance  = cls(*args: Any, **kwargs: Any)
         return instance.testify()
     
     """ Public Methods """

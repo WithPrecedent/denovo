@@ -109,7 +109,7 @@ def beautify(item: Any,
             kwargs.update({'package': package, 
                         'exclude': exclude,
                         'include_private': include_private})
-        summary = kind.method(**kwargs)
+        summary = kind.method(**kwargs: Any)
     return f'{LINE_BREAK}{summary}'
    
 def beautify_mapping(item: MutableSequence, 

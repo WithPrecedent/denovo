@@ -45,7 +45,7 @@ def build_keystone(name: str,
                    quirks: Union[str, 
                                  denovo.Quirk, 
                                  Sequence[Union[str, denovo.Quirk]]] = None,
-                   **kwargs) -> denovo.core.quirks.Keystone:
+                   **kwargs: Any) -> denovo.core.quirks.Keystone:
     """[summary]
 
     Args:
@@ -78,7 +78,7 @@ def build_keystone(name: str,
         bases.append(keystone)
     else:
         raise TypeError('keystone must be a str or Keystone type')
-    return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
+    return dataclasses.dataclass(type(name, tuple(bases), **kwargs: Any))
 
 
 @dataclasses.dataclass
@@ -120,7 +120,7 @@ class Workshop(denovo.Lexicon):
                 return value
         raise KeyError(f'item does not match any recognized type')
        
-    def convert(self, item: Any, output: Union[Type, str], **kwargs) -> Any:
+    def convert(self, item: Any, output: Union[Type, str], **kwargs: Any) -> Any:
         """[summary]
 
         Args:
@@ -138,7 +138,7 @@ class Workshop(denovo.Lexicon):
             stop = output
             output = self.kinds[output].name
         method = getattr(self.kinds[output], f'from_{start}')
-        return method(item = item, **kwargs)
+        return method(item = item, **kwargs: Any)
 
 
 # @dataclasses.dataclass
@@ -175,7 +175,7 @@ class Workshop(denovo.Lexicon):
 #         for name in validations:
 #             if hasattr(self, f'_validate_{name}'):
 #                 kwargs = {name: getattr(self, name)}
-#                 validated = getattr(self, f'_validate_{name}')(**kwargs)
+#                 validated = getattr(self, f'_validate_{name}')(**kwargs: Any)
 #             else:
 #                 converter = self._initialize_converter(name = name)
 #                 try:
@@ -245,9 +245,9 @@ class Workshop(denovo.Lexicon):
 
 #     """ Initialization Methods """
     
-#     def __init_subclass__(cls, **kwargs):
+#     def __init_subclass__(cls, **kwargs: Any):
 #         """Adds 'cls' to 'Validator.converters' if it is a concrete class."""
-#         super().__init_subclass__(**kwargs)
+#         super().__init_subclass__(**kwargs: Any)
 #         if not abc.ABC in cls.__bases__:
 #             key = denovo.tools.snakify(cls.__name__)
 #             # Removes '_converter' from class name so that the key is consistent
@@ -260,7 +260,7 @@ class Workshop(denovo.Lexicon):
                        
 #     """ Public Methods """
 
-#     def validate(self, item: Any, instance: object, **kwargs) -> object:
+#     def validate(self, item: Any, instance: object, **kwargs: Any) -> object:
 #         """[summary]
 
 #         Args:
@@ -282,27 +282,27 @@ class Workshop(denovo.Lexicon):
 #             try:
 #                 base = getattr(instance.library, self.base)
 #                 if item is None:
-#                     validated = base(**kwargs)
+#                     validated = base(**kwargs: Any)
 #                 elif isinstance(item, base):
 #                     validated = item
 #                     for key, value in kwargs.items():
 #                         setattr(validated, key, value)
 #                 elif inspect.isclass(item) and issubclass(item, base):
-#                     validated = item(**kwargs)
+#                     validated = item(**kwargs: Any)
 #                 elif (isinstance(item, str) 
 #                         or isinstance(item, list)
 #                         or isinstance(item, tuple)):
-#                     validated = base.library.select(names = item)(**kwargs)
+#                     validated = base.library.select(names = item)(**kwargs: Any)
 #                 elif isinstance(item, self.alternatives) and self.alternatives:
-#                     validated = base(item, **kwargs)
+#                     validated = base(item, **kwargs: Any)
 #                 else:
 #                     raise TypeError(
 #                         f'{item} could not be validated or converted')
 #             except AttributeError:
-#                 validated = self.default(**kwargs)
+#                 validated = self.default(**kwargs: Any)
 #         else:
 #             try:
-#                 validated = self.default(**kwargs)
+#                 validated = self.default(**kwargs: Any)
 #             except (TypeError, ValueError):
 #                 raise AttributeError(
 #                     f'Cannot validate or convert {item} without library')
