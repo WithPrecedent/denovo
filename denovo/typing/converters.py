@@ -70,16 +70,16 @@ def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
 catalog: denovo.containers.Catalog = denovo.containers.Catalog()
 
  
-def bondafide(_wrapped: Optional[dataclasses.dataclass] = None, 
+def bondafide(_wrapped: Optional[Type[Any]] = None, 
               *,
               include: Optional[list[str]] = None, 
-              exclude: Optional[list[str]] = None):
+              exclude: Optional[list[str]] = None) -> Type[Any]:
     """Wraps a python dataclass and validates/converts attributes.
     
     """
     include = include or []
     exclude = exclude or []
-    def validator(wrapped: dataclasses.dataclass):
+    def validator(wrapped: Type[Any]) -> Type[Any]:
         @functools.wraps(wrapped)
         def wrapper(*args: Any, **kwargs: Any):
             kwargs.update(denovo.tools.kwargify(args = args, item = wrapped))

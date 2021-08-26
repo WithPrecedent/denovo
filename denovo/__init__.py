@@ -22,30 +22,10 @@ __package__ = 'denovo'
 
 __author__ = 'Corey Rayburn Yung'
 
-# from . import core
-# from . import typing
-# from . import utilities
-# from .core import *
-# from .typing import *
-# from .utilities import *
 
+from typing import Any
 
-
-
-
-
-import abc
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Type, Union)
-
-
-
-
-# from . import utilities
 from .utilities import lazy
-# from .core import containers
-# from .typing import types
 
 
 
@@ -75,11 +55,14 @@ the modules and other items listed in values. 'importables' is necessary for
 the lazy importation system used throughout denovo.
 
 """
-importables: Dict[str, str] = {
+importables: dict[str, str] = {
     'typing': 'typing',
+    'checks': 'typing.checks',
     'converters': 'typing.converters',
+    'foundry': 'typing.foundry',
+    'types': 'typing.types',
+    
     'utilities': 'utilities',
-
     'decorators': 'utilities.decorators',
     'introspection': 'utilities.introspection',
     'lazy': 'utilities.lazy',
@@ -87,6 +70,7 @@ importables: Dict[str, str] = {
     'summary': 'utilities.summary',
     'testing': 'utilities.testing',
     'tools': 'utilities.tools',
+    
     'containers': 'core.containers',
     'Bunch': 'core.containers.Bunch',
     'Proxy': 'core.containers.Proxy',

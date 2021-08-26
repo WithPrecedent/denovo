@@ -5,12 +5,15 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
+    acquire (Callable): lazy loader that intelligently imports from either a
+        file path or import path.
     fetch (Callable): lazy loader that accepts import and file paths to load
         individual items from them.
+    from_path (Callable): lazy loader from a file path.
     importify (Callable): function which imports items only when such modules 
         and items are first accessed based on a dict.
-    Importer (object): descriptor which adds the functionality of 'importify' to
-        a class.
+    # Importer (object): descriptor which adds the functionality of 'importify' to
+    #     a class.
     
 ToDo:
 
@@ -25,7 +28,7 @@ from typing import Any, Optional, Union
 
 """ Importing Tools """
 
-def acquire(path: Union[str, pathlib.Path]) -> Union[type.ModuleType, Any]:
+def acquire(path: Union[str, pathlib.Path]) -> Union[types.ModuleType, Any]:
     if isinstance(path, pathlib.Path) or '\\' in path or '\/' in path:
         imported = fetch(file_path = path)
     elif isinstance(path, str):
