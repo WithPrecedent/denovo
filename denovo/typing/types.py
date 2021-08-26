@@ -493,7 +493,7 @@ class Composite(Bunch, abc.ABC):
                                                         'merge', 'subset', 
                                                         'walk', '__add__'])
                     and denovo.tools.has_properties(item = subclass, 
-                                                attributes = 'nodes')))
+                                                    attributes = 'nodes')))
   
     def __add__(self, other: Any) -> None:
         """Adds 'other' to the stored graph using the 'merge' method.
@@ -633,12 +633,13 @@ class Directed(Network, abc.ABC):
                 or (super().__subclasshook__(subclass = subclass) 
                     and denovo.tools.has_methods(item = subclass,
                                                 methods = ['add', 'delete', 
-                                                            'merge', 'subset', 
-                                                            'walk'])
+                                                           'merge', 'subset', 
+                                                           'walk'])
                     and denovo.tools.has_properties(item = subclass,
                                                     attributes = ['endpoints',
                                                                 'paths', 
                                                                 'roots'])))
+
 
 @dataclasses.dataclass # type: ignore
 class Graph(Directed, abc.ABC):
