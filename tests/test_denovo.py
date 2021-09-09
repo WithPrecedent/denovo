@@ -45,6 +45,6 @@ def test_version() -> None:
 if __name__ == '__main__':
     test_version()
     folder = pathlib.Path('.')
-    testimony = denovo.testing.Testimony(folder = folder)
+    testimony = denovo.test.Testimony(folder = folder)
     testimony.testify()
     

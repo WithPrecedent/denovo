@@ -1,5 +1,5 @@
 """
-summary: functions for representing python objects as strings
+recap: functions for representing python objects as strings
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -173,10 +173,10 @@ def beautify_object(item: MutableSequence,
         if hasattr(module, '__package__'):
             package = module.__package__
     if kind.name == 'object':
-        name = denovo.tools.namify(item = item)
+        name = denovo.check.get_name(item = item)
     else:
         name = ''
-    base = denovo.tools.snakify(item.__class__.__name__)
+    base = denovo.modify.snakify(item.__class__.__name__)
     indent = _get_indent(offsets = offsets)
     inner = _get_indent(offsets = offsets, extra = TAB)
     summary = [f'{indent}']

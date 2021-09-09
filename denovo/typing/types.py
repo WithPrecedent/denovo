@@ -12,13 +12,21 @@ Contents:
 from __future__ import annotations
 import abc
 from collections.abc import (Collection, Hashable, Iterator, Sequence, 
-                             MutableMapping)
+                             MutableMapping, MutableSequence, Set)
+import copy
 import dataclasses
+import datetime
 import inspect
-from typing import Any, Optional, Type, TypeVar, Union
+from typing import Any, Callable, ClassVar, Optional, Type, TypeVar, Union
 
 import denovo
 
+
+""" Type Aliases """
+
+Operation = Callable[..., Any]
+Signatures = MutableMapping[str, inspect.Signature]
+Wrappable = Union[object, Type[Any], Operation]
 
 """ Primitive Abstract Base Classes """
 
@@ -64,7 +72,7 @@ class Named(abc.ABC):
             str: name of class for internal referencing and some access methods.
         
         """
-        return denovo.tools.snakify(self.__class__.__name__) # type: ignore
+        return denovo.modify.snakify(self.__class__.__name__) # type: ignore
     
     """ Dunder Methods """
     
@@ -146,10 +154,10 @@ class Bunch(Collection[Any], abc.ABC):
             
         """
         return (subclass in cls.__subclasses__() 
-                or denovo.tools.has_methods(item = subclass,
-                                            methods = ['add', 'subset', 
-                                                       '__add__', '__iadd__', 
-                                                       '__iter__', '__len__'])) 
+                or denovo.check.has_methods(item = subclass,
+                                             methods = ['add', 'subset', 
+                                                        '__add__', '__iadd__', 
+                                                        '__iter__', '__len__'])) 
           
     def __add__(self, other: Any) -> None:
         """Combines argument with 'contents' using the 'add' method.
@@ -228,14 +236,14 @@ class Node(Hashable, abc.ABC):
         
         """
         super().__init_subclass__(*args, **kwargs) # type: ignore
-        cls.__hash__ = NodeWrapper.__hash__ # type: ignore
-        cls.__eq__ = NodeWrapper.__eq__ # type: ignore
-        cls.__ne__ = NodeWrapper.__ne__ # type: ignore
+        cls.__hash__ = Node.__hash__ # type: ignore
+        cls.__eq__ = Node.__eq__ # type: ignore
+        cls.__ne__ = Node.__ne__ # type: ignore
 
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Sets 'name' attribute if 'name' is None.
-        self.name = self.name or denovo.tools.snakify(self.__class__.__name__)
+        self.name = self.name or denovo.modify.snakify(self.__class__.__name__)
                 
     """ Dunder Methods """
 
@@ -251,9 +259,9 @@ class Node(Hashable, abc.ABC):
             
         """
         return (subclass in cls.__subclasses__() 
-                or denovo.tools.has_methods(item = subclass,
-                                            methods = ['__hash__', '__eq__', 
-                                                       '__ne__']))
+                or denovo.check.has_methods(item = subclass,
+                                             methods = ['__hash__', '__eq__', 
+                                                        '__ne__']))
         
     def __hash__(self) -> int:
         """Makes Node hashable so that it can be used as a key in a dict.
@@ -380,7 +388,8 @@ class Node(Hashable, abc.ABC):
 @dataclasses.dataclass # type: ignore
 class Composite(Bunch, abc.ABC):
 
-                      
+    """ Required Properties """
+
     @abc.abstractproperty
     def nodes(self) -> set[Node]:
         """Returns all stored nodes as a set."""
@@ -488,12 +497,12 @@ class Composite(Bunch, abc.ABC):
             
         """
         return (subclass in cls.__subclasses__() 
-                or (denovo.tools.has_methods(item = subclass,
-                                             methods = ['add', 'delete', 
-                                                        'merge', 'subset', 
-                                                        'walk', '__add__'])
-                    and denovo.tools.has_properties(item = subclass, 
-                                                    attributes = 'nodes')))
+                or (denovo.check.has_methods(item = subclass,
+                                              methods = ['add', 'delete', 
+                                                         'merge', 'subset', 
+                                                         'walk', '__add__'])
+                    and denovo.check.has_properties(item = subclass, 
+                                                     attributes = 'nodes')))
   
     def __add__(self, other: Any) -> None:
         """Adds 'other' to the stored graph using the 'merge' method.
@@ -556,12 +565,12 @@ class Network(Composite, abc.ABC):
         """
         return (subclass in cls.__subclasses__() 
                 or (super().__subclasshook__(subclass = subclass) 
-                    and denovo.tools.has_methods(item = subclass,
-                                                 attributes = ['add', 'delete', 
-                                                               'merge', 'walk',
-                                                               'subset'])
-                    and denovo.tools.has_properties(item = subclass,
-                                                    attributes = 'edges')))
+                    and denovo.check.has_methods(item = subclass,
+                                                  attributes = ['add', 'delete', 
+                                                                'merge', 'walk',
+                                                                'subset'])
+                    and denovo.check.has_properties(item = subclass,
+                                                     attributes = 'edges')))
 
 
 @dataclasses.dataclass # type: ignore
@@ -631,14 +640,14 @@ class Directed(Network, abc.ABC):
         """
         return (subclass in cls.__subclasses__() 
                 or (super().__subclasshook__(subclass = subclass) 
-                    and denovo.tools.has_methods(item = subclass,
-                                                methods = ['add', 'delete', 
-                                                           'merge', 'subset', 
-                                                           'walk'])
-                    and denovo.tools.has_properties(item = subclass,
-                                                    attributes = ['endpoints',
-                                                                'paths', 
-                                                                'roots'])))
+                    and denovo.check.has_methods(item = subclass,
+                                                  methods = ['add', 'delete', 
+                                                             'merge', 'subset', 
+                                                             'walk'])
+                    and denovo.check.has_properties(item = subclass,
+                                                     attributes = ['endpoints',
+                                                                   'paths', 
+                                                                   'roots'])))
 
 
 @dataclasses.dataclass # type: ignore
@@ -700,13 +709,13 @@ class Graph(Directed, abc.ABC):
             Graph: a Graph instance created based on 'source'.
                 
         """
-        if denovo.converters.is_adjacency_list(item = source):
+        if denovo.tools.is_adjacency_list(item = source):
             return cls.from_adjacency(adjacency = source) # type: ignore
-        elif denovo.converters.is_adjacency_matrix(item = source):
+        elif denovo.tools.is_adjacency_matrix(item = source):
             return cls.from_matrix(matrix = source) # type: ignore
-        elif denovo.converters.is_edge_list(item = source):
+        elif denovo.tools.is_edge_list(item = source):
             return cls.from_edges(edges = source) # type: ignore
-        elif denovo.converters.is_pipeline(item = source): 
+        elif denovo.tools.is_pipeline(item = source): 
             return cls.from_pipeline(pipeline = source) # type: ignore
         else:
             raise TypeError(
@@ -727,12 +736,12 @@ class Graph(Directed, abc.ABC):
             
         """
         return (super().__subclasshook__(subclass = subclass) 
-                and denovo.tools.has_methods(item = subclass,
+                and denovo.check.has_methods(item = subclass,
                                              methods = ['from_adjacency',
                                                         'from_edges',
                                                         'from_matrix',
                                                         'from_pipeline'])
-                and denovo.tools.has_properties(item = subclass,
+                and denovo.check.has_properties(item = subclass,
                                                 attributes = ['adjacency',
                                                               'matrix']))
         
@@ -744,7 +753,7 @@ class Graph(Directed, abc.ABC):
                 adjacency list.
             
         """
-        return denovo.summary.beautify(item = self, package = 'denovo') # type: ignore
+        return denovo.recap.beautify(item = self, package = 'denovo') # type: ignore
   
        
 """ Aliases"""

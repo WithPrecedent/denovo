@@ -1,118 +1,72 @@
 """
-checks: typing check functions that return booleans
+classes: tools for classes and instances
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-Contents:    
-    is_iterable (Callable): returns whether an item is iterable but not a str.
-    is_nested (Callable): returns whether a dict or dict-like item is nested.
-    is_property (Callable): returns whether an attribute is actually a property.
+Contents:   
+
    
 ToDo:
 
 
 """
 from __future__ import annotations
-import abc
 import collections.abc
 import dataclasses
-import datetime
 import inspect
-import pathlib
-import re
 import types
-from typing import Any, ClassVar, Optional, Type, Union
-
-import more_itertools
+from typing import Any, Optional, Type, Union
 
 import denovo
 
 
-""" Simplified Protocol """
+""" Type Aliases """
 
-@dataclasses.dataclass
-class Kind(abc.ABC):
-    
-    attributes: ClassVar[list[str]] = []
-    methods: ClassVar[list[str]] = []
-    properties: ClassVar[list[str]] = []
-    signatures: ClassVar[dict[str, inspect.Signature]] = {}
-    
-    """ Dunder Methods """
-    
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Tests whether 'subclass' has the relevant characteristics."""
-        return is_kind(item = subclass,
-                       attributes = cls.attributes,
-                       methods = cls.methods,
-                       properties = cls.properties,
-                       signatures = cls.signatures)
+Signatures = dict[str, inspect.Signature]
 
+""" Introspection Tools """
 
-""" Package Introspection Tools """
-
-def get_modules(folder: Union[str, pathlib.Path],
-                recursive: bool = False) -> list[types.ModuleType]:  
-    """Returns list of modules in 'folder'."""
-    return [denovo.lazy.acquire(path = p) 
-            for p in get_paths(folder = folder, recursive = recursive)]
-
-def get_paths(folder: Union[str, pathlib.Path], 
-              suffix: str = 'py',
-              recursive: bool = False) -> list[pathlib.Path]:  
-    """Returns list of pathlib Paths of modules in 'folder'."""
-    folder = denovo.converters.pathlibify(item = folder) 
-    if recursive:
-        return  list(folder.rglob(f'*.{suffix}')) # type: ignore
-    else:
-        return list(folder.glob(f'*.{suffix}')) # type: ignore
-
-def is_file(file_path: Union[str, pathlib.Path]) -> bool:
-    """Returns whether 'file_path' currently exists and is a file."""
-    folder = denovo.converters.pathlibify(item = file_path)
-    return folder.exists() and folder.is_file() # type: ignore
-
-def is_folder(folder: Union[str, pathlib.Path]) -> bool:
-    """Returns whether 'folder' currently exists and is a folder."""
-    folder = denovo.converters.pathlibify(item = folder)
-    return folder.exists() and folder.is_dir() # type: ignore
-    
-def name_modules(folder: Union[str, pathlib.Path],
-                 recursive: bool = False) -> list[str]:  
-    """Returns list of str names of modules in 'folder'."""
-    return [p.stem for p in get_paths(folder = folder, recursive = recursive)]
-
-""" Module Introspection Tools """
-          
-def get_classes(module: types.ModuleType) -> list[Type[Any]]:
-    """Returns list of string names of classes in a module."""
-    return [m[1] for m in inspect.getmembers(module, inspect.isclass)
-            if m[1].__module__ == module.__name__]
-
-def get_functions(module: types.ModuleType) -> list[types.FunctionType]:
-    """Returns list of string names of functions in a module."""
-    return [m[1] for m in inspect.getmembers(module, inspect.isfunction)
-            if m[1].__module__ == module.__name__]
-
-def name_classes(module: types.ModuleType) -> list[str]:
-    """Returns list of string names of classes in a module."""
-    return [m[0] for m in inspect.getmembers(module, inspect.isclass)
-            if m[1].__module__ == module.__name__]
-       
-def name_functions(module: types.ModuleType) -> list[str]:
-    """Returns list of string names of functions in a module."""
-    return [m[0] for m in inspect.getmembers(module, inspect.isfunction)
-            if m[1].__module__ == module.__name__]
-    
-""" Class and Object Attributes Checks """
+def get_attributes(item: Union[object, Type[Any]], 
+                   exclude_private: bool = True) -> list[types.FunctionType]:
+    """Returns methods of 'item'."""
+    attributes = name_attributes(item = item, exclude_private = exclude_private)
+    return [getattr(item, m) for m in attributes]
 
 def get_methods(item: Union[object, Type[Any]], 
                 exclude_private: bool = True) -> list[types.FunctionType]:
     """Returns methods of 'item'."""
     methods = name_methods(item = item, exclude_private = exclude_private)
     return [getattr(item, m) for m in methods]
+
+def get_name(item: Any, default: Optional[str] = None) -> Optional[str]:
+    """Returns str name representation of 'item'.
+    
+    Args:
+        item (Any): item to determine a str name.
+
+    Returns:
+        str: a name representation of 'item.'
+        
+    """        
+    if isinstance(item, str):
+        return item
+    else:
+        if hasattr(item, 'name') and isinstance(item.name, str):
+            return item.name
+        else:
+            try:
+                return denovo.modify.snakify(item.__name__) # type: ignore
+            except AttributeError:
+                if item.__class__.__name__ is not None:
+                    return denovo.modify.snakify( # type: ignore
+                        item.__class__.__name__) 
+                else:
+                    return default
+
+def get_parameters(item: Type[Any]) -> list[str]:
+    """Returns list of parameters based on annotations of 'item'."""        
+    return list(item.__annotations__.keys())
 
 def get_properties(item: Union[object, Type[Any]], 
                    exclude_private: bool = True) -> list[Any]:
@@ -121,18 +75,27 @@ def get_properties(item: Union[object, Type[Any]],
         item = item.__class__
     properties = name_properties(item = item, exclude_private = exclude_private)
     return [getattr(item, p) for p in properties]
+
+def get_signatures(item: Union[object, Type[Any]], 
+                   exclude_private: bool = True) -> dict[str, inspect.Signature]:
+    """Returns method signatures of 'item'."""
+    if not inspect.isclass(item):
+        item = item.__class__
+    methods = name_methods(item = item, exclude_private = exclude_private)
+    signatures = [inspect.signature(getattr(item, m)) for m in methods]
+    return dict(zip(methods, signatures))
  
 def has_methods(item: Union[object, Type[Any]], 
                 methods: Union[str, list[str]]) -> bool:
     """Returns whether 'item' has 'methods' which are methods."""
-    methods = denovo.converters.listify(item = methods)
+    methods = denovo.typing.convert.listify(item = methods)
     return all(denovo.tools.is_method(item = item, attribute = m) 
                for m in methods)
 
 def has_properties(item: Union[object, Type[Any]], 
                    properties: Union[str, list[str]]) -> bool:
     """Returns whether 'item' has 'properties' which are properties."""
-    properties = denovo.converters.listify(item = properties)
+    properties = denovo.typing.convert.listify(item = properties)
     return all(denovo.tools.is_property(item = item, attribute = p) 
                for p in properties)
 
@@ -141,19 +104,19 @@ def has_signatures(item: Union[object, Type[Any]],
     """Returns whether 'item' has 'signatures' of its methods."""
     names = name_methods(item = item)
     methods = get_methods(item = item)
-    item_signatures = [m.__signature__ for m in methods]
+    item_signatures = dict(zip(names, [inspect.signature(m) for m in methods]))
     pass_test = True
-    for name, parameters in dict(zip(names, item_signatures)).items():
+    for name, parameters in signatures.items():
         if (not hasattr(item, name) 
-                or getattr(item, name).__signature__ != parameters):
+                or not item_signatures[name] != parameters):
             pass_test = False
     return pass_test
     
-def is_kind(item: Union[object, Type[Any]],
-            attributes: Optional[list[str]] = None,
-            methods: Optional[list[str]] = None,
-            properties: Optional[list[str]] = None,
-            signatures: Optional[dict[str, inspect.Signature]] = None) -> bool:
+def has_traits(item: Union[object, Type[Any]],
+               attributes: Optional[list[str]] = None,
+               methods: Optional[list[str]] = None,
+               properties: Optional[list[str]] = None,
+               signatures: Optional[Signatures] = None) -> bool:
     """Returns if 'item' has 'attributes', 'methods' and 'properties'."""
     if not inspect.isclass(item):
         item = item.__class__ 
@@ -167,6 +130,15 @@ def is_kind(item: Union[object, Type[Any]],
             and has_methods(item = item, methods = methods)
             and has_properties(item = item, properties = properties)
             and has_signatures(item = item, signatures = signatures))
+
+def name_attributes(item: Union[object, Type[Any]], 
+                    exclude_private: bool = True) -> list[str]:
+    """Returns simple data attribute names of 'item'."""
+    attributes = [a for a in dir(item)
+                  if is_attribute(item = item, attribute = a)]
+    if exclude_private:
+        attributes = [m for m in attributes if not m.startswith('_')]
+    return attributes
 
 def name_methods(item: Union[object, Type[Any]], 
                  exclude_private: bool = True) -> list[str]:
@@ -188,19 +160,26 @@ def name_properties(item: Union[object, Type[Any]],
         properties = [p for p in properties if not p.startswith('_')]
     return properties
     
-""" Class and Object Typing Checks """
- 
 def is_iterable(item: Union[object, Type[Any]]) -> bool:
     """Returns if 'item' is iterable and is NOT a str type."""
     if not inspect.isclass(item):
         item = item.__class__ 
     return (issubclass(item, collections.abc.Iterable)  # type: ignore  
             and not issubclass(item, str)) # type: ignore  
-
-def is_nested(dictionary: collections.abc.Mapping[Any, Any]) -> bool:
-    """Returns if passed 'contents' is nested at least one-level."""
+    
+def is_kind(item: Union[Type[Any], object], 
+            kind: Type[denovo.typing.Kind]) -> bool:
+     """Returns whether 'item' is an instance of subclass of 'kind'."""   
+     return has_traits(item = item,
+                       attributes = kind.attributes,
+                       methods = kind.methods, 
+                       properties = kind.properties,
+                       signatures = kind.signatures)
+    
+def is_nested(item: collections.abc.Mapping[Any, Any]) -> bool:
+    """Returns if 'item' is nested at least one-level."""
     return any(isinstance(v, collections.abc.Mapping) 
-               for v in dictionary.values())
+               for v in item.values())
  
 def is_sequence(item: Union[object, Type[Any]]) -> bool:
     """Returns if 'item' is a sequence and is NOT a str type."""
@@ -210,6 +189,14 @@ def is_sequence(item: Union[object, Type[Any]]) -> bool:
             and not issubclass(item, str)) # type: ignore  
 
 """ Attribute Introspection Tools """
+
+def is_attribute(item: Union[object, Type[Any]], 
+                 attribute: Union[str, types.FunctionType]) -> bool:
+    """Returns if 'attribute' is a simple data attribute of 'item'."""
+    if isinstance(attribute, str):
+        attribute = getattr(item, attribute)
+    return (not is_method(item = item, attribute = attribute)
+            and not is_property(item = item, attribute = attribute))
 
 def is_classvar(item: Union[object, Type[Any]], 
                 attribute: str) -> bool:

@@ -49,44 +49,44 @@ class TestClass(object):
 def test_all() -> None:
     a_folder = pathlib.Path('.') / 'tests' / 'test_folder'
     a_file = pathlib.Path(a_folder) / 'dummy_module.py'
-    assert denovo.checks.is_folder(folder = a_folder)
-    assert denovo.checks.is_file(file_path = a_file)
-    assert denovo.checks.name_modules(folder = a_folder) == ['dummy_module']
-    all_modules = denovo.checks.get_modules(folder = a_folder)
+    assert denovo.check.is_folder(folder = a_folder)
+    assert denovo.check.is_file(file_path = a_file)
+    assert denovo.check.name_modules(folder = a_folder) == ['dummy_module']
+    all_modules = denovo.check.get_modules(folder = a_folder)
     a_module = all_modules[0]
     assert type(a_module) == types.ModuleType
     assert a_module.__name__ == 'dummy_module'
-    class_names = denovo.checks.name_classes(module = a_module)
+    class_names = denovo.check.name_classes(module = a_module)
     assert class_names == ['TestClass', 'TestDataclass']
-    function_names = denovo.checks.name_functions(module = a_module)
+    function_names = denovo.check.name_functions(module = a_module)
     assert function_names == ['a_function']
-    classes = denovo.checks.get_classes(module = a_module)
+    classes = denovo.check.get_classes(module = a_module)
     assert inspect.isclass(classes[0])
-    functions = denovo.checks.get_functions(module = a_module)
+    functions = denovo.check.get_functions(module = a_module)
     assert type(functions[0]) == types.FunctionType
     a_class = TestClass()
     a_dataclass = TestDataclass()
-    assert denovo.checks.is_classvar(item = a_class, attribute = 'a_classvar')
-    assert denovo.checks.is_classvar(item = a_dataclass, 
+    assert denovo.check.is_classvar(item = a_class, attribute = 'a_classvar')
+    assert denovo.check.is_classvar(item = a_dataclass, 
                                      attribute = 'a_classvar')   
-    assert not denovo.checks.is_classvar(item = a_class, attribute = 'a_dict')
-    assert not denovo.checks.is_classvar(item = a_dataclass, 
+    assert not denovo.check.is_classvar(item = a_class, attribute = 'a_dict')
+    assert not denovo.check.is_classvar(item = a_dataclass, 
                                          attribute = 'a_dict')    
-    assert denovo.checks.is_method(item = a_class, attribute = 'do_something')
-    assert denovo.checks.is_method(item = a_dataclass, 
+    assert denovo.check.is_method(item = a_class, attribute = 'do_something')
+    assert denovo.check.is_method(item = a_dataclass, 
                                    attribute = 'do_something')
-    assert denovo.checks.is_property(item = a_class, 
+    assert denovo.check.is_property(item = a_class, 
                                      attribute = 'get_something')
-    assert denovo.checks.is_property(item = a_dataclass, 
+    assert denovo.check.is_property(item = a_dataclass, 
                                      attribute = 'get_something')
-    properties = denovo.checks.get_properties(item = a_class)
+    properties = denovo.check.get_properties(item = a_class)
     assert isinstance(properties[0], property)
-    methods = denovo.checks.get_methods(item = a_dataclass) 
+    methods = denovo.check.get_methods(item = a_dataclass) 
     assert isinstance(methods[0], types.MethodType)
     return
 
 if __name__ == '__main__':
-    testables = denovo.testing.get_testables(module = denovo.tools)
-    denovo.testing.run_tests(testables = testables, 
+    testables = denovo.test.get_testables(module = denovo.tools)
+    denovo.test.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

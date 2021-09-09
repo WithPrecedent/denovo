@@ -1,5 +1,5 @@
 """
-test_summary: tests function in denovo.summary
+test_recap: tests function in denovo.recap
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -22,11 +22,11 @@ class TestClass(object):
 def test_beautify():
     dummy = TestClass(a_dict = {'tree': 'house', 'window': 'pane'},
                       a_list = ['car', 'road', 'lawn'])
-    summary = denovo.summary.beautify(item = dummy, package = 'denovo')
+    recap = denovo.recap.beautify(item = dummy, package = 'denovo')
     return
 
 if __name__ == '__main__':
-    testables = denovo.testing.get_testables(module = denovo.summary)
-    denovo.testing.run_tests(testables = testables, 
+    testables = denovo.test.get_testables(module = denovo.recap)
+    denovo.test.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

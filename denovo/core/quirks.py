@@ -55,11 +55,11 @@ class Quirk(abc.ABC):
     
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Adds 'cls' to 'quirks' if it is a concrete class."""
-        super().__init_subclass__(**kwargs: Any) # type: ignore
+        super().__init_subclass__(**kwargs) # type: ignore
         # Adds concrete quirks to 'quirks' using 'key'.
         if not abc.ABC in cls.__bases__:
             # Creates a snakecase key of the class name.
-            key = denovo.tools.snakify(cls.__name__)
+            key = denovo.modify.snakify(cls.__name__)
             # Removes "_quirk" from class name if you choose to use 'Quirk' as
             # a suffix to Quirk subclasses. denovo doesn't follow this practice 
             # but includes this adjustment for users that which to use that 
@@ -86,7 +86,7 @@ class Factory(Quirk, abc.ABC):
     Namespaces: 'create' and 'sources'        
     
     """
-    sources: ClassVar[Mapping[Type, str]] = {}
+    sources: ClassVar[Mapping[Type[Any], str]] = {}
     
     """ Class Methods """
 
@@ -115,7 +115,7 @@ class Factory(Quirk, abc.ABC):
                 except AttributeError:
                     raise AttributeError(f'{method_name} does not exist')
                 kwargs[suffix] = source
-                return method(**kwargs: Any)
+                return method(**kwargs)
         raise ValueError(f'source does not match any recognized types in '
                          'sources')  
 
@@ -155,7 +155,7 @@ class Importer(Quirk, abc.ABC):
         value = super().__getattribute__(attribute)
         if isinstance(value, str) and '.' in value:
             try:
-                value = denovo.lazy.acquire(path = value)
+                value = denovo.load.acquire(path = value)
                 super().__setattr__(attribute, value)
             except ImportError:
                 pass
@@ -191,14 +191,14 @@ class Keystone(Quirk, abc.ABC):
     
     def __init_subclass__(cls, **kwargs: Any):
         """Adds 'cls' to 'library'."""
-        super().__init_subclass__(**kwargs: Any)
+        super().__init_subclass__(**kwargs)
         # Adds concrete subclasses to 'library'.
         if not abc.ABC in cls.__bases__:
             if Keystone in cls.__bases__:
-                base = denovo.tools.namify(item = cls)
+                base = denovo.check.get_name(item = cls)
             else:
                 base = denovo.tools.find_base(item = cls, match = Keystone)
-                base = denovo.tools.namify(item = base)
+                base = denovo.check.get_name(item = base)
             cls.library.deposit(item = cls, collection = base)
 
     def __post_init__(self) -> None:
@@ -275,7 +275,7 @@ class Keystone(Quirk, abc.ABC):
 #         kwargs = {}
 #         for need in more_itertools.always_iterable(cls.sources):
 #             if need in ['self']:
-#                 key = denovo.tools.snakify(instance.__class__.__name__)
+#                 key = denovo.modify.snakify(instance.__class__.__name__)
 #                 kwargs[key] = instance
 #             else:
 #                 try:

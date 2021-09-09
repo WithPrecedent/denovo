@@ -4,7 +4,7 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-
+import dataclasses
 
 import denovo
 
@@ -29,6 +29,6 @@ class EvenAnother(denovo.structures.Node):
 
 
 if __name__ == '__main__':
-    denovo.testing.testify(target_module = denovo.structures, 
-                           testing_module = __name__)
+    denovo.test.testify(target_module = denovo.structures,
+                        testing_module = __name__)
     

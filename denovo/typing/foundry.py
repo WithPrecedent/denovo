@@ -37,20 +37,20 @@ import denovo
     
 #     @property
 #     def matchers(self) -> dict[tuple[Type, ...], str]:
-#         return {denovo.converters.to_tuple(item = k.sources): k.name 
+#         return {denovo.tools.to_tuple(item = k.sources): k.name 
 #                 for k in self.kinds.values()}
     
 #     @property
 #     def names(self) -> dict[Kind, str]:
 #         labels = {}
 #         for key, value in self.kinds.items():
-#             for item in denovo.converters.to_tuple(item = value.comparison):
+#             for item in denovo.tools.to_tuple(item = value.comparison):
 #                 labels[item] = key
 #         return labels
         
 #     @property
 #     def types(self) -> dict[str, Type]:
-#         return {k.name: denovo.converters.to_tuple(item = k.comparison) 
+#         return {k.name: denovo.tools.to_tuple(item = k.comparison) 
 #                 for k in self.kinds.values()}
     
 #     """Public Methods"""
@@ -95,10 +95,10 @@ import denovo
 #             stop = self.names[output]
 #         try:
 #             strict_key = denovo.typing.types.STRICT(start, stop)
-#             method = self.converters[strict_key]
+#             method = self.tools[strict_key]
 #         except KeyError:
 #             flexible_key = denovo.typing.types.FLEXIBLE(stop)
-#             method = self.converters[flexible_key]
+#             method = self.tools[flexible_key]
 #         return method(item = item, **kwargs)
 
 
@@ -109,13 +109,13 @@ import denovo
 #     Args:
 #         validations (list[str]): a list of attributes that need validating.
 #             Each item in 'validations' should have a corresponding method named 
-#             f'_validate_{name}' or match a key in 'converters'. Defaults to an 
+#             f'_validate_{name}' or match a key in 'tools'. Defaults to an 
 #             empty list. 
-#         converters (denovo.Catalog):
+#         tools (denovo.Catalog):
                
 #     """
 #     validations: ClassVar[Sequence[str]] = []
-#     converters: ClassVar[denovo.Catalog] = denovo.Catalog()
+#     tools: ClassVar[denovo.Catalog] = denovo.Catalog()
 
 #     """ Public Methods """
 
@@ -125,7 +125,7 @@ import denovo
 #         Args:
 #             validations (list[str]): a list of attributes that need validating.
 #                 Each item in 'validations' should have a corresponding method 
-#                 named f'_validate_{name}' or match a key in 'converters'. If not 
+#                 named f'_validate_{name}' or match a key in 'tools'. If not 
 #                 passed, the 'validations' attribute will be used instead. 
 #                 Defaults to None. 
         
@@ -182,7 +182,7 @@ import denovo
 #             Converter: [description]
 #         """
 #         try:
-#             converter = self.converters[name]
+#             converter = self.tools[name]
 #         except KeyError:
 #             raise KeyError(
 #                 f'No local or stored type validator exists for {name}')
@@ -191,7 +191,7 @@ import denovo
 
 # @dataclasses.dataclass
 # class Converter(abc.ABC):
-#     """Keystone class for type converters and validators.
+#     """Keystone class for type tools and validators.
 
 #     Args:
 #         base (str): 
@@ -207,17 +207,17 @@ import denovo
 #     """ Initialization Methods """
     
 #     def __init_subclass__(cls, **kwargs: Any):
-#         """Adds 'cls' to 'Validator.converters' if it is a concrete class."""
+#         """Adds 'cls' to 'Validator.tools' if it is a concrete class."""
 #         super().__init_subclass__(**kwargs: Any)
 #         if not abc.ABC in cls.__bases__:
-#             key = denovo.tools.snakify(cls.__name__)
+#             key = denovo.modify.snakify(cls.__name__)
 #             # Removes '_converter' from class name so that the key is consistent
 #             # with the key name for the class being constructed.
 #             try:
 #                 key = key.replace('_converter', '')
 #             except ValueError:
 #                 pass
-#             Validator.converters[key] = cls
+#             Validator.tools[key] = cls
                        
 #     """ Public Methods """
 

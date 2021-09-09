@@ -89,6 +89,6 @@ def test_catalog():
     return
  
 if __name__ == '__main__':
-    denovo.testing.testify(target_module = denovo.containers, 
+    denovo.test.testify(target_module = denovo.containers, 
                            testing_module = __name__)
    

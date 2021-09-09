@@ -42,10 +42,11 @@ import denovo
 
 Keys = Union[Hashable, Sequence[Hashable]] 
  
-ALL_KEYS: list[Any] = ['all', 'All', ['all'], ['All']]
-DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults', 
-                           ['default'], ['defaults'], ['Default'], ['Defaults']]
-NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
+_ALL_KEYS: list[Any] = ['all', 'All', ['all'], ['All']]
+_DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults', 
+                            ['default'], ['defaults'], ['Default'], 
+                            ['Defaults']]
+_NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
 
 
 @dataclasses.dataclass
@@ -390,38 +391,9 @@ class Hybrid(Manifest):
         """
         return tuple(self.contents)
 
-    """ Private Methods """
-
-    def _namify(self, item: Any) -> str:
-        """Returns item as a str type.
-
-        Args:
-            item (Any): item to convert to a str type.
-
-        Returns:
-            str: the str used to represent a item.
-            
-        """        
-        if isinstance(item, str):
-            return item
-        else:
-            try:
-                return item.name
-            except AttributeError:
-                try:
-                    return hash(item)
-                except TypeError:
-                    try:
-                        return str(item)
-                    except TypeError:
-                        try:
-                            return denovo.tools.snakify(item.__name__)
-                        except AttributeError:
-                            return denovo.tools.snakify(item.__class__.__name__)
-                                
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[Hashable, int]) -> Any:
+    def __getitem__(self, key: Union[Hashable, int]) -> Any: # type: ignore
         """Returns value(s) for 'key' in 'contents'.
         
         If 'key' is not an int type, this method looks for a matching 'name'
@@ -489,12 +461,12 @@ class Hybrid(Manifest):
             del self.contents[key]
         else:
             self.contents = [c for c in self.contents 
-                             if self._namify(c) != key]
+                             if denovo.check.get_name(c) != key]
         return
 
  
 @dataclasses.dataclass  # type: ignore
-class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # type: ignore
+class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: ignore
     """Basic denovo dict replacement.
     
     A Lexicon differs from an ordinary python dict in ways inherited from Bunch 
@@ -548,7 +520,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
         self.contents.update(item, **kwargs)
         return
 
-    def get(self, key: Hashable) -> Any:
+    def get(self, key: Hashable) -> Any: # type: ignore
         """Returns value in 'contents' or value in 'default_factory' attribute.
         
         Args:
@@ -569,7 +541,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
                 except TypeError:
                     return self.default_factory
                 
-    def items(self) -> tuple[tuple[Any]]:
+    def items(self) -> tuple[tuple[Any, Any], ...]: # type: ignore
         """Emulates python dict 'items' method.
         
         Returns:
@@ -580,7 +552,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
         """
         return tuple(zip(self.keys(), self.values()))
 
-    def keys(self) -> tuple(Any):
+    def keys(self) -> tuple(Any, ...): # type: ignore
         """Returns 'contents' keys as a tuple.
         
         Returns:
@@ -591,7 +563,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
         """
         return tuple(self.contents.keys())
 
-    def setdefault(self, value: Any) -> None:
+    def setdefault(self, value: Any) -> None: # type: ignore
         """sets default value to return when 'get' method is used.
         
         Args:
@@ -632,7 +604,7 @@ class Lexicon(denovo.typing.types.Bunch, collections.abc.MutableMapping):  # typ
             new_lexicon.contents = contents
         return new_lexicon
       
-    def values(self) -> tuple[Any]:
+    def values(self) -> tuple[Any, ...]: # type: ignore
         """Returns 'contents' values as a tuple.
         
         Returns:
@@ -718,9 +690,10 @@ class Catalog(Lexicon):
             Defaults to False.
                      
     """
-    contents: Mapping[Hashable, Any] = dataclasses.field(default_factory = dict)
+    contents: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = dict)
     default_factory: Any = None
-    default: Sequence[Any] = 'all'
+    default: Iterable[Any] = 'all'
     always_return_list: bool = False
 
     """ Dunder Methods """
@@ -739,17 +712,17 @@ class Catalog(Lexicon):
 
         """
         # Returns a list of all values if the 'all' key is sought.
-        if key in ALL_KEYS:
+        if key in _ALL_KEYS:
             return list(self.contents.values())
         # Returns a list of values for keys listed in 'default' attribute.
-        elif key in DEFAULT_KEYS:
+        elif key in _DEFAULT_KEYS:
             try:
                 return[self.default]
             except KeyError:
                 matches = {k: self.contents[k] for k in self.default}
                 return list(matches.values())
         # Returns an empty list if a null value is sought.
-        elif key in NONE_KEYS:
+        elif key in _NONE_KEYS:
             return []
         # Returns list of matching values if 'key' is list-like.        
         elif isinstance(key, Sequence) and not isinstance(key, str):
@@ -764,23 +737,22 @@ class Catalog(Lexicon):
             except KeyError:
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
-    def __setitem__(self, key: Keys, value: Union[Any, Sequence[Any]]) -> None:
+    def __setitem__(self, key: Keys, value: Union[Any, Iterable[Any]]) -> None:
         """sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Keys): key(s) to set in 
-                'contents'.
-            value (Union[Any, Sequence[Any]]): value(s) to be paired with 'key' 
+            key (Keys): key(s) to set in 'contents'.
+            value (Union[Any, Iterable[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
         """
-        if key in DEFAULT_KEYS:
+        if key in _DEFAULT_KEYS:
             self.default = more_itertools.always_iterable(value)
         else:
             try:
                 self.contents[key] = value
             except TypeError:
-                self.contents.update(dict(zip(key, value)))
+                self.contents.update(dict(zip(key, value))) # type: ignore
         return
 
     def __delitem__(self, key: Keys) -> None:
@@ -804,10 +776,10 @@ class Library(Lexicon):
     
     Args:
         classes (Catalog): a catalog of stored classes. Defaults to any empty
-            Catalog
+            Catalog.
         instances (Catalog): a catalog of stored class instances. Defaults to an
             empty Catalog.
-        collections (MutableMapping[str, set[str]]): a defaultdict with keys
+        kinds (MutableMapping[str, set[str]]): a defaultdict with keys
             that are the different kinds of stored items and values which are
             sets of names of items that are of that kind. Defaults to an empty
             defaultdict which autovivifies sets as values.
@@ -815,33 +787,33 @@ class Library(Lexicon):
     """
     classes: Catalog = Catalog()
     instances: Catalog = Catalog()
-    collections: MutableMapping[str, set[str]] = dataclasses.field(
+    kinds: MutableMapping[str, set[str]] = dataclasses.field(
         default_factory = lambda: collections.defaultdict(set))
 
     """ Public Methods """
     
-    def classify(self, item: Union[str, object, Type]) -> tuple[str]:
-        """Returns kind or kinds of 'item' based on 'collections.'
+    def classify(self, item: Union[str, object, Type[Any]]) -> tuple[str, ...]:
+        """Returns kind or kinds of 'item' based on 'kinds.'
         
         Args:
             item (Union[str, object, Type]): name of object or Type or an object
                 or Type to be classified.
                 
         Returns:
-            tuple[str]: collections of which 'item' is part of.
+            tuple[str]: kinds of which 'item' is part of.
  
         """
         if not isinstance(item, str):
-            item = denovo.tools.namify(item = item)
-        collections = []  
-        for collection, classes in self.collections.items():  
+            item = denovo.check.get_name(item = item)
+        kinds = []  
+        for kind, classes in self.kinds.items():  
             if item in classes:
-                collections.append(collection)
-        return tuple(collections)
+                kinds.append(kind)
+        return tuple(kinds)
        
     def deposit(self, 
-                item: Union[Type, object],
-                collection: Union[str, Sequence[str]] = None) -> None:
+                item: Union[Type[Any], object],
+                kind: Optional[Union[str, Sequence[str]]] = None) -> None:
         """Adds 'item' to 'classes' and, possibly, 'instances'.
 
         If 'item' is a class, it is added to 'classes.' If it is an object, it
@@ -850,26 +822,26 @@ class Library(Lexicon):
         Args:
             item (Union[Type, object]): class or instance to add to the Library
                 instance.
-            collection (Union[str, Sequence[str]]): collection(s) to add 'item'
+            kind (Union[str, Sequence[str]]): kind(s) to add 'item'
                 to. Defaults to None.
                 
         """
-        key = denovo.tools.namify(item = item)
+        key = denovo.check.get_name(item = item)
         base_key = None
         if inspect.isclass(item):
             self.classes[key] = item
         elif isinstance(item, object):
             self.instances[key] = item
             base = item.__class__
-            base_key = denovo.tools.namify(item = base)
+            base_key = denovo.check.get_name(item = base)
             self.classes[base_key] = base
         else:
             raise TypeError(f'item must be a class or a class instance')
-        if collection is not None:
-            for classification in more_itertools.always_iterable(collection):
-                self.collections[classification].add(key)
+        if kind is not None:
+            for classification in more_itertools.always_iterable(kind):
+                self.kinds[classification].add(key)
                 if base_key is not None:
-                    self.collections[classification].add(base_key)
+                    self.kinds[classification].add(base_key)
         return
     
     def remove(self, name: str) -> None:
@@ -896,7 +868,8 @@ class Library(Lexicon):
 
     def withdraw(self, 
                  name: Union[str, Sequence[str]], 
-                 kwargs: Mapping[Hashable, Any] = None) -> Union[Type, object]:
+                 kwargs: Optional[MutableMapping[Hashable, Any]] = None) -> (
+                     Union[Type[Any], object]):
         """Returns instance or class of first match of 'name' from catalogs.
         
         The method prioritizes the 'instances' catalog over 'classes' and any
@@ -918,7 +891,7 @@ class Library(Lexicon):
                 Otherwise, and object is returned.
             
         """
-        names = denovo.tools.listify(name)
+        names = denovo.convert.listify(name)
         item = None
         for key in names:
             for catalog in ['instances', 'classes']:
@@ -939,4 +912,4 @@ class Library(Lexicon):
             else:
                 for key, value in kwargs.items():
                     setattr(item, key, value)  
-        return item
+        return item # type: ignore

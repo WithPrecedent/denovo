@@ -25,11 +25,8 @@ import more_itertools
 import denovo
 
 
-TwoLevel: Type = MutableMapping[Hashable, MutableMapping[Hashable, Any]]
-
-
 @dataclasses.dataclass
-class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
+class Settings(denovo.quirks.Factory, denovo.containers.Lexicon): # type: ignore
     """Loads and stores configuration settings.
 
     To create settings instance, a user can pass a:
@@ -55,8 +52,8 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
     other sections. This is implemented in the 'project' subpackage.
 
     Args:
-        contents (TwoLevel): a two-level nested dict for storing configuration 
-            options. Defaults to en empty dict.
+        contents (MutableMapping[Hashable, Any]): a dict for storing 
+            configuration options. Defaults to en empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty dict.
         default (Mapping[str, Mapping[str]]): any default options that should
@@ -67,13 +64,15 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
             from an .ini file, all values will be strings. Defaults to True.
 
     """
-    contents: TwoLevel = dataclasses.field(default_factory = dict)
+    contents: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = dict)
     default_factory: Any = dataclasses.field(default_factory = dict)
-    default: TwoLevel = dataclasses.field(default_factory = dict)
+    default: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = dict)
     infer_types: bool = True
-    sources: ClassVar[Mapping[Type, str]] = {MutableMapping: 'dictionary', 
-                                             pathlib.Path: 'path',  
-                                             str: 'path'}
+    sources: ClassVar[Mapping[Type[Any], str]] = {MutableMapping: 'dictionary', 
+                                                  pathlib.Path: 'path',  
+                                                  str: 'path'}
 
     """ Initialization Methods """
 
@@ -94,8 +93,9 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
     """ Class Methods """
 
     @classmethod
-    def from_dictionary(cls, dictionary: TwoLevel, **kwargs: Any) -> settings:
-        """[summary]
+    def from_dictionary(cls, dictionary: MutableMapping[Hashable, Any], 
+                        **kwargs: Any) -> Settings:
+        """[recap]
 
         Args:
             path (Union[str, pathlib.Path]): [description]
@@ -104,10 +104,11 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
             settings: [description]
             
         """        
-        return cls(contents = dictionary, **kwargs: Any)
+        return cls(contents = dictionary, **kwargs)
     
     @classmethod
-    def from_path(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_path(cls, path: Union[str, pathlib.Path], 
+                  **kwargs: Any) -> Settings:
         """[summary]
 
         Args:
@@ -120,10 +121,11 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
         path = denovo.tools.pathlibify(item = path)   
         extension = path.suffix[1:]
         load_method = getattr(cls, f'from_{extension}')
-        return load_method(path = path, **kwargs: Any)
+        return load_method(path = path, **kwargs)
     
     @classmethod
-    def from_ini(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_ini(cls, path: Union[str, pathlib.Path], 
+                 **kwargs: Any) -> Settings:
         """Returns settings from an .ini file.
 
         Args:
@@ -143,12 +145,13 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
             contents = configparser.ConfigParser(dict_type = dict)
             contents.optionxform = lambda option: option
             contents.read(path)
-            return cls(contents = dict(contents._sections), **kwargs: Any)
+            return cls(contents = dict(contents._sections), **kwargs)
         except (KeyError, FileNotFoundError):
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_json(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_json(cls, path: Union[str, pathlib.Path], 
+                  **kwargs: Any) -> Settings:
         """Returns settings from an .json file.
 
         Args:
@@ -167,12 +170,13 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
         try:
             with open(pathlib.Path(path)) as settings_file:
                 contents = json.load(settings_file)
-            return cls(contents = contents, **kwargs: Any)
+            return cls(contents = contents, **kwargs)
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_py(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_py(cls, path: Union[str, pathlib.Path], 
+                **kwargs: Any) -> Settings:
         """Returns a settings dictionary from a .py file.
 
         Args:
@@ -197,12 +201,12 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
                                                                  path)
             import_module = importlib.util.module_from_spec(import_path)
             import_path.loader.exec_module(import_module)
-            return cls(contents = import_module.settings, **kwargs: Any)
+            return cls(contents = import_module.settings, **kwargs)
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {path} not found')
 
     @classmethod
-    def from_toml(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_toml(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> Settings:
         """Returns settings from a .toml file.
 
         Args:
@@ -220,12 +224,12 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
-            return cls(contents = toml.load(path), **kwargs: Any)
+            return cls(contents = toml.load(path), **kwargs)
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {path} not found')
    
     @classmethod
-    def from_yaml(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> settings:
+    def from_yaml(cls, path: Union[str, pathlib.Path], **kwargs: Any) -> Settings:
         """Returns settings from a .yaml file.
 
         Args:
@@ -244,7 +248,7 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
             kwargs['infer_types'] = False
         try:
             with open(path, 'r') as config:
-                return cls(contents = yaml.safe_load(config, **kwargs: Any))
+                return cls(contents = yaml.safe_load(config, **kwargs))
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {path} not found')
         
@@ -266,7 +270,7 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
 
     def inject(self, 
                instance: object,
-               additional: Union[Sequence[str], str] = None, 
+               additional: Optional[Union[Sequence[str], str]] = None, 
                overwrite: bool = False) -> object:
         """Injects appropriate items into 'instance' from 'contents'.
 
@@ -302,14 +306,14 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
 
     """ Private Methods """
 
-    def _infer_types(self, contents: TwoLevel) -> TwoLevel:
+    def _infer_types(self, contents: MutableMapping[Hashable, Any]) -> MutableMapping[Hashable, Any]:
         """Converts stored values to appropriate datatypes.
 
         Args:
-            contents (TwoLevel): a nested contents dict to review.
+            contents (MutableMapping[Hashable, Any]): a nested contents dict to review.
 
         Returns:
-            TwoLevel: with the nested values converted to the appropriate 
+            MutableMapping[Hashable, Any]: with the nested values converted to the appropriate 
                 datatypes.
 
         """
@@ -324,7 +328,7 @@ class settings(denovo.containers.Lexicon, denovo.core.quirks.Factory):
                 new_contents[key] = denovo.tools.typify(value)
         return new_contents
 
-    def _add_default(self, contents:TwoLevel) -> TwoLevel:
+    def _add_default(self, contents:MutableMapping[Hashable, Any]) -> MutableMapping[Hashable, Any]:
         """Creates a backup set of mappings for denovo settings lookup.
 
 

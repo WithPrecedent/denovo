@@ -1,5 +1,5 @@
 """
-testing: functions to make unit testing a little bit easier
+test: functions to make unit testing a little bit easier
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -40,7 +40,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
-def get_testers(package: object, 
+def get_testers(package: types.ModuleType, 
                 folder: Union[str, pathlib.Path], 
                 prefix: str = 'test_') -> list[pathlib.Path]:
     """[summary]
@@ -55,7 +55,8 @@ def get_testers(package: object,
         
     """
     name = package.__package__
-    testers = denovo.tools.get_modules(folder = folder)
+    testers = denovo.check.name_modules(folder = folder)
+    testers = [denovo.convert.pathlibify(t) for t in testers]
     testers = [t for t in testers if t.name.startswith(prefix)]
     testers = [t for t in testers if t.stem != f'{prefix}{name}']
     return testers
@@ -75,7 +76,7 @@ def run_testers(testers: MutableSequence[pathlib.Path],
         target = tester.stem
         module = denovo.tools.drop_prefix(item = target, prefix = prefix)
         target_module = getattr(package, module)
-        imported = denovo.lazy.from_path(name = target, file_path = tester)
+        imported = denovo.load.from_path(name = target, file_path = tester)
         testify(target_module = target_module, testing_module = imported) 
     return
 
@@ -108,13 +109,13 @@ def get_testables(module: types.ModuleType,
         [type]: [description]
         
     """
-    classes = denovo.tools.get_classes(module = module)
-    functions = denovo.tools.get_functions(module = module)
+    classes = denovo.check.name_classes(module = module)
+    functions = denovo.check.name_functions(module = module)
     testables = classes + functions
     testables = [t.lower() for t in testables]
     if not include_private:
         testables = [i for i in testables if not i.startswith('_')]
-    testables = denovo.tools.add_prefix(item = testables, prefix = prefix)
+    testables = denovo.modify.add_prefix(item = testables, prefix = prefix)
     testables.append('test_all')
     return testables
 

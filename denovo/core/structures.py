@@ -31,6 +31,7 @@ To Do:
 from __future__ import annotations
 import abc
 import collections
+from collections.abc import Hashable, MutableMapping, Sequence
 import collections.abc
 import copy
 import dataclasses
@@ -40,29 +41,27 @@ from typing import Any, Callable, Optional, Type, Union
 import more_itertools
 
 import denovo
-from denovo.typing.types import (Adjacency, Composite, Connections, Dyad, Edge, 
-                                 Edges, Group, Kind, Listing, Matrix, Node, 
-                                 Nodes, Order, Pipeline, Pipelines, Repeater)
-
+from denovo.typing.types import (Adjacency, Composite, Connections, Edge, 
+                                 Edges, Matrix, Node, 
+                                 Nodes, Pipeline, Pipelines)
 
 
 @dataclasses.dataclass
-class System(Graph):
+class System(denovo.containers.Lexicon):
     """Base class for denovo directed graphs.
     
-    System supports '+' to join two Graph instances (or data structures 
+    System supports '+' to join two System instances (or data structures 
     supported by the 'create' method) using the 'append' method if an instance
     is the left operand or 'prepend' if an instance is the right operand (and 
     the left operand is not a System).
        
     Args:
-        contents (Adjacency): an adjacency list storing the contained graph.
-            Defaults to en empty defaultdict with set as the default factory
-            for missing keys.
+
                   
     """  
-    contents: Adjacency = dataclasses.field(
-        default_factory = lambda: collections.defaultdict(set))
+    contents: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = dict)
+    default_factory: Any = set
     
     """ Properties """
 
@@ -74,7 +73,7 @@ class System(Graph):
     @property
     def edges(self) -> Edges:
         """Returns the stored graph as an edge list."""
-        return denovo.converters.adjacency_to_edges(source = self.contents)
+        return denovo.tools.adjacency_to_edges(source = self.contents)
 
     @property
     def endpoints(self) -> set[Node]:
@@ -84,7 +83,7 @@ class System(Graph):
     @property
     def matrix(self) -> Matrix:
         """Returns the stored graph as an adjacency matrix."""
-        return denovo.converters.adjacency_to_matrix(source = self.contents)
+        return denovo.tools.adjacency_to_matrix(source = self.contents)
                       
     @property
     def nodes(self) -> set[Node]:
@@ -112,19 +111,19 @@ class System(Graph):
     @classmethod
     def from_edges(cls, edges: Edges) -> System:
         """Creates a System instance from an edge list."""
-        return cls(contents = denovo.converters.edges_to_adjacency(
+        return cls(contents = denovo.tools.edges_to_adjacency(
             source = edges))
     
     @classmethod
     def from_matrix(cls, matrix: Matrix) -> System:
         """Creates a System instance from an adjacency matrix."""
-        return cls(contents = denovo.converters.matrix_to_adjacency(
+        return cls(contents = denovo.tools.matrix_to_adjacency(
             source = matrix))
     
     @classmethod
     def from_pipeline(cls, pipeline: Pipeline) -> System:
         """Creates a System instance from a Pipeline."""
-        return cls(contents = denovo.converters.pipeline_to_adjacency(
+        return cls(contents = denovo.tools.pipeline_to_adjacency(
             source = pipeline))
        
     """ Public Methods """
@@ -150,7 +149,7 @@ class System(Graph):
         elif denovo.tools.is_property(item = descendants, instance = self):
             self.contents = set(getattr(self, descendants))
         else:
-            descendants = denovo.tools.listify(descendants)
+            descendants = denovo.convert.listify(descendants)
             descendants = [self._stringify(n) for n in descendants]
             missing = [n for n in descendants if n not in self.contents]
             if missing:
@@ -162,7 +161,7 @@ class System(Graph):
             if denovo.tools.is_property(item = ancestors, instance = self):
                 start = list(getattr(self, ancestors))
             else:
-                ancestors = denovo.tools.listify(ancestors)
+                ancestors = denovo.convert.listify(ancestors)
                 missing = [n for n in ancestors if n not in self.contents]
                 if missing:
                     raise KeyError(f'ancestors {str(missing)} are not in the '
@@ -279,11 +278,11 @@ class System(Graph):
         elif isinstance(item, Adjacency):
             adjacency = item
         elif isinstance(item, Edges):
-            adjacency = denovo.converters.edges_to_adjacency(source = item)
+            adjacency = denovo.tools.edges_to_adjacency(source = item)
         elif isinstance(item, Matrix):
-            adjacency = denovo.converters.matrix_to_adjacency(source = item)
-        elif isinstance(item, (listing, tuple, set)):
-            adjacency = denovo.converters.pipeline_to_adjacency(source = item)
+            adjacency = denovo.tools.matrix_to_adjacency(source = item)
+        elif isinstance(item, (list, tuple, set)):
+            adjacency = denovo.tools.pipeline_to_adjacency(source = item)
         elif isinstance(item, Node):
             adjacency = {item: set()}
         else:
@@ -440,6 +439,8 @@ class System(Graph):
         """
         self.prepend(item = other)     
         return 
+
+
 
 # @dataclasses.dataclass
 # class Network(Graph):
@@ -650,7 +651,7 @@ class System(Graph):
 #         if descendants is None:
 #             self.contents[node] = []
 #         elif descendants in self:
-#             self.contents[node] = denovo.tools.listify(descendants)
+#             self.contents[node] = denovo.convert.listify(descendants)
 #         else:
 #             missing = [n for n in descendants if n not in self.contents]
 #             raise KeyError(f'descendants {missing} are not in the stored graph.')
@@ -908,9 +909,9 @@ class System(Graph):
 #                 return node.name
 #             except AttributeError:
 #                 try:
-#                     return denovo.tools.snakify(node.__name__)
+#                     return denovo.modify.snakify(node.__name__)
 #                 except AttributeError:
-#                     return denovo.tools.snakify(node.__class__.__name__)
+#                     return denovo.modify.snakify(node.__class__.__name__)
 
 
 #     def _all_paths_bfs(self, start, stop):
@@ -1091,7 +1092,7 @@ class System(Graph):
 #         return []
     
 #     def __str__(self) -> str:
-#         """Returns prettier summary of the Graph.
+#         """Returns prettier recap of the Graph.
 
 #         Returns:
 #             str: a formatted str of class information and the contained 

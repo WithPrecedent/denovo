@@ -1,5 +1,5 @@
 """
-test_converters: tests denovo typing system
+test_tools: tests denovo typing system
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -17,31 +17,31 @@ def test_to_adjacency() -> None:
     adjacency = {'node': {'another_node'},
                  'another_node': {'some_node'},
                  'some_node': set()}
-    converted = denovo.typing.converters.to_adjacency(adjacency)
+    converted = denovo.typing.tools.to_adjacency(adjacency)
     assert converted == {'node': {'another_node'},
                          'another_node': {'some_node'},
                          'some_node': set()}
     matrix = tuple([[[0, 1], [1,0]], ['tree', 'house']])
     print('test matrix', matrix)
     print('test registry', 
-          denovo.typing.converters.to_adjacency.registry.keys())
+          denovo.typing.tools.to_adjacency.registry.keys())
     print('test string registry', 
-          denovo.typing.converters.to_string.registry.keys())
+          denovo.typing.tools.to_string.registry.keys())
     assert isinstance(matrix, denovo.types.Matrix)
-    converted = denovo.typing.converters.to_adjacency(matrix)
+    converted = denovo.typing.tools.to_adjacency(matrix)
     return
 
 def test_to_string() -> None:
     print('testing to_string')
     listing = ['stuff', 'more_stuff', 'even_more']
-    converted = denovo.typing.converters.to_string(listing)
+    converted = denovo.typing.tools.to_string(listing)
     assert converted == 'stuff, more_stuff, even_more'
     return
 
 if __name__ == '__main__':
     print('testing')
-    testables = denovo.testing.get_testables(module = denovo.converters)
+    testables = denovo.test.get_testables(module = denovo.tools)
     print('testing testables', testables)
-    denovo.testing.run_tests(testables = testables, 
+    denovo.test.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

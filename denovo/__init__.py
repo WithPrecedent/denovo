@@ -6,7 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
     importables (Dict): dict of imports available directly from 'denovo'. This 
-        dict is needed for the 'importify' function which is called by this 
+        dict is needed for the 'from_dict' function which is called by this 
         modules '__getattr__' function.
 
         
@@ -25,9 +25,13 @@ __author__ = 'Corey Rayburn Yung'
 
 from typing import Any
 
-from .utilities import lazy
+from . import core
+from . import typing
+from . import utilities
+from .utilities import load
 
 
+__all__ = ['core', 'typing', 'utilities', 'load']
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 
@@ -56,43 +60,29 @@ the lazy importation system used throughout denovo.
 
 """
 importables: dict[str, str] = {
+    'core': 'core',
     'typing': 'typing',
-    'checks': 'typing.checks',
-    'converters': 'typing.converters',
+    'utilities': 'utilities',
+    
+    'configuration': 'core.configuration',
+    'containers': 'core.containers',
+    'filing': 'core.filing',
+    'quirks': 'core.quirks',
+    'structures': 'core.structures',
+        
+    'convert': 'typing.convert',
     'foundry': 'typing.foundry',
+    'framework': 'typing.framework',
     'types': 'typing.types',
     
-    'utilities': 'utilities',
+    'check': 'utilities.check',
     'decorators': 'utilities.decorators',
-    'introspection': 'utilities.introspection',
-    'lazy': 'utilities.lazy',
+    'load': 'utilities.load',
     'memory': 'utilities.memory',
-    'summary': 'utilities.summary',
-    'testing': 'utilities.testing',
-    'tools': 'utilities.tools',
+    'modify': 'utilities.modify',
+    'recap': 'utilities.recap',
+    'test': 'utilities.test'}
     
-    'containers': 'core.containers',
-    'Bunch': 'core.containers.Bunch',
-    'Proxy': 'core.containers.Proxy',
-    'Manifest': 'core.containers.Manifest',
-    'Hybrid': 'core.containers.Hybrid',
-    'Lexicon': 'core.containers.Lexicon',
-    'Catalog': 'core.containers.Catalog',
-    'Library': 'core.containers.Library',
-    'quirks': 'core.quirks',
-    'Quirk': 'core.quirks.Quirk',
-    'configuration': 'core.configuration',
-    'settings': 'core.configuration.settings',
-    'filing': 'core.filing',
-    'Clerk': 'core.filing.Clerk',
-    'FileFormat': 'core.filing.FileFormat',
-    # 'Keystone': 'core.framework.Keystone',
-    # 'create_keystone': 'core.framework.create_keystone',
-    # 'Validator': 'core.framework.Validator',
-    # 'Converter': 'core.framework.Converter',
-    'structures': 'core.structures',
-    'Structure': 'core.structures.Structure',
-    'Graph': 'core.structures.Graph'}
 
 def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them as package attributes.
@@ -105,6 +95,8 @@ def __getattr__(name: str) -> Any:
         
     """
     package = __package__ or __name__
-    return lazy.importify(name = name, 
-                          package = package, 
-                          importables = importables)
+    if package in load.Importer.registry:
+        importer = load.Importer.registry[package]
+    else:
+        importer = load.Importer(package = package, importables = importables)
+    return importer.load(path = importables[name])

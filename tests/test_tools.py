@@ -42,22 +42,22 @@ def test_listify():
     another_list = ['d']
     a_string = 'tree'
     an_int = 4
-    result = denovo.tools.listify(item = some_list)
+    result = denovo.convert.listify(item = some_list)
     assert result == ['a', 'b', 'c']
-    result = denovo.tools.listify(item = another_list)
+    result = denovo.convert.listify(item = another_list)
     assert result == ['d']
-    result = denovo.tools.listify(item = a_string)
+    result = denovo.convert.listify(item = a_string)
     assert result == ['tree']
-    result = denovo.tools.listify(item = an_int)
+    result = denovo.convert.listify(item = an_int)
     assert result == [4]
     return
 
 def test_namify():
     an_instance = TestClass()
-    result = denovo.tools.namify(item = an_instance)
+    result = denovo.check.get_name(item = an_instance)
     assert result == 'test_class'
     an_instance.name = 'huh'
-    result = denovo.tools.namify(item = an_instance)
+    result = denovo.check.get_name(item = an_instance)
     assert result == 'huh'
     return
 
@@ -74,7 +74,7 @@ def test_numify():
     return
 
 if __name__ == '__main__':
-    testables = denovo.testing.get_testables(module = denovo.tools)
-    denovo.testing.run_tests(testables = testables, 
+    testables = denovo.test.get_testables(module = denovo.tools)
+    denovo.test.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    

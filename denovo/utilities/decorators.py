@@ -5,116 +5,80 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    add_name (Callable): adds a 'name' attribute to 'process' if one was not 
+    add_name (Operation): adds a 'name' attribute to 'process' if one was not 
         passed as an argument based on the '__name__' attribute of the item
         passed.
-    register (Callable): registers the wrapped function to REGISTRY.
-    set_registry (Callable): sets REGISTRY to a dict or dict like object.
-    timer (Callalbe): computes the time it takes for the wrapped 'process' to
-        complete.
+    register (Operation): registers the wrapped function to REGISTRY.
+    set_registry (Operation): sets REGISTRY to a dict or dict like object.
+
 
 ToDo:
 
 """
 from __future__ import annotations
-import abc
-import dataclasses
-import datetime
+from collections.abc import MutableMapping
 import inspect
 import functools
-import time
 import types
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, 
-                    Mapping, MutableMapping, MutableSequence, Optional, 
-                    Sequence, Type, Union, get_type_hints)
+from typing import Any, Optional, Type, Union, get_type_hints
 
 import denovo
+from denovo.typing import Operation, Wrappable
 
-""" Type Annotations """
-
-Processes = Union[object, Type[Any], Callable]
 
 """ Module-Level Attributes """
 
-REGISTRY: MutableMapping[str, Callable] = {}
+catalog: MutableMapping[str, Operation] = {}
 
 """ Functions """
 
-def add_name(process: Processes) -> Processes:
+def add_name(process: Wrappable) -> Wrappable:
     """Adds 'name' attribute to 'process' if it wasn't passed as an argument.
     
-    The decorator uses the 'denovo.tools.namify' to determine the specific value
+    The decorator uses the 'denovo.check.get_name' to determine the specific value
     for the 'name' attribute.
     
     Args:
-        process (Processes): function, method, class, or instance to add a 
+        process (Wrappable): function, method, class, or instance to add a 
             'name' to if 'name' was not passed as an argument.
     
     """
     @functools.wraps(process)
-    def wrapped(*args: Any, **kwargs: Any):
+    def wrapped(*args: Any, **kwargs: Any) -> Operation:
         call_signature = inspect.signature(process)
         arguments = dict(call_signature.bind(*args, **kwargs).arguments)
         if not arguments.get('name'):
-            arguments['name'] = denovo.tools.namify(item = process)
+            arguments['name'] = denovo.check.get_name(item = process)
         return process(**arguments)
     return wrapped
 
-def register(func: Callable) -> Callable:
+def register(func: Operation) -> Operation:
     """Decorator for a function registry.
     
     Args:
-        func (Callable): any function.
+        func (Operation): any function.
         
     Returns:
-        Callable: with passed arguments.
+        Operation: with passed arguments.
         
     """
     name = func.__name__
-    REGISTRY[name] = func
+    catalog[name] = func
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any):
+    def wrapper(*args: Any, **kwargs: Any) -> Operation:
         return func(*args, **kwargs)
     return wrapper
 
-def set_registry(registry: MutableMapping[str, Callable]) -> None:
+def set_registry(registry: MutableMapping[str, Operation]) -> None:
     """sets registry for the 'register' decorator.
     
     Args:
-        registry (MutableMapping[str, Callable]): dict or dict-like item to use
+        registry (MutableMapping[str, Operation]): dict or dict-like item to use
             for storing functions.
             
     """
-    globals().REGISTRY = registry
+    globals()['catalog'] = registry
     return
-   
-def timer(process: Callable) -> Callable:
-    """Decorator for computing the length of time a process takes.
-
-    Args:
-        process (Callable): wrapped callable to compute the time it takes to 
-            complete its execution.
-
-    """
-    try:
-        name = process.__name__
-    except AttributeError:
-        name = process.__class__.__name__
-    def shell_timer(_function):
-        def decorated(*args: Any, **kwargs: Any):
-            def convert_time(seconds: int) -> tuple(int, int, int):
-                minutes, seconds = divmod(seconds, 60)
-                hours, minutes = divmod(minutes, 60)
-                return hours, minutes, seconds
-            implement_time = time.time()
-            result = _function(*args, **kwargs)
-            total_time = time.time() - implement_time
-            h, m, s = convert_time(total_time)
-            print(f'{name} completed in %d:%02d:%02d' % (h, m, s))
-            return result
-        return decorated
-    return shell_timer
-
 
 class Dispatcher(object):
     """Decorator for a dispatcher.
@@ -123,30 +87,22 @@ class Dispatcher(object):
     checks to determint the approriate function to call. The code is adapted
     from the python source code for singledisptach.
     
-    This class doesn't follow the normal python naming convention for a class
-    because it is only designed to be used as a decorator. But rather than 
-    creating a nested function dispatcher (which cannot be inherited and
-    extended), 'dispatcher' is a class.
-    
-    Args:
-        wrapped (Callable): a callable dispatcher.
+    Attributes:
         registry (dict[str, denovo.typing.types.Kind]): registry for different
             functions that may be called based on the first parameter's type.
             Defaults to an empty dict.
         
     Returns:
-        Callable: with passed arguments.
+        Operation: with passed arguments.
         
     """
-    # wrapped: Callable
-    # registry: dict[str, Callable] = dataclasses.field(default_factory = dict)
-    
+
     """ Initialization Methods """
     
-    def __init__(self, wrapped: Callable):
+    def __init__(self, wrapped: Operation):
         """Allows class to be called as a function decorator."""
         self.wrapped = wrapped
-        self.registry = {}
+        self.registry: dict[str, Operation] = {}
         # Copies key attributes and functions to wrapped function.
         self.wrapped.register = self.register
         self.wrapped.dispatch = self.dispatch
@@ -154,8 +110,8 @@ class Dispatcher(object):
         # Updates wrapper information for tracebacks and introspection.
         functools.update_wrapper(self, self.wrapped)
         
-    def __call__(self, *args: Any, **kwargs: Any) -> Callable:
-
+    def __call__(self, *args: Any, **kwargs: Any) -> Operation:
+        """Returns wrapped object with args and kwargs"""
         return self.wrapped(*args, **kwargs)
     
     """ Public Methods """
@@ -166,21 +122,21 @@ class Dispatcher(object):
             checker = issubclass
         else:
             checker = isinstance
-        for value in denovo.typing.types.catalog.values():
+        for value in denovo.types.catalog.values():
             if checker(item, value):
-                return denovo.tools.snakify(value.__name__)
+                return denovo.modify.snakify(item = value.__name__)
                 # except AttributeError:
-                #     return denovo.tools.snakify(value.__class__.__name__)
+                #     return denovo.modify.snakify(value.__class__.__name__)
         raise KeyError(f'item does not match any recognized type')
            
-    def dispatch(self, source: Any, *args: Any, **kwargs: Any) -> Callable:
+    def dispatch(self, source: Any, *args: Any, **kwargs: Any) -> Operation:
         """[summary]
 
         Args:
             source (Any): [description]
 
         Returns:
-            Callable: [description]
+            Operation: [description]
             
         """
         key = self.categorize(item = source)
@@ -190,14 +146,14 @@ class Dispatcher(object):
             dispatched = self.dispatcher
         return dispatched(source, *args, **kwargs)
 
-    def register(self, dispatched: Callable) -> Callable:
+    def register(self, dispatched: Operation) -> Operation:
         """[summary]
 
         Args:
-            dispatched (Callable): [description]
+            dispatched (Operation): [description]
 
         Returns:
-            Callable: [description]
+            Operation: [description]
             
         """
         _, kind = next(iter(get_type_hints(dispatched).items()))
@@ -205,29 +161,29 @@ class Dispatcher(object):
         self.registry[key] = dispatched
         return dispatched
     
-    def wrapper(self, *args: Any, **kwargs: Any):
+    def wrapper(self, *args: Any, **kwargs: Any) -> Operation:
         if not args:
             parameter, argument = next(iter(kwargs.items()))
             del kwargs[parameter]
             args = tuple([argument])
         return self.dispatch(*args, **kwargs)  
 
-def dispatcher(dispatcher: Callable) -> Callable:
-    """Decorator for a converter registry and dispatcher.
+def dispatcher(dispatcher: Operation) -> Operation:
+    """Decorator for a single dispatcher that checks subtypes.
     
     This decorator is similar to python's singledispatch but it uses isintance
     checks to determint the approriate function to call. The code is adapted
     from the python source code for singledisptach.
     
     Args:
-        dispatcher (Callable): a callable converter.
+        dispatcher (Operation): a callable converter.
         
     Returns:
-        Callable: with passed arguments.
+        Operation: with passed arguments.
         
     """
     # Creates a registry for dispatchers.
-    registry = {}
+    registry: dict[str, types.FunctionType] = {}
     
     def categorize(item: Any) -> str:
         """Determines the kind of 'item' and returns its str name."""
@@ -235,16 +191,14 @@ def dispatcher(dispatcher: Callable) -> Callable:
             checker = issubclass
         else:
             checker = isinstance
-        print('test kind catalog', denovo.typing.types.catalog)
-        for value in denovo.typing.types.catalog.values():
-            print('test kind name', value.__name__)
+        for kind, name in denovo.types.kind.matcher.items():
             if checker(item, value):
-                return denovo.tools.snakify(value.__name__)
+                return denovo.modify.snakify(value.__name__)
                 # except AttributeError:
-                #     return denovo.tools.snakify(value.__class__.__name__)
+                #     return denovo.modify.snakify(value.__class__.__name__)
         raise KeyError(f'item does not match any recognized type')
         
-    def dispatch(source: Any, *args: Any, **kwargs: Any) -> Callable:
+    def dispatch(source: Any, *args: Any, **kwargs: Any) -> Operation:
         key = categorize(item = source)
         try:
             dispatched = registry[key]
@@ -252,21 +206,21 @@ def dispatcher(dispatcher: Callable) -> Callable:
             dispatched = dispatcher
         return dispatched(source, *args, **kwargs)
 
-    def register(dispatched: Callable) -> None:
+    def register(dispatched: Operation) -> None:
         _, kind = next(iter(get_type_hints(dispatched).items()))
         key = kind.__name__
         registry[key] = dispatched
-        return dispatched
+        return
     
-    def wrapper(*args: Any, **kwargs: Any):
+    def wrapper(*args: Any, **kwargs: Any) -> Operation:
         if not args:
             parameter, argument = next(iter(kwargs.items()))
             del kwargs[parameter]
             args = tuple([argument])
         return dispatch(*args, **kwargs)
 
-    wrapper.register = register
-    wrapper.dispatch = dispatch
-    wrapper.registry = registry
+    wrapper.register = register # type: ignore
+    wrapper.dispatch = dispatch # type: ignore
+    wrapper.registry = registry # type: ignore
     functools.update_wrapper(wrapper, dispatcher)
     return wrapper   

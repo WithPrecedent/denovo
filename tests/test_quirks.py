@@ -29,7 +29,7 @@ def test_importer():
     return
 
 if __name__ == '__main__':
-    testables = denovo.testing.get_testables(module = denovo.quirks)
-    denovo.testing.run_tests(testables = testables, 
+    testables = denovo.test.get_testables(module = denovo.quirks)
+    denovo.test.run_tests(testables = testables, 
                              module = sys.modules[__name__])
    
