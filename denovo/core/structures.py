@@ -46,6 +46,111 @@ from denovo.typing.types import (Adjacency, Composite, Connections, Edge,
                                  Nodes, Pipeline, Pipelines)
 
 
+@dataclasses.dataclass # type: ignore
+class Graph(Directed, abc.ABC):
+    """Base class for denovo graph data structures.
+    
+    Args:
+        contents (Union[Adjacency, Matrix]): an adjacency list or adjacency
+            matrix storing the contained graph.
+                  
+    """  
+    contents: Union[Adjacency, Matrix] # type: ignore
+    
+    """ Required Properties """
+
+    @abc.abstractproperty
+    def adjacency(self) -> Adjacency:
+        """Returns the stored graph as an adjacency list."""
+        pass
+
+    @abc.abstractproperty
+    def matrix(self) -> Matrix:
+        """Returns the stored graph as an adjacency matrix."""
+        pass
+    
+    """ Required Methods """
+    
+    @abc.abstractclassmethod
+    def from_adjacency(cls, adjacency: Adjacency) -> Graph:
+        """Creates a Graph instance from an Adjacency instance."""
+        pass
+    
+    @abc.abstractclassmethod
+    def from_edges(cls, edges: Edges) -> Graph:
+        """Creates a Graph instance from an Edges instance."""
+        pass
+    
+    @abc.abstractclassmethod
+    def from_matrix(cls, matrix: Matrix) -> Graph:
+        """Creates a Graph instance from a Matrix instance."""
+        pass
+    
+    @abc.abstractclassmethod
+    def from_pipeline(cls, pipeline: Pipeline) -> Graph:
+        """Creates a Graph instance from a Pipeline instance."""
+        pass
+
+    """ Public Methods """
+    
+    @classmethod
+    def create(cls, source: Composite) -> Graph:
+        """Creates an instance of a Graph from 'source'.
+        
+        Args:
+            source (Composite): an adjacency list, adjacency matrix, edge list, 
+                or pipeline which can used to create the stored graph.
+                
+        Returns:
+            Graph: a Graph instance created based on 'source'.
+                
+        """
+        if denovo.tools.is_adjacency_list(item = source):
+            return cls.from_adjacency(adjacency = source) # type: ignore
+        elif denovo.tools.is_adjacency_matrix(item = source):
+            return cls.from_matrix(matrix = source) # type: ignore
+        elif denovo.tools.is_edge_list(item = source):
+            return cls.from_edges(edges = source) # type: ignore
+        elif denovo.tools.is_pipeline(item = source): 
+            return cls.from_pipeline(pipeline = source) # type: ignore
+        else:
+            raise TypeError(
+                f'create requires source to be an adjacency list, adjacency '
+                f'matrix, edge list, or pipeline')      
+      
+    """ Dunder Methods """
+
+    @classmethod
+    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a virtual or real subclass.
+
+        Args:
+            subclass (Type[Any]): item to test as a subclass.
+
+        Returns:
+            bool: whether 'subclass' is a real or virtual subclass.
+            
+        """
+        return (super().__subclasshook__(subclass = subclass) 
+                and denovo.unit.has_methods(item = subclass,
+                                             methods = ['from_adjacency',
+                                                        'from_edges',
+                                                        'from_matrix',
+                                                        'from_pipeline'])
+                and denovo.unit.has_properties(item = subclass,
+                                                attributes = ['adjacency',
+                                                              'matrix']))
+        
+    def __str__(self) -> str:
+        """Returns prettier summary of the stored graph.
+
+        Returns:
+            str: a formatted str of class information and the contained 
+                adjacency list.
+            
+        """
+        return denovo.recap.beautify(item = self, package = 'denovo') # type: ignore
+  
 @dataclasses.dataclass
 class System(denovo.containers.Lexicon):
     """Base class for denovo directed graphs.
@@ -1092,7 +1197,7 @@ class System(denovo.containers.Lexicon):
 #         return []
     
 #     def __str__(self) -> str:
-#         """Returns prettier recap of the Graph.
+#         """Returns prettier summary of the Graph.
 
 #         Returns:
 #             str: a formatted str of class information and the contained 

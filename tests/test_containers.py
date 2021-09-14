@@ -10,6 +10,7 @@ ToDo:
     test_library
     
 """
+import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
                     MutableMapping, MutableSequence, Optional, Sequence, Type, 
                     Union)
@@ -90,5 +91,5 @@ def test_catalog():
  
 if __name__ == '__main__':
     denovo.test.testify(target_module = denovo.containers, 
-                           testing_module = __name__)
+                        testing_module = __name__)
    

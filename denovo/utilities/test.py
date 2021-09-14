@@ -109,8 +109,8 @@ def get_testables(module: types.ModuleType,
         [type]: [description]
         
     """
-    classes = denovo.check.name_classes(module = module)
-    functions = denovo.check.name_functions(module = module)
+    classes = denovo.module.name_classes(module = module)
+    functions = denovo.module.name_functions(module = module)
     testables = classes + functions
     testables = [t.lower() for t in testables]
     if not include_private:
@@ -155,13 +155,13 @@ class Testimony(object):
         report: add method and support for it in the 'testify' method. 
         
     """
-    package: object = denovo
-    folder: Union[str, pathlib.Path] = None
+    package: types.ModuleType = denovo
+    folder: Optional[Union[str, pathlib.Path]] = None
     prefix: str = 'test_'
     
     """ Initialization Methods """
     
-    def __call__(cls, *args: Any, **kwargs: Any) -> Callable:
+    def __call__(cls, *args: Any, **kwargs: Any) -> None:
         """Instances the class and calls testify method.
         
         Returns:
@@ -174,9 +174,9 @@ class Testimony(object):
     """ Public Methods """
     
     def testify(self, 
-                package: object = None, 
-                folder: Union[str, pathlib.Path] = None,
-                prefix: str = None) -> None:
+                package: types.ModuleType = None, 
+                folder: Optional[Union[str, pathlib.Path]] = None,
+                prefix: Optional[str] = None) -> None:
         """Calls testing methods for an entire package.
         
         Args:

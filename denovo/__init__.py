@@ -8,8 +8,7 @@ Contents:
     importables (Dict): dict of imports available directly from 'denovo'. This 
         dict is needed for the 'from_dict' function which is called by this 
         modules '__getattr__' function.
-
-        
+    
 In general, python files in denovo are over-documented to allow beginning
 programmers to understand basic design choices that were made. If there is any
 area of the documentation that could be made clearer, please don't hesitate to 
@@ -23,15 +22,12 @@ __package__ = 'denovo'
 __author__ = 'Corey Rayburn Yung'
 
 
-from typing import Any
+import importlib
+from typing import Any, Optional
 
-from . import core
-from . import typing
-from . import utilities
-from .utilities import load
+from .core import types
+from .utilities import lazy
 
-
-__all__ = ['core', 'typing', 'utilities', 'load']
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 
@@ -61,7 +57,6 @@ the lazy importation system used throughout denovo.
 """
 importables: dict[str, str] = {
     'core': 'core',
-    'typing': 'typing',
     'utilities': 'utilities',
     
     'configuration': 'core.configuration',
@@ -69,21 +64,23 @@ importables: dict[str, str] = {
     'filing': 'core.filing',
     'quirks': 'core.quirks',
     'structures': 'core.structures',
-        
-    'convert': 'typing.convert',
-    'foundry': 'typing.foundry',
-    'framework': 'typing.framework',
-    'types': 'typing.types',
-    
-    'check': 'utilities.check',
-    'decorators': 'utilities.decorators',
-    'load': 'utilities.load',
+    'types': 'core.types',
+             
+    'classes': 'utilities.classes',
+    'clock': 'utilities.clock',
+    'convert': 'utilities.convert',
+    'foundry': 'utilities.foundry',
+    'framework': 'utilities.framework',
+    'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
     'modify': 'utilities.modify',
+    'module': 'utilities.module',
+    'package': 'utilities.package',
     'recap': 'utilities.recap',
-    'test': 'utilities.test'}
-    
+    'test': 'utilities.test',
+    'unit': 'utilities.unit'}
 
+           
 def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them as package attributes.
     
@@ -95,8 +92,11 @@ def __getattr__(name: str) -> Any:
         
     """
     package = __package__ or __name__
-    if package in load.Importer.registry:
-        importer = load.Importer.registry[package]
-    else:
-        importer = load.Importer(package = package, importables = importables)
-    return importer.load(path = importables[name])
+    key = '.' + importables[name]
+    try:
+        return importlib.import_module(key, package = package)
+    except ModuleNotFoundError:
+        item = key.split('.')[-1]
+        module_name = key[:-len(item) - 1]
+        module = importlib.import_module(module_name, package = package)
+        return getattr(module, item)

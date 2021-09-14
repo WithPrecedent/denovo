@@ -13,19 +13,18 @@ ToDo:
 
 """
 from __future__ import annotations
-import dataclasses
 import datetime
 import time
 from typing import Any, Optional, Type, Union
 
 import denovo
-from denovo.typing import Operation
 
 
 """ General Tools """
 
-def how_soon_is_now(prefix: Optional[str] = None,
-                    time_format: str = '%Y-%m-%d_%H-%M') -> str:
+def how_soon_is_now(
+    prefix: Optional[str] = None,
+    time_format: str = '%Y-%m-%d_%H-%M') -> str:
     """Creates a string from current date and time.
 
     Args:
@@ -43,26 +42,28 @@ def how_soon_is_now(prefix: Optional[str] = None,
 
 """ Decorators """
 
-def timer(process: Operation) -> Operation:
+def timer(process: denovo.typing.Operation) -> denovo.typing.Operation:
     """Decorator for computing the length of time a process takes.
 
     Args:
-        process (Operation): wrapped callable to compute the time it takes to 
-            complete its execution.
+        process (denovo.typing.Operation): wrapped callable to compute the time 
+            it takes to complete its execution.
 
     """
     try:
         name = process.__name__
     except AttributeError:
         name = process.__class__.__name__
-    def shell_timer(_function: Operation) -> Operation:
-        def decorated(*args: Any, **kwargs: Any) -> Operation:
-            def convert_time(seconds: Union[int, float]) -> tuple[int, int, int]:
+    def shell_timer(
+        operation: denovo.typing.Operation) -> denovo.typing.Operation:
+        def decorated(*args: Any, **kwargs: Any) -> denovo.typing.Operation:
+            def convert_time(
+                seconds: Union[int, float]) -> tuple[int, int, int]:
                 minutes, seconds = divmod(seconds, 60)
                 hours, minutes = divmod(minutes, 60)
                 return int(hours), int(minutes), int(seconds)
             implement_time = time.time()
-            result = _function(*args, **kwargs)
+            result = operation(*args, **kwargs)
             total_time = time.time() - implement_time
             h, m, s = convert_time(total_time)
             print(f'{name} completed in %d:%02d:%02d' % (h, m, s))

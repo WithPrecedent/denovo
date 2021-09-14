@@ -50,7 +50,7 @@ _NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
 
 
 @dataclasses.dataclass
-class Proxy(collections.abc.Container[Any]):
+class Proxy(collections.abc.Container):
     """Basic wrapper class.
     
     A Proxy differs than an ordinary container in 2 significant ways:
@@ -162,7 +162,7 @@ class Proxy(collections.abc.Container[Any]):
                         
 
 @dataclasses.dataclass # type: ignore
-class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence[Any]): # type: ignore
+class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # type: ignore
     """Basic denovo list replacement.
     
     A Manifest differs from an ordinary python list only in ways inherited
@@ -174,7 +174,7 @@ class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence[Any]):
     If this fails, it appends the item to 'contents'.
             
     Args:
-        contents (MutableSequence[Any]): items to store in a list. Defaults to 
+        contents (MutableSequence): items to store in a list. Defaults to 
             an empty list.
         
     """

@@ -48,8 +48,8 @@ from typing import Any, Callable, Optional, Type, Union
 import more_itertools
 
 import denovo
-from denovo.typing.types import (Adjacency, Dyad, Edges, Matrix, Operation,
-                                 Pipeline)
+from denovo.types import (
+    Adjacency, Dyad, Edges, Matrix, Operation, Pipeline)
 
 
 """ Class Related Tools """

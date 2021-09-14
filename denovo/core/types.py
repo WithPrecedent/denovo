@@ -4,20 +4,91 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+The base class types in denovo serve two purposes (unless otherwise noted):
+    1) They can be base classes that can be inherited from with attributes,
+        methods, and properties.
+    2) They act as de facto protocols that allow non-inherited and 
+        non-registered classes/instances to be recognized as subclasses/
+        instances if they meet certain criteria.
+It is this second purpose that attempts to bridge the demands of static type 
+checkers and runtime type checking that currently is impossible with the typing
+module in python. It also affords users greater flexibility in designing 
+compatible classes without hassling with inheritance or abstract base class
+registration.
 
 Contents:
+    Type Aliases:
+        Operation: generic, flexible Callable type alias.
+        Signatures: dict of Signatures type.
+        Wrappable: type for an item that can be wrapped by a decorator.
+    Module Level Variables:
+        BUILTINS (dict): mapping with str names of builtin in a types and values
+            as the (generic) type to compare against.
+        registry (dict): using the module '__getattr__' function, 'registry' 
+            acts as a constantly updated registry of Kind subclasses and 
+            BUILTINS. Until a tree structure is built for the Kind registry, the 
+            order of 'registry' determines the order of matching. So, BUILTINS 
+            are always placed at the bottom of the dict to prioritize user 
+            created classes.
+    Simplified Protocol System:
+        Kind (ABC): denovo protocol class which allows classes to be defined in
+             manner that facilitates static and runtime type checking including
+             attributes, properties, methods, and method signatures.
+        dispatcher (Callable, object): decorator for denovo's dispatch system 
+            which has greater functionality to the python singledispatch method 
+            using the Kind protocol system. It is also fully compatible with 
+            python builtin types.
+        identify (Callable): determines the matching Kind or builtin python 
+            type.
+        kindify (Callable): convenience function for creating Kind subclasses.
+    Abstract Base Class Types:
+        Named (ABC): base class that requires a 'name' attribute and, if
+            inherited, automatically provides a value for 'name'.
+        Bunch (Collection, ABC): base class for denovo collections that requires
+            subclasses to have 'add' and 'subset' methods. 
+        Node (Hashable, ABC): base class that defines the criteria for a node in
+            a composite denovo object. It also provides automatic hashablity if
+            inherited from.
+        Composite (Bunch, ABC): base class establishing necessary functionality
+            of denovo composite objects. There is no value in inheriting from 
+            Composite except to enforce the subclass requirements.
+        Network (Composite, ABC): base class establishing criteria for denovo 
+            composite objects with edges. There is no value in inheriting from 
+            Network except to enforce the subclass requirements.
+        Directed (Network, ABC): base class establishing criteria for denovo 
+            composite objects with directed edges. There is no value in 
+            inheriting from Directed except to enforce the subclass 
+            requirements.
+    Type Variables:
+        Adjacency (TypeVar): defines a raw adjacency list type.
+        Connections (TypeVar): defines set of network connections type.
+        Dyad (TypeVar): defines a double sequence type.
+        Edge (TypeVar): defines a composite edge.
+        Edges (TypeVar): defines a collection of Edges.
+        Matrix (TypeVar): defines a raw adjacency matrix type.
+        Nodes (TypeVar): defines a type for a single Node or a collection of 
+            Nodes.
+        Pipeline (TypeVar): defines a sequence of Nodes.
+        Pipelines (TypeVar): defines a collection of Pipelines.
 
-    
+ToDo:
+    Convert Kind registry into a tree for a more complex typing match search.
+    Add Keystone base class with automatic type validation, subclass 
+        registration, and instance registration.
+       
 """
 from __future__ import annotations
 import abc
-from collections.abc import (Collection, Hashable, Iterator, Sequence, 
-                             MutableMapping, MutableSequence, Set)
+from collections.abc import (
+    Collection, Hashable, Iterator, MutableMapping, MutableSequence, Sequence, 
+    Set)
 import copy
 import dataclasses
 import datetime
+import functools
 import inspect
-from typing import Any, Callable, ClassVar, Optional, Type, TypeVar, Union
+from typing import (
+    Any, Callable, ClassVar, Optional, Type, TypeVar, Union, get_type_hints)
 
 import denovo
 
@@ -28,7 +99,235 @@ Operation = Callable[..., Any]
 Signatures = MutableMapping[str, inspect.Signature]
 Wrappable = Union[object, Type[Any], Operation]
 
-""" Primitive Abstract Base Classes """
+""" Module Level Variables """
+
+BUILTINS: dict[str, Type[Any]] = {
+    'bool': bool,
+    'complex': complex,
+    'datetime': datetime.datetime,
+    'dict': MutableMapping,
+    'float': float,
+    'int': int,
+    'bytes': bytes,
+    'list': MutableSequence,
+    'set': Set,
+    'str': str,
+    'tuple': Sequence}
+
+""" Module Attribute Accessor """
+
+def __getattr__(attribute: str) -> Any:
+    """Adds module level access to 'registry' and 'matcher'."""
+    if attribute in ['registry']:
+        _get_registry()
+    else:
+        raise AttributeError(
+            f'{attribute} not found in {globals()["__module__"]}')    
+
+def _get_registry() -> MutableMapping[str, Type[Any]]:
+    complete = copy.deepcopy(Kind._registry)
+    complete.update(BUILTINS)
+    return complete 
+    
+""" Simplified Protocol System """
+
+@dataclasses.dataclass
+class Kind(abc.ABC):
+    """Base class for easy protocol typing.
+    
+    Kind must be subclassed either directly or by using the helper function
+    'kindify'. All of its attributes are stored as class-level variables and 
+    subclasses are not designed to be instanced.
+    
+    Args:
+        attributes (ClassVar[list[str]]): a list of the str names of attributes
+            that are neither methods nor properties. Defaults to an empty list.
+        methods: ClassVar[list[str]] = a list of str names of methods. Defaults 
+            to an empty list.
+        properties: ClassVar[list[str]] = a list of str names of properties. 
+            Defaults to an empty list.
+        signatures: ClassVar[Signatures]  = a dict with keys as 
+            str names of methods and values as inspect.Signature classes. 
+            Defaults to an empty dict.
+    
+    """
+    attributes: ClassVar[list[str]] = []
+    methods: ClassVar[list[str]] = []
+    properties: ClassVar[list[str]] = []
+    signatures: ClassVar[Signatures] = {}
+    _registry: ClassVar[MutableMapping[str, Type[Any]]] = {}
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs: Any):
+        """Adds 'cls' to '_registry'."""
+        try:
+            super().__init_subclass__(**kwargs) # type: ignore
+        except AttributeError:
+            pass
+        if abc.ABC in cls.__bases__:
+            key = denovo.modify.snakify(cls.__name__)
+            cls._registry[key] = cls
+
+    """ Properties """
+    
+    @property
+    def matcher(self) -> dict[Union[Type[Any], Kind], str]:
+        """Returns internal registry with builtin types added."""
+        return {v: k for k, v in self.registry.items()}
+    
+    @property
+    def registry(self) -> dict[str, Union[Type[Any], Kind]]:
+        """Returns internal registry with builtin types added."""
+        return _get_registry() # type: ignore
+    
+    """ Dunder Methods """
+    
+    @classmethod
+    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
+        """Tests whether 'subclass' has the relevant characteristics."""
+        return denovo.check.is_kind(item = subclass, kind = cls) # type: ignore
+
+
+@dataclasses.dataclass
+class dispatcher(object):
+    """Decorator for a dispatcher.
+    
+    dispatcher violates the normal python convention of naming classes in
+    capital case because it is only designed to be used as a callable decorator,
+    where lowercase names are the norm.
+    
+    decorator attempts to solve two shortcomings of the current python 
+    singledispatch framework: 
+        1) It checks for subtypes of passed items that serve as the basis for
+            the dispatcher. As of python 3.10, singledispatch tests the type of
+            a passed argument was equivalent to a stored type which precludes
+            testing of subtypes.
+        2) It supports the denovo typing system which allows for an alternative 
+            approach to parameterized generics that can be used at runtime. So,
+            for example, singledispatch cannot match MutableSequence[str] to a
+            function even though type annotations often prefer the flexibility
+            of generics. However, dispatcher compares the passed argument with
+            the types (and Kinds) stored in 'denovo.framework.Kind.registry'.
+    
+    Attributes:
+        wrapped (Wrappable): wrapped class or function.
+        registry (dict[str, Operation]): registry for different functions that 
+            may be called based on the first parameter's type. Defaults to an 
+            empty dict.
+        
+    """
+    wrapped: Wrappable
+    registry: dict[str, Operation] = dataclasses.field(
+        default_factory = dict)
+    
+    """ Initialization Methods """
+    
+    def __post_init__(self) -> None:
+        """Allows class to be called as a function decorator."""
+        # Updates 'wrapped' for proper introspection and traceback.
+        functools.update_wrapper(self, self.wrapped)
+        # Copies key attributes and functions to wrapped Operation.
+        self.wrapped.register = self.register
+        self.wrapped.dispatch = self.dispatch
+        self.wrapped.registry = self.registry
+        
+    def __call__(self, *args: Any, **kwargs: Any) -> Operation:
+        """Returns wrapped object with args and kwargs"""
+        return self.dispatch(*args, **kwargs)
+
+    """ Properties """
+    
+    @property
+    def kinds(self) -> MutableMapping[str, Type[Any]]:
+        """Returns the virtual registry of types in the module."""
+        return globals()['__getattr__'](__module__, 'registry') # type: ignore
+    
+    """ Public Methods """
+    
+    def categorize(self, item: Any) -> str:
+        """Determines the kind of 'item' and returns its str name."""
+        if not inspect.isclass(item):
+            item = item.__class__
+        for name, kind in self.kinds.items():
+            if issubclass(item, kind):
+                return name
+        raise KeyError(f'item does not match any recognized type')
+           
+    def dispatch(self, *args: Any, **kwargs: Any) -> Operation:
+        """[summary]
+
+        Args:
+            source (Any): [description]
+
+        Returns:
+            Operation: [description]
+            
+        """
+        item = self._get_first_argument(*args, **kwargs)
+        key = self.categorize(item = item)
+        return self.registry[key](item, *args, **kwargs)
+    
+    def register(self, wrapped: Operation) -> None:
+        """[summary]
+
+        Args:
+            wrapped (Operation): [description]
+
+        Returns:
+            Operation: [description]
+            
+        """
+        _, kind = next(iter(get_type_hints(wrapped).items()))
+        self.registry[kind.__name__] = wrapped
+        return
+    
+    """ Private Methods """
+    
+    def _get_first_argument(*args: Any, **kwargs: Any) -> Any:
+        """Returns first argument in args and kwargs."""
+        if args:
+            return args[0]
+        else:
+            return list(kwargs.keys())[0]
+           
+def identify(item: Any) -> str:
+    """Determines the kind/type of 'item' and returns its str name."""
+    if inspect.isclass(item):
+        checker = issubclass
+    else:
+        checker = isinstance
+    for kind, name in Kind.matcher.items(): # type: ignore
+        if checker(item, kind):
+            return name # type: ignore
+    raise KeyError(f'item {str(item)} does not match any recognized type')
+
+def kindify(name: str, 
+            item: Type[Any], 
+            exclude_private: bool = True,
+            include_signatures: bool = True) -> Type[Kind]:
+    """Creates Kind named 'name' from passed 'item'."""
+    kind = dataclasses.make_dataclass(
+        name,
+        list(Kind.__annotations__.keys()), 
+        bases = tuple([Kind, abc.ABC]))
+    kind.attributes = denovo.unit.name_attributes(  # type: ignore
+        item = item,
+        exclude_private = exclude_private)
+    kind.methods = denovo.unit.name_methods( # type: ignore
+        item = item, 
+        exclude_private = exclude_private)
+    kind.properties = denovo.unit.name_properties( # type: ignore
+        item = item,
+        exclude_private = exclude_private)
+    if include_signatures:
+        kind.signatures = denovo.unit.get_signatures( # type: ignore
+            item = item,
+            exclude_private = exclude_private)
+    return kind
+
+
+""" Abstract Base Class Types """
 
 @dataclasses.dataclass
 class Named(abc.ABC):
@@ -90,10 +389,8 @@ class Named(abc.ABC):
         return (subclass in cls.__subclasses__() or hasattr(subclass, 'name'))
               
 
-""" Containers Abstract Base Classes """
-
 @dataclasses.dataclass # type: ignore
-class Bunch(Collection[Any], abc.ABC):
+class Bunch(Collection, abc.ABC): # type: ignore
     """Abstract base class for denovo collections.
   
     A Bunch differs from a general python Collection in 3 ways:
@@ -109,7 +406,7 @@ class Bunch(Collection[Any], abc.ABC):
             'exclude' parameters for returning a subset of the Bunch subclass.
     
     Args:
-        contents (Collection[Any]): stored iterable. Defaults to None.
+        contents (Collection): stored iterable. Defaults to None.
               
     """
     contents: Collection[Any]
@@ -126,9 +423,10 @@ class Bunch(Collection[Any], abc.ABC):
         pass
     
     @abc.abstractmethod
-    def subset(self, 
-               include: Union[Sequence[Any], Any] = None, 
-               exclude: Union[Sequence[Any], Any] = None) -> Bunch:
+    def subset(
+        self, 
+        include: Union[Sequence[Any], Any] = None, 
+        exclude: Union[Sequence[Any], Any] = None) -> Bunch:
         """Returns a subclass with some items removed from 'contents'.
         
         Args:
@@ -154,10 +452,11 @@ class Bunch(Collection[Any], abc.ABC):
             
         """
         return (subclass in cls.__subclasses__() 
-                or denovo.check.has_methods(item = subclass,
-                                             methods = ['add', 'subset', 
-                                                        '__add__', '__iadd__', 
-                                                        '__iter__', '__len__'])) 
+                or denovo.unit.has_methods(
+                    item = subclass,
+                    methods = [
+                        'add', 'subset', '__add__', '__iadd__', '__iter__', 
+                        '__len__'])) 
           
     def __add__(self, other: Any) -> None:
         """Combines argument with 'contents' using the 'add' method.
@@ -259,9 +558,9 @@ class Node(Hashable, abc.ABC):
             
         """
         return (subclass in cls.__subclasses__() 
-                or denovo.check.has_methods(item = subclass,
-                                             methods = ['__hash__', '__eq__', 
-                                                        '__ne__']))
+                or denovo.unit.has_methods(
+                    item = subclass,
+                    methods = ['__hash__', '__eq__', '__ne__']))
         
     def __hash__(self) -> int:
         """Makes Node hashable so that it can be used as a key in a dict.
@@ -411,10 +710,11 @@ class Composite(Bunch, abc.ABC):
         pass
     
     @abc.abstractmethod 
-    def add(self, 
-            node: Node,
-            ancestors: Optional[Nodes] = None,
-            descendants: Optional[Nodes] = None) -> None:
+    def add(
+        self, 
+        node: Node,
+        ancestors: Optional[Nodes] = None,
+        descendants: Optional[Nodes] = None) -> None:
         """Adds 'node' to the stored Composite.
         
         Args:
@@ -451,9 +751,10 @@ class Composite(Bunch, abc.ABC):
         pass
     
     @abc.abstractmethod 
-    def subset(self, 
-               include: Optional[Nodes] = None,
-               exclude: Optional[Nodes] = None) -> Composite:
+    def subset(
+        self, 
+        include: Optional[Nodes] = None,
+        exclude: Optional[Nodes] = None) -> Composite:
         """Returns a Composite with some items removed from 'contents'.
         
         Args:
@@ -466,10 +767,11 @@ class Composite(Bunch, abc.ABC):
         pass
     
     @abc.abstractmethod 
-    def walk(self, 
-             start: Node, 
-             stop: Node, 
-             path: Optional[Pipelines] = None) -> Pipelines:
+    def walk(
+        self, 
+        start: Node, 
+        stop: Node, 
+        path: Optional[Pipelines] = None) -> Pipelines:
         """Returns all paths in graph from 'start' to 'stop'.
         
         Args:
@@ -496,13 +798,15 @@ class Composite(Bunch, abc.ABC):
             bool: whether 'subclass' is a real or virtual subclass.
             
         """
-        return (subclass in cls.__subclasses__() 
-                or (denovo.check.has_methods(item = subclass,
-                                              methods = ['add', 'delete', 
-                                                         'merge', 'subset', 
-                                                         'walk', '__add__'])
-                    and denovo.check.has_properties(item = subclass, 
-                                                     attributes = 'nodes')))
+        return (
+            subclass in cls.__subclasses__() 
+            or (denovo.unit.has_methods(
+                item = subclass,
+                methods = ['add', 'delete', 'merge', 'subset', 'walk', 
+                           '__add__'])
+                and denovo.unit.has_properties(
+                    item = subclass, 
+                    attributes = 'nodes')))
   
     def __add__(self, other: Any) -> None:
         """Adds 'other' to the stored graph using the 'merge' method.
@@ -563,14 +867,15 @@ class Network(Composite, abc.ABC):
             bool: whether 'subclass' is a real or virtual subclass.
             
         """
-        return (subclass in cls.__subclasses__() 
-                or (super().__subclasshook__(subclass = subclass) 
-                    and denovo.check.has_methods(item = subclass,
-                                                  attributes = ['add', 'delete', 
-                                                                'merge', 'walk',
-                                                                'subset'])
-                    and denovo.check.has_properties(item = subclass,
-                                                     attributes = 'edges')))
+        return (
+            subclass in cls.__subclasses__() 
+            or (super().__subclasshook__(subclass = subclass) 
+                and denovo.unit.has_methods(
+                    item = subclass,
+                    attributes = ['add', 'delete', 'merge', 'walk', 'subset'])
+                    and denovo.unit.has_properties(
+                        item = subclass,
+                        attributes = 'edges')))
 
 
 @dataclasses.dataclass # type: ignore
@@ -638,144 +943,42 @@ class Directed(Network, abc.ABC):
             bool: whether 'subclass' is a real or virtual subclass.
             
         """
-        return (subclass in cls.__subclasses__() 
-                or (super().__subclasshook__(subclass = subclass) 
-                    and denovo.check.has_methods(item = subclass,
-                                                  methods = ['add', 'delete', 
-                                                             'merge', 'subset', 
-                                                             'walk'])
-                    and denovo.check.has_properties(item = subclass,
-                                                     attributes = ['endpoints',
-                                                                   'paths', 
-                                                                   'roots'])))
-
-
-@dataclasses.dataclass # type: ignore
-class Graph(Directed, abc.ABC):
-    """Base class for denovo graph data structures.
-    
-    Args:
-        contents (Union[Adjacency, Matrix]): an adjacency list or adjacency
-            matrix storing the contained graph.
-                  
-    """  
-    contents: Union[Adjacency, Matrix] # type: ignore
-    
-    """ Required Properties """
-
-    @abc.abstractproperty
-    def adjacency(self) -> Adjacency:
-        """Returns the stored graph as an adjacency list."""
-        pass
-
-    @abc.abstractproperty
-    def matrix(self) -> Matrix:
-        """Returns the stored graph as an adjacency matrix."""
-        pass
-    
-    """ Required Methods """
-    
-    @abc.abstractclassmethod
-    def from_adjacency(cls, adjacency: Adjacency) -> Graph:
-        """Creates a Graph instance from an Adjacency instance."""
-        pass
-    
-    @abc.abstractclassmethod
-    def from_edges(cls, edges: Edges) -> Graph:
-        """Creates a Graph instance from an Edges instance."""
-        pass
-    
-    @abc.abstractclassmethod
-    def from_matrix(cls, matrix: Matrix) -> Graph:
-        """Creates a Graph instance from a Matrix instance."""
-        pass
-    
-    @abc.abstractclassmethod
-    def from_pipeline(cls, pipeline: Pipeline) -> Graph:
-        """Creates a Graph instance from a Pipeline instance."""
-        pass
-
-    """ Public Methods """
-    
-    @classmethod
-    def create(cls, source: Composite) -> Graph:
-        """Creates an instance of a Graph from 'source'.
-        
-        Args:
-            source (Composite): an adjacency list, adjacency matrix, edge list, 
-                or pipeline which can used to create the stored graph.
-                
-        Returns:
-            Graph: a Graph instance created based on 'source'.
-                
-        """
-        if denovo.tools.is_adjacency_list(item = source):
-            return cls.from_adjacency(adjacency = source) # type: ignore
-        elif denovo.tools.is_adjacency_matrix(item = source):
-            return cls.from_matrix(matrix = source) # type: ignore
-        elif denovo.tools.is_edge_list(item = source):
-            return cls.from_edges(edges = source) # type: ignore
-        elif denovo.tools.is_pipeline(item = source): 
-            return cls.from_pipeline(pipeline = source) # type: ignore
-        else:
-            raise TypeError(
-                f'create requires source to be an adjacency list, adjacency '
-                f'matrix, edge list, or pipeline')      
-      
-    """ Dunder Methods """
-
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Returns whether 'subclass' is a virtual or real subclass.
-
-        Args:
-            subclass (Type[Any]): item to test as a subclass.
-
-        Returns:
-            bool: whether 'subclass' is a real or virtual subclass.
-            
-        """
-        return (super().__subclasshook__(subclass = subclass) 
-                and denovo.check.has_methods(item = subclass,
-                                             methods = ['from_adjacency',
-                                                        'from_edges',
-                                                        'from_matrix',
-                                                        'from_pipeline'])
-                and denovo.check.has_properties(item = subclass,
-                                                attributes = ['adjacency',
-                                                              'matrix']))
-        
-    def __str__(self) -> str:
-        """Returns prettier summary of the stored graph.
-
-        Returns:
-            str: a formatted str of class information and the contained 
-                adjacency list.
-            
-        """
-        return denovo.recap.beautify(item = self, package = 'denovo') # type: ignore
-  
-       
-""" Aliases"""
-
-_AdjacencyType = MutableMapping[Node, Union[set[Node], Sequence[Node]]]
-_ConnectionsType = Collection[Node]
-_DyadType = tuple[Sequence[Any], Sequence[Any]]
-_EdgeType = tuple[Node, Node]
-_EdgesType = Collection[_EdgeType]
-_MatrixType = tuple[Sequence[Sequence[int]], Sequence[Node]]
-_NodesType = Union[Node, _ConnectionsType]
-_PipelineType = Sequence[Node]
-_PipelinesType = Collection[_PipelineType]
+        return (
+            subclass in cls.__subclasses__() 
+            or (super().__subclasshook__(subclass = subclass) 
+                and denovo.unit.has_methods(
+                    item = subclass,
+                    methods = ['add', 'delete', 'merge', 'subset', 'walk'])
+                and denovo.unit.has_properties(
+                    item = subclass,
+                    attributes = ['endpoints', 'paths', 'roots'])))
 
 """ Type Variables """
 
-Adjacency = TypeVar('Adjacency', bound = _AdjacencyType)
-Connections = TypeVar('Connections', bound = _ConnectionsType)
-Dyad = TypeVar('Dyad', bound = _DyadType)
-Edge = TypeVar('Edge', bound = _EdgeType)
-Edges = TypeVar('Edges', bound = _EdgesType)
-Matrix = TypeVar('Matrix', bound = _MatrixType)
-Nodes = TypeVar('Nodes', bound = _NodesType)
-Pipeline = TypeVar('Pipeline', bound = _PipelineType)
-Pipelines = TypeVar('Pipelines', bound = _PipelinesType)
+Adjacency = TypeVar(
+    'Adjacency', 
+    bound = MutableMapping[Node, Union[set[Node], Sequence[Node]]])
+Connections = TypeVar(
+    'Connections', 
+    bound = Collection[Node])
+Dyad = TypeVar(
+    'Dyad', 
+    bound = tuple[Sequence[Any], Sequence[Any]])
+Edge = TypeVar(
+    'Edge', 
+    bound = tuple[Node, Node])
+Edges = TypeVar(
+    'Edges', 
+    bound = Collection[tuple[Node, Node]])
+Matrix = TypeVar(
+    'Matrix', 
+    bound = tuple[Sequence[Sequence[int]], Sequence[Node]])
+Nodes = TypeVar(
+    'Nodes', 
+    bound = Union[Node, Collection[Node]])
+Pipeline = TypeVar(
+    'Pipeline', 
+    bound = Sequence[Node])
+Pipelines = TypeVar(
+    'Pipelines', 
+    bound = Collection[Sequence[Node]])
