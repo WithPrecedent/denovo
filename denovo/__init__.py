@@ -25,8 +25,10 @@ __author__ = 'Corey Rayburn Yung'
 import importlib
 from typing import Any, Optional
 
-from .core import types
+from .utilities import alias
 from .utilities import lazy
+from .core import framework
+
 
 
 """ 
@@ -69,6 +71,7 @@ importables: dict[str, str] = {
     'classes': 'utilities.classes',
     'clock': 'utilities.clock',
     'convert': 'utilities.convert',
+    'easy': 'utilities.easy',
     'foundry': 'utilities.foundry',
     'framework': 'utilities.framework',
     'lazy': 'utilities.lazy',

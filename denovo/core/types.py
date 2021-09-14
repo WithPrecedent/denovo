@@ -18,29 +18,9 @@ registration.
 
 Contents:
     Type Aliases:
-        Operation: generic, flexible Callable type alias.
-        Signatures: dict of Signatures type.
-        Wrappable: type for an item that can be wrapped by a decorator.
-    Module Level Variables:
-        BUILTINS (dict): mapping with str names of builtin in a types and values
-            as the (generic) type to compare against.
-        registry (dict): using the module '__getattr__' function, 'registry' 
-            acts as a constantly updated registry of Kind subclasses and 
-            BUILTINS. Until a tree structure is built for the Kind registry, the 
-            order of 'registry' determines the order of matching. So, BUILTINS 
-            are always placed at the bottom of the dict to prioritize user 
-            created classes.
-    Simplified Protocol System:
-        Kind (ABC): denovo protocol class which allows classes to be defined in
-             manner that facilitates static and runtime type checking including
-             attributes, properties, methods, and method signatures.
-        dispatcher (Callable, object): decorator for denovo's dispatch system 
-            which has greater functionality to the python singledispatch method 
-            using the Kind protocol system. It is also fully compatible with 
-            python builtin types.
-        identify (Callable): determines the matching Kind or builtin python 
-            type.
-        kindify (Callable): convenience function for creating Kind subclasses.
+        denovo.alias.Operation: generic, flexible Callable type alias.
+        denovo.alias.Signatures: dict of denovo.alias.Signatures type.
+        denovo.alias.Wrappable: type for an item that can be wrapped by a decorator.
     Abstract Base Class Types:
         Named (ABC): base class that requires a 'name' attribute and, if
             inherited, automatically provides a value for 'name'.
@@ -72,7 +52,6 @@ Contents:
         Pipelines (TypeVar): defines a collection of Pipelines.
 
 ToDo:
-    Convert Kind registry into a tree for a more complex typing match search.
     Add Keystone base class with automatic type validation, subclass 
         registration, and instance registration.
        
@@ -92,245 +71,10 @@ from typing import (
 
 import denovo
 
-
-""" Type Aliases """
-
-Operation = Callable[..., Any]
-Signatures = MutableMapping[str, inspect.Signature]
-Wrappable = Union[object, Type[Any], Operation]
-
-""" Module Level Variables """
-
-BUILTINS: dict[str, Type[Any]] = {
-    'bool': bool,
-    'complex': complex,
-    'datetime': datetime.datetime,
-    'dict': MutableMapping,
-    'float': float,
-    'int': int,
-    'bytes': bytes,
-    'list': MutableSequence,
-    'set': Set,
-    'str': str,
-    'tuple': Sequence}
-
-""" Module Attribute Accessor """
-
-def __getattr__(attribute: str) -> Any:
-    """Adds module level access to 'registry' and 'matcher'."""
-    if attribute in ['registry']:
-        _get_registry()
-    else:
-        raise AttributeError(
-            f'{attribute} not found in {globals()["__module__"]}')    
-
-def _get_registry() -> MutableMapping[str, Type[Any]]:
-    complete = copy.deepcopy(Kind._registry)
-    complete.update(BUILTINS)
-    return complete 
-    
-""" Simplified Protocol System """
-
-@dataclasses.dataclass
-class Kind(abc.ABC):
-    """Base class for easy protocol typing.
-    
-    Kind must be subclassed either directly or by using the helper function
-    'kindify'. All of its attributes are stored as class-level variables and 
-    subclasses are not designed to be instanced.
-    
-    Args:
-        attributes (ClassVar[list[str]]): a list of the str names of attributes
-            that are neither methods nor properties. Defaults to an empty list.
-        methods: ClassVar[list[str]] = a list of str names of methods. Defaults 
-            to an empty list.
-        properties: ClassVar[list[str]] = a list of str names of properties. 
-            Defaults to an empty list.
-        signatures: ClassVar[Signatures]  = a dict with keys as 
-            str names of methods and values as inspect.Signature classes. 
-            Defaults to an empty dict.
-    
-    """
-    attributes: ClassVar[list[str]] = []
-    methods: ClassVar[list[str]] = []
-    properties: ClassVar[list[str]] = []
-    signatures: ClassVar[Signatures] = {}
-    _registry: ClassVar[MutableMapping[str, Type[Any]]] = {}
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs: Any):
-        """Adds 'cls' to '_registry'."""
-        try:
-            super().__init_subclass__(**kwargs) # type: ignore
-        except AttributeError:
-            pass
-        if abc.ABC in cls.__bases__:
-            key = denovo.modify.snakify(cls.__name__)
-            cls._registry[key] = cls
-
-    """ Properties """
-    
-    @property
-    def matcher(self) -> dict[Union[Type[Any], Kind], str]:
-        """Returns internal registry with builtin types added."""
-        return {v: k for k, v in self.registry.items()}
-    
-    @property
-    def registry(self) -> dict[str, Union[Type[Any], Kind]]:
-        """Returns internal registry with builtin types added."""
-        return _get_registry() # type: ignore
-    
-    """ Dunder Methods """
-    
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Tests whether 'subclass' has the relevant characteristics."""
-        return denovo.check.is_kind(item = subclass, kind = cls) # type: ignore
-
-
-@dataclasses.dataclass
-class dispatcher(object):
-    """Decorator for a dispatcher.
-    
-    dispatcher violates the normal python convention of naming classes in
-    capital case because it is only designed to be used as a callable decorator,
-    where lowercase names are the norm.
-    
-    decorator attempts to solve two shortcomings of the current python 
-    singledispatch framework: 
-        1) It checks for subtypes of passed items that serve as the basis for
-            the dispatcher. As of python 3.10, singledispatch tests the type of
-            a passed argument was equivalent to a stored type which precludes
-            testing of subtypes.
-        2) It supports the denovo typing system which allows for an alternative 
-            approach to parameterized generics that can be used at runtime. So,
-            for example, singledispatch cannot match MutableSequence[str] to a
-            function even though type annotations often prefer the flexibility
-            of generics. However, dispatcher compares the passed argument with
-            the types (and Kinds) stored in 'denovo.framework.Kind.registry'.
-    
-    Attributes:
-        wrapped (Wrappable): wrapped class or function.
-        registry (dict[str, Operation]): registry for different functions that 
-            may be called based on the first parameter's type. Defaults to an 
-            empty dict.
-        
-    """
-    wrapped: Wrappable
-    registry: dict[str, Operation] = dataclasses.field(
-        default_factory = dict)
-    
-    """ Initialization Methods """
-    
-    def __post_init__(self) -> None:
-        """Allows class to be called as a function decorator."""
-        # Updates 'wrapped' for proper introspection and traceback.
-        functools.update_wrapper(self, self.wrapped)
-        # Copies key attributes and functions to wrapped Operation.
-        self.wrapped.register = self.register
-        self.wrapped.dispatch = self.dispatch
-        self.wrapped.registry = self.registry
-        
-    def __call__(self, *args: Any, **kwargs: Any) -> Operation:
-        """Returns wrapped object with args and kwargs"""
-        return self.dispatch(*args, **kwargs)
-
-    """ Properties """
-    
-    @property
-    def kinds(self) -> MutableMapping[str, Type[Any]]:
-        """Returns the virtual registry of types in the module."""
-        return globals()['__getattr__'](__module__, 'registry') # type: ignore
-    
-    """ Public Methods """
-    
-    def categorize(self, item: Any) -> str:
-        """Determines the kind of 'item' and returns its str name."""
-        if not inspect.isclass(item):
-            item = item.__class__
-        for name, kind in self.kinds.items():
-            if issubclass(item, kind):
-                return name
-        raise KeyError(f'item does not match any recognized type')
-           
-    def dispatch(self, *args: Any, **kwargs: Any) -> Operation:
-        """[summary]
-
-        Args:
-            source (Any): [description]
-
-        Returns:
-            Operation: [description]
-            
-        """
-        item = self._get_first_argument(*args, **kwargs)
-        key = self.categorize(item = item)
-        return self.registry[key](item, *args, **kwargs)
-    
-    def register(self, wrapped: Operation) -> None:
-        """[summary]
-
-        Args:
-            wrapped (Operation): [description]
-
-        Returns:
-            Operation: [description]
-            
-        """
-        _, kind = next(iter(get_type_hints(wrapped).items()))
-        self.registry[kind.__name__] = wrapped
-        return
-    
-    """ Private Methods """
-    
-    def _get_first_argument(*args: Any, **kwargs: Any) -> Any:
-        """Returns first argument in args and kwargs."""
-        if args:
-            return args[0]
-        else:
-            return list(kwargs.keys())[0]
-           
-def identify(item: Any) -> str:
-    """Determines the kind/type of 'item' and returns its str name."""
-    if inspect.isclass(item):
-        checker = issubclass
-    else:
-        checker = isinstance
-    for kind, name in Kind.matcher.items(): # type: ignore
-        if checker(item, kind):
-            return name # type: ignore
-    raise KeyError(f'item {str(item)} does not match any recognized type')
-
-def kindify(name: str, 
-            item: Type[Any], 
-            exclude_private: bool = True,
-            include_signatures: bool = True) -> Type[Kind]:
-    """Creates Kind named 'name' from passed 'item'."""
-    kind = dataclasses.make_dataclass(
-        name,
-        list(Kind.__annotations__.keys()), 
-        bases = tuple([Kind, abc.ABC]))
-    kind.attributes = denovo.unit.name_attributes(  # type: ignore
-        item = item,
-        exclude_private = exclude_private)
-    kind.methods = denovo.unit.name_methods( # type: ignore
-        item = item, 
-        exclude_private = exclude_private)
-    kind.properties = denovo.unit.name_properties( # type: ignore
-        item = item,
-        exclude_private = exclude_private)
-    if include_signatures:
-        kind.signatures = denovo.unit.get_signatures( # type: ignore
-            item = item,
-            exclude_private = exclude_private)
-    return kind
-
-
 """ Abstract Base Class Types """
 
 @dataclasses.dataclass
-class Named(abc.ABC):
+class Named(denovo.framework.Kind, abc.ABC):
     """Automatically creates a sensible 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -390,7 +134,7 @@ class Named(abc.ABC):
               
 
 @dataclasses.dataclass # type: ignore
-class Bunch(Collection, abc.ABC): # type: ignore
+class Bunch(denovo.framework.Kind, Collection, abc.ABC): # type: ignore
     """Abstract base class for denovo collections.
   
     A Bunch differs from a general python Collection in 3 ways:
@@ -500,7 +244,7 @@ class Bunch(Collection, abc.ABC): # type: ignore
 """ Composite Abstract Base Classes """
 
 @dataclasses.dataclass
-class Node(Hashable, abc.ABC):
+class Node(denovo.framework.Kind, Hashable, abc.ABC):
     """Vertex wrapper to provide hashability to any object.
     
     Node acts a basic wrapper for any item stored in a denovo Structure. An
@@ -982,3 +726,6 @@ Pipeline = TypeVar(
 Pipelines = TypeVar(
     'Pipelines', 
     bound = Collection[Sequence[Node]])
+
+for item in [Adjacency, Connections, Dyad, Edge, Edges, Matrix, Nodes, Pipeline, Pipelines]:
+    denovo.framework.Kind.register(item)

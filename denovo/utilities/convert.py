@@ -48,8 +48,7 @@ from typing import Any, Callable, Optional, Type, Union
 import more_itertools
 
 import denovo
-from denovo.types import (
-    Adjacency, Dyad, Edges, Matrix, Operation, Pipeline)
+from denovo.core.types import Adjacency, Dyad, Edges, Matrix, Pipeline
 
 
 """ Class Related Tools """
@@ -275,7 +274,7 @@ def pathlibify(item: Union[str, pathlib.Path]) -> pathlib.Path:
                          
 """ Converters """
 
-@denovo.decorators.dispatcher 
+@denovo.easy.dispatcher 
 def to_adjacency(source: Any) -> Adjacency:
     """Converts 'source' to an Adjacency.
     
@@ -298,6 +297,7 @@ def to_adjacency(source: Any) -> Adjacency:
 @to_adjacency.register # type: ignore
 def edges_to_adjacency(source: Edges) -> Adjacency:
     """Converts and edge list to an adjacency list."""
+    print('test edges', source)
     adjacency = collections.defaultdict(set)
     for edge_pair in source:
         if edge_pair[0] not in adjacency:
@@ -335,7 +335,7 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
         adjacency[edge_pair[0]] = {edge_pair[1]}
     return adjacency
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_dict(source: Any) -> MutableMapping[Hashable, Any]:
     """Converts 'source' to a MutableMapping.
     
@@ -360,7 +360,7 @@ def dyad_to_dict(source: Dyad) -> MutableMapping[Hashable, Any]:
     """Converts a Dyad to a MutableMapping."""
     return dict(zip(source))
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_dyad(source: Any) -> Dyad:
     """Converts 'source' to a Dyad.
     
@@ -385,7 +385,7 @@ def dict_to_dyad(source: MutableMapping) -> Dyad:
     """Converts a MutableMapping to a Dyad."""
     return zip(*source)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_edges(source: Any) -> Edges:
     """Converts 'source' to an Edges.
     
@@ -414,7 +414,7 @@ def adjacency_to_edges(source: Adjacency) -> Edges:
             edges.append(tuple(node, connection))
     return edges
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_index(source: Any) -> Hashable:
     """Converts 'source' to an Hashable.
     
@@ -451,7 +451,7 @@ def str_to_index(source: str) -> Hashable:
     """Converts a str to an Hashable."""
     return source
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_int(source: Any) -> int:
     """Converts 'source' to a pathlib.Path.
     
@@ -481,7 +481,7 @@ def float_to_int(source: float) -> int:
     """Converts a float to an int."""
     return int(source)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_list(source: Any) -> list[Any]:
     """Converts 'source' to a list.
     
@@ -506,7 +506,7 @@ def str_to_listing(source: str) -> list[Any]:
     """Converts a str to a list."""
     return ast.literal_eval(source)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_matrix(source: Any) -> Matrix:
     """Converts 'source' to a Edges.
     
@@ -537,7 +537,7 @@ def adjacency_to_matrix(source: Adjacency) -> Matrix:
             matrix[i][j] = 1
     return tuple(matrix, names)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_float(source: Any) -> float:
     """Converts 'source' to a float.
     
@@ -567,7 +567,7 @@ def str_to_float(source: str) -> float:
     """Converts a str to a float."""
     return float(source)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_path(source: Any) -> pathlib.Path:
     """Converts 'source' to a pathlib.Path.
     
@@ -592,7 +592,7 @@ def str_to_path(source: str) -> pathlib.Path:
     """Converts a str to a pathlib.Path."""
     return pathlib.pathlib.Path(source)
 
-@denovo.decorators.dispatcher   
+@denovo.easy.dispatcher   
 def to_str(source: Any) -> str:
     """Converts 'source' to a str.
     

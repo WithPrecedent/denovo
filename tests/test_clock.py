@@ -11,7 +11,7 @@ ToDo:
 import denovo
 
 def test_how_soon_is_now() -> None:
-    current_datetime = denovo.tools.how_soon_is_now()
+    current_datetime = denovo.clock.how_soon_is_now()
     assert isinstance(current_datetime, str)
     return
 

@@ -23,7 +23,7 @@ import denovo
 
 """ Type Aliases """
 
-Signatures = dict[str, inspect.Signature]
+denovo.alias.Signatures = dict[str, inspect.Signature]
 
 """ Introspection Tools """
 
@@ -88,15 +88,15 @@ def get_signatures(item: Union[object, Type[Any]],
 def has_methods(item: Union[object, Type[Any]], 
                 methods: Union[str, list[str]]) -> bool:
     """Returns whether 'item' has 'methods' which are methods."""
-    methods = denovo.typing.convert.listify(item = methods)
-    return all(denovo.tools.is_method(item = item, attribute = m) 
+    methods = denovo.convert.listify(item = methods)
+    return all(denovo.unit.is_method(item = item, attribute = m) 
                for m in methods)
 
 def has_properties(item: Union[object, Type[Any]], 
                    properties: Union[str, list[str]]) -> bool:
     """Returns whether 'item' has 'properties' which are properties."""
-    properties = denovo.typing.convert.listify(item = properties)
-    return all(denovo.tools.is_property(item = item, attribute = p) 
+    properties = denovo.convert.listify(item = properties)
+    return all(denovo.unit.is_property(item = item, attribute = p) 
                for p in properties)
 
 def has_signatures(item: Union[object, Type[Any]], 
@@ -116,7 +116,7 @@ def has_traits(item: Union[object, Type[Any]],
                attributes: Optional[list[str]] = None,
                methods: Optional[list[str]] = None,
                properties: Optional[list[str]] = None,
-               signatures: Optional[Signatures] = None) -> bool:
+               signatures: Optional[denovo.alias.Signatures] = None) -> bool:
     """Returns if 'item' has 'attributes', 'methods' and 'properties'."""
     if not inspect.isclass(item):
         item = item.__class__ 
@@ -166,15 +166,6 @@ def is_iterable(item: Union[object, Type[Any]]) -> bool:
         item = item.__class__ 
     return (issubclass(item, collections.abc.Iterable)  # type: ignore  
             and not issubclass(item, str)) # type: ignore  
-    
-def is_kind(item: Union[Type[Any], object], 
-            kind: Type[denovo.typing.Kind]) -> bool:
-     """Returns whether 'item' is an instance of subclass of 'kind'."""   
-     return has_traits(item = item,
-                       attributes = kind.attributes,
-                       methods = kind.methods, 
-                       properties = kind.properties,
-                       signatures = kind.signatures)
     
 def is_nested(item: collections.abc.Mapping[Any, Any]) -> bool:
     """Returns if 'item' is nested at least one-level."""

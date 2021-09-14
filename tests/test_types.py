@@ -7,7 +7,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import sys
 
 import denovo
-from denovo.typing.types import *
+from denovo.core.types import *
 
     
 

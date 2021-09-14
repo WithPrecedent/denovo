@@ -26,7 +26,7 @@ Contents:
 """
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, MutableSequence, Sequence, Set
 import dataclasses
 import re
 from typing import Any, Type
@@ -36,7 +36,7 @@ import denovo
 
 """ Adders """
 
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def add_prefix(item: Any, prefix: str, divider: str = '') -> Any:
     """Adds 'prefix' to 'item' with 'divider' in between.
     
@@ -98,13 +98,13 @@ def add_prefix_to_dict(
  
 @add_prefix.register # type: ignore
 def add_prefix_to_list(
-    item: Sequence[str], 
+    item: MutableSequence[str], 
     prefix: str, 
-    divider: str = '') -> Sequence[str]:
+    divider: str = '') -> MutableSequence[str]:
     """Adds 'prefix' to items in 'item' with 'divider' in between.
     
     Args:
-        item (Sequence[str]): item to be modified.
+        item (MutableSequence[str]): item to be modified.
         prefix (str): prefix to be added to 'item'.
         divider (str): str to add between 'item' and 'prefix'. Defaults to '',
             which means no divider will be added.
@@ -200,7 +200,7 @@ def add_slots(item: Type[Any]) -> Type[Any]:
             item.__qualname__ = qualname
     return item
 
-@denovo.framework.dispatcher # type: ignore 
+@denovo.easy.dispatcher # type: ignore 
 def add_suffix(item: Any, suffix: str, divider: str = '') -> Any:
     """Adds 'suffix' to 'item' with 'divider' in between.
     
@@ -262,19 +262,19 @@ def add_suffix_to_dict(
  
 @add_suffix.register # type: ignore
 def add_suffix_to_list(
-    item: Sequence[str], 
+    item: MutableSequence[str], 
     suffix: str, 
-    divider: str = '') -> Sequence[str]:
+    divider: str = '') -> MutableSequence[str]:
     """Adds 'suffix' to items in 'item' with 'divider' in between.
     
     Args:
-        item (Sequence[str]): item to be modified.
+        item (MutableSequence[str]): item to be modified.
         suffix (str): suffix to be added to 'item'.
         divider (str): str to add between 'item' and 'suffix'. Defaults to '',
             which means no divider will be added.
 
     Returns:
-        Sequence[str]: modified sequence.
+        MutableSequence[str]: modified sequence.
 
     """
     contents = [add_suffix(item = i, suffix = suffix, divider = divider) 
@@ -332,7 +332,7 @@ def add_suffix_to_tuple(
 
 """ Dividers """
 
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def cleave(
     item: Any, 
     divider: Any,
@@ -394,7 +394,7 @@ def cleave_str(
         prefix = suffix = item
     return prefix, suffix
 
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def separate(
     item: Any, 
     divider: Any,
@@ -447,7 +447,7 @@ def separate_str(
  
 """ Subtractors """
 
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def deduplicate(item: Any) -> Any:
     """Deduplicates contents of 'item.
     
@@ -464,14 +464,14 @@ def deduplicate(item: Any) -> Any:
     raise TypeError(f'item is not a supported type for {__name__}')
 
 @deduplicate.register # type: ignore
-def deduplicate_list(item: Sequence[Any]) -> Sequence[Any]:
+def deduplicate_list(item: MutableSequence[Any]) -> MutableSequence[Any]:
     """Deduplicates contents of 'item.
     
     Args:
-        item (Sequence[Any]): item to deduplicate.
+        item (MutableSequence[Any]): item to deduplicate.
 
     Returns:
-        Sequence[Any]: deduplicated item.
+        MutableSequence[Any]: deduplicated item.
         
     """
     contents = list(dict.fromkeys(item))
@@ -494,7 +494,7 @@ def deduplicate_tuple(item: tuple[Any, ...]) -> tuple[Any, ...]:
     """
     return tuple(list(dict.fromkeys(item)))
     
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def drop_prefix(item: Any, prefix: str, divider: str = '') -> Any:
     """Drops 'prefix' from 'item' with 'divider' in between.
     
@@ -560,19 +560,19 @@ def drop_prefix_from_dict(
 
 @drop_prefix.register # type: ignore
 def drop_prefix_from_list(
-    item: Sequence[str], 
+    item: MutableSequence[str], 
     prefix: str, 
-    divider: str = '') -> Sequence[str]:
+    divider: str = '') -> MutableSequence[str]:
     """Drops 'prefix' from items in 'item' with 'divider' in between.
     
     Args:
-        item (Sequence[str]): item to be modified.
+        item (MutableSequence[str]): item to be modified.
         prefix (str): prefix to be added to 'item'.
         divider (str): str to add between 'item' and 'prefix'. Defaults to '',
             which means no divider will be added.
  
     Returns:
-        Sequence[str]: modified sequence.
+        MutableSequence[str]: modified sequence.
 
     """
     contents = [drop_prefix(item = i, prefix = prefix, divider = divider) 
@@ -644,7 +644,7 @@ def drop_privates(item: list[Any]) -> list[Any]:
     else:
         return [i for i in item if not i.startswith('_')]
        
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def drop_substring(item: Any, substring: str) -> Any:
     """Drops 'substring' from 'item' with a possible 'divider' in between.
     
@@ -702,16 +702,16 @@ def drop_substring_from_dict(
 
 @drop_substring.register # type: ignore
 def drop_substring_from_list(
-    item: Sequence[str], 
-    substring: str) -> Sequence[str]:
+    item: MutableSequence[str], 
+    substring: str) -> MutableSequence[str]:
     """Drops 'substring' from items in 'item'.
     
     Args:
-        item (Sequence[str]): item to be modified.
+        item (MutableSequence[str]): item to be modified.
         substring (str): substring to be added to 'item'.
 
     Returns:
-        Sequence[str]: modified sequence.
+        MutableSequence[str]: modified sequence.
 
     """
     contents = [drop_substring(item = i, substring = substring) for i in item] 
@@ -757,7 +757,7 @@ def drop_substring_from_tuple(
     return tuple([drop_substring(item = i, substring = substring) 
                   for i in item])    
      
-@denovo.framework.dispatcher # type: ignore
+@denovo.easy.dispatcher # type: ignore
 def drop_suffix(item: Any, suffix: str, divider: str = '') -> Any:
     """Drops 'suffix' from 'item' with 'divider' in between.
     
@@ -817,17 +817,17 @@ def drop_suffix_from_dict(
 
 @drop_suffix.register # type: ignore
 def drop_suffix_from_list(
-    item: Sequence[str], 
+    item: MutableSequence[str], 
     suffix: str, 
-    divider: str = '') -> Sequence[str]:
+    divider: str = '') -> MutableSequence[str]:
     """Drops 'suffix' from items in 'item' with 'divider' in between.
     
     Args:
-        item (Sequence[str]): item to be modified.
+        item (MutableSequence[str]): item to be modified.
         suffix (str): suffix to be added to 'item'.
 
     Returns:
-        Sequence[str]: modified sequence.
+        MutableSequence[str]: modified sequence.
 
     """
     contents = [drop_suffix(item = i, suffix = suffix, divider = divider) 
