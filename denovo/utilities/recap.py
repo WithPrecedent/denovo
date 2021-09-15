@@ -173,7 +173,7 @@ def beautify_object(item: MutableSequence,
         if hasattr(module, '__package__'):
             package = module.__package__
     if kind.name == 'object':
-        name = denovo.check.get_name(item = item)
+        name = denovo.unit.get_name(item = item)
     else:
         name = ''
     base = denovo.modify.snakify(item.__class__.__name__)

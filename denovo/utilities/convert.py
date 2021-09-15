@@ -336,7 +336,7 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
     return adjacency
 
 @denovo.easy.dispatcher   
-def to_dict(source: Any) -> MutableMapping[Hashable, Any]:
+def to_dict(source: Any) -> denovo.alias.Dictionary:
     """Converts 'source' to a MutableMapping.
     
     Args:
@@ -356,7 +356,7 @@ def to_dict(source: Any) -> MutableMapping[Hashable, Any]:
                         f'unsupported type: {type(source).__name__}')
 
 @to_dict.register # type: ignore   
-def dyad_to_dict(source: Dyad) -> MutableMapping[Hashable, Any]:
+def dyad_to_dict(source: Dyad) -> denovo.alias.Dictionary:
     """Converts a Dyad to a MutableMapping."""
     return dict(zip(source))
 

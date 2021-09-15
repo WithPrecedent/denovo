@@ -34,13 +34,12 @@ Contents:
         Kind (ABC): denovo protocol class which allows classes to be defined in
              manner that facilitates static and runtime type checking including
              attributes, properties, methods, and method signatures.
-        dispatcher (Callable, object): decorator for denovo's dispatch system 
-            which has greater functionality to the python singledispatch method 
-            using the Kind protocol system. It is also fully compatible with 
-            python builtin types.
         identify (Callable): determines the matching Kind or builtin python 
             type.
-        kindify (Callable): convenience function for creating Kind subclasses.
+        is_kind (Callable): returns whether the passed item is a particular
+            Kind.
+        kindify (Callable): convenience function for creating Kind subclasses
+            from any existing class or instance.
 
 ToDo:
     Convert Kind registry into a tree for a more complex typing match search.
@@ -49,14 +48,12 @@ ToDo:
 from __future__ import annotations
 import abc
 from collections.abc import (
-    Collection, Hashable, Iterator, Mapping, MutableMapping, MutableSequence, 
-    Sequence, Set)
+    Mapping, MutableMapping, MutableSequence, Sequence, Set)
 import copy
 import dataclasses
 import datetime
 import inspect
-from typing import (
-    Any, Callable, ClassVar, Optional, Type, TypeVar, Union, get_origin, get_type_hints)
+from typing import Any, ClassVar, Optional, Type, Union, get_origin
 
 import denovo
 
@@ -126,9 +123,8 @@ class Kind(abc.ABC):
             super().__init_subclass__(**kwargs) # type: ignore
         except AttributeError:
             pass
-        if abc.ABC in cls.__bases__:
-            key = denovo.modify.snakify(cls.__name__)
-            cls._registry[key] = cls
+        key = denovo.modify.snakify(cls.__name__)
+        cls._registry[key] = cls
 
     """ Properties """
     
@@ -185,7 +181,7 @@ def identify(item: Any) -> str:
     raise KeyError(f'item {str(item)} does not match any recognized type')
     
 def is_kind(item: Union[Type[Any], object], 
-            kind: Type[denovo.typing.Kind]) -> bool:
+            kind: Kind) -> bool:
      """Returns whether 'item' is an instance of subclass of 'kind'."""   
      return denovo.unit.has_traits(
          item = item,

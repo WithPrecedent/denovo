@@ -24,7 +24,6 @@ import types
 from typing import Any, ClassVar, Optional, Type, Union, get_type_hints
 
 import denovo
-from denovo.typing.types import denovo.alias.Operation, denovo.alias.Wrappable
 
 
 """ Module-Level Attributes """
@@ -36,7 +35,7 @@ catalog: MutableMapping[str, denovo.alias.Operation] = {}
 def add_name(process: denovo.alias.Wrappable) -> denovo.alias.Wrappable:
     """Adds 'name' attribute to 'process' if it wasn't passed as an argument.
     
-    The decorator uses the 'denovo.check.get_name' to determine the specific value
+    The decorator uses the 'denovo.unit.get_name' to determine the specific value
     for the 'name' attribute.
     
     Args:
@@ -49,7 +48,7 @@ def add_name(process: denovo.alias.Wrappable) -> denovo.alias.Wrappable:
         call_signature = inspect.signature(process)
         arguments = dict(call_signature.bind(*args, **kwargs).arguments)
         if not arguments.get('name'):
-            arguments['name'] = denovo.check.get_name(item = process)
+            arguments['name'] = denovo.unit.get_name(item = process)
         return process(**arguments)
     return wrapped
 

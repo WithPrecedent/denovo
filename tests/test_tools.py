@@ -54,10 +54,10 @@ def test_listify():
 
 def test_namify():
     an_instance = TestClass()
-    result = denovo.check.get_name(item = an_instance)
+    result = denovo.unit.get_name(item = an_instance)
     assert result == 'test_class'
     an_instance.name = 'huh'
-    result = denovo.check.get_name(item = an_instance)
+    result = denovo.unit.get_name(item = an_instance)
     assert result == 'huh'
     return
 

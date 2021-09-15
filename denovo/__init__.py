@@ -27,7 +27,7 @@ from typing import Any, Optional
 
 from .utilities import alias
 from .utilities import lazy
-from .core import framework
+from .types import framework
 
 
 
@@ -58,23 +58,20 @@ the lazy importation system used throughout denovo.
 
 """
 importables: dict[str, str] = {
-    'core': 'core',
+    'types': 'types',
     'utilities': 'utilities',
     
-    'configuration': 'core.configuration',
-    'containers': 'core.containers',
-    'filing': 'core.filing',
-    'framework': 'core.framework',
-    'quirks': 'core.quirks',
-    'structures': 'core.structures',
-    'types': 'core.types',
+    'containers': 'types.containers',
+    'framework': 'types.framework',
+    'quirks': 'types.quirks',
+    'structures': 'types.structures',
              
     'classes': 'utilities.classes',
     'clock': 'utilities.clock',
     'convert': 'utilities.convert',
     'easy': 'utilities.easy',
+    'filing': 'utilities.filing',
     'foundry': 'utilities.foundry',
-
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
     'modify': 'utilities.modify',

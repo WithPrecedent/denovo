@@ -1,5 +1,5 @@
 """
-containers: denovo base container classes
+containers: denovo basic container classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -13,10 +13,12 @@ Contents:
     Proxy (Container): basic wrapper for a stored python object. Dunder methods 
         attempt to intelligently apply access methods to either the wrapper or 
         the wrapped item.
-    Manifest (MutableSequence, Bunch): denovo drop-in replacement for a python 
+    Bunch (Collection, ABC): base class for denovo collections that requires
+        subclasses to have 'add' and 'subset' methods. 
+    Manifest (Bunch, MutableSequence): denovo drop-in replacement for a python 
         list with additional functionality.
     Hybrid (Manifest): iterable with both dict and list interfaces.
-    Lexicon (MutableMapping, Bunch): denovo's drop-in replacement for a python
+    Lexicon (Bunch, MutableMapping): denovo's drop-in replacement for a python
         dict with some added functionality.
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
@@ -26,31 +28,24 @@ Contents:
         
 """
 from __future__ import annotations
+import abc
 import collections
-import collections.abc
+from collections.abc import (
+    Collection, Container, Hashable, Iterable, Mapping, MutableMapping, 
+    MutableSequence, Sequence)
 import copy
 import dataclasses
 import inspect
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
-                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
-                    Union)
+from typing import Any, Optional, Type, Union
 
 import more_itertools
 
 import denovo
-
-
-Keys = Union[Hashable, Sequence[Hashable]] 
  
-_ALL_KEYS: list[Any] = ['all', 'All', ['all'], ['All']]
-_DEFAULT_KEYS: list[Any] = ['default', 'defaults', 'Default', 'Defaults', 
-                            ['default'], ['defaults'], ['Default'], 
-                            ['Defaults']]
-_NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
-
+""" (Mostly) Transparent Wrapper """
 
 @dataclasses.dataclass
-class Proxy(collections.abc.Container):
+class Proxy(Container):
     """Basic wrapper class.
     
     A Proxy differs than an ordinary container in 2 significant ways:
@@ -159,14 +154,124 @@ class Proxy(collections.abc.Container):
                 object.__delattr__(self.contents, attribute)
             except AttributeError:
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
-                        
+
+""" Generic Collection with Kind Typing """
 
 @dataclasses.dataclass # type: ignore
-class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # type: ignore
+class Bunch(denovo.framework.Kind, Collection, abc.ABC): # type: ignore
+    """Abstract base class for denovo collections.
+  
+    A Bunch differs from a general python Collection in 3 ways:
+        1) It must include an 'add' method which provides the default mechanism
+            for adding new items to the collection.'add' allows a subclass to 
+            designate the preferred method of adding to the collections's stored 
+            data.
+        2) It allows the '+' operator to be used to join a Bunch subclass 
+            instance of the same general type (Mapping, Sequence, tuple, etc.). 
+            The '+' operator calls the Bunch subclass 'add' method to implement 
+            how the added item(s) is/are added to the Bunch subclass instance.
+        3) A subclass must include a 'subset' method with optional 'include' and
+            'exclude' parameters for returning a subset of the Bunch subclass.
+    
+    Args:
+        contents (Collection): stored iterable. Defaults to None.
+              
+    """
+    contents: Collection[Any]
+   
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def add(self, item: Any) -> None:
+        """Adds 'item' to 'contents'.
+        
+        Subclasses must provide their own methods.
+        
+        """
+        pass
+    
+    @abc.abstractmethod
+    def subset(
+        self, 
+        include: Union[Sequence[Any], Any] = None, 
+        exclude: Union[Sequence[Any], Any] = None) -> Bunch:
+        """Returns a subclass with some items removed from 'contents'.
+        
+        Args:
+            include (Union[Sequence[Any], Any]): items to include in the new 
+                Bunch. Defaults to None.
+            exclude (Union[Sequence[Any], Any]): items to exclude in the new 
+                Bunch. Defaults to None.
+        
+        """
+        pass
+       
+    """ Dunder Methods """
+    
+    @classmethod
+    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a virtual or real subclass.
+
+        Args:
+            subclass (Type[Any]): item to test as a subclass.
+
+        Returns:
+            bool: whether 'subclass' is a real or virtual subclass.
+            
+        """
+        return (subclass in cls.__subclasses__() 
+                or denovo.unit.has_methods(
+                    item = subclass,
+                    methods = [
+                        'add', 'subset', '__add__', '__iadd__', '__iter__', 
+                        '__len__'])) 
+          
+    def __add__(self, other: Any) -> None:
+        """Combines argument with 'contents' using the 'add' method.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(item = other)
+        return
+
+    def __iadd__(self, other: Any) -> None:
+        """Combines argument with 'contents' using the 'add' method.
+
+        Args:
+            other (Any): item to add to 'contents' using the 'add' method.
+
+        """
+        self.add(item = other)
+        return
+
+    def __iter__(self) -> Iterator[Any]:
+        """Returns iterable of 'contents'.
+
+        Returns:
+            Iterable: of 'contents'.
+
+        """
+        return iter(self.contents)
+
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+                        
+""" Generic list """
+
+@dataclasses.dataclass # type: ignore
+class Manifest(Bunch, MutableSequence): # type: ignore
     """Basic denovo list replacement.
     
-    A Manifest differs from an ordinary python list only in ways inherited
-    from Bunch by requiring 'add' and 'subset' methods, storing data in 
+    A Manifest differs from an ordinary python list only in ways required by
+    inheriting from Bunch: 'add' and 'subset' methods, storing data in 
     'contents', and allowing the '+' operator to join Manifests with other lists 
     and Manifests).
     
@@ -174,7 +279,7 @@ class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # ty
     If this fails, it appends the item to 'contents'.
             
     Args:
-        contents (MutableSequence): items to store in a list. Defaults to 
+        contents (MutableSequence[Any]): items to store in a list. Defaults to 
             an empty list.
         
     """
@@ -207,7 +312,10 @@ class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # ty
         self.contents.insert(index, item)
         return
                
-    def subset(self, include: Keys = None, exclude: Keys = None) -> Manifest:
+    def subset(
+        self, 
+        include: Union[Hashable, Sequence[Hashable]] = None, 
+        exclude: Union[Hashable, Sequence[Hashable]] = None) -> Manifest:
         """Returns a new instance with a subset of 'contents'.
 
         This method applies 'include' before 'exclude' if both are passed. If
@@ -215,8 +323,10 @@ class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # ty
         applied.
         
         Args:
-            include (Keys): item(s) to include in the new Manifest instance.
-            exclude (Keys): item(s) to exclude in the new Manifest instance.                
+            include (Union[Hashable, Sequence[Hashable]]): item(s) to include in 
+                the new Manifest instance.
+            exclude (Union[Hashable, Sequence[Hashable]]: item(s) to exclude in 
+                the new Manifest instance.                
                 
         Returns:
             Manifest: with only items from 'include' and no items in 'exclude'.
@@ -272,7 +382,8 @@ class Manifest(denovo.typing.types.Bunch, collections.abc.MutableSequence): # ty
         del self.contents[index]
         return
 
-   
+""" list with a dict Interface """
+
 @dataclasses.dataclass # type: ignore
 class Hybrid(Manifest):
     """Iterable that has both a dict and list interfaces.
@@ -461,12 +572,13 @@ class Hybrid(Manifest):
             del self.contents[key]
         else:
             self.contents = [c for c in self.contents 
-                             if denovo.check.get_name(c) != key]
+                             if denovo.unit.get_name(c) != key]
         return
 
- 
+""" Generic dict """
+
 @dataclasses.dataclass  # type: ignore
-class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: ignore
+class Lexicon(Bunch, MutableMapping):  # type: ignore
     """Basic denovo dict replacement.
     
     A Lexicon differs from an ordinary python dict in ways inherited from Bunch 
@@ -477,23 +589,24 @@ class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: igno
             as tuples instead of KeysView, ValuesView, and ItemsView.
     
     Args:
-        contents (MutableMapping[Hashable, Any]]): stored dictionary. Defaults 
+        contents (denovo.alias.Dictionary]): stored dictionary. Defaults 
             to an empty dict.
         default_factory (Any): default value to return when the 'get' method is 
             used. Defaults to None.
                           
     """
-    contents: MutableMapping[Hashable, Any] = dataclasses.field(
+    contents: denovo.alias.Dictionary = dataclasses.field(
         default_factory = dict)
     default_factory: Any = None
 
     """ Class Methods """
 
     @classmethod
-    def fromkeys(cls, 
-                 keys: Sequence[Hashable], 
-                 value: Any, 
-                 **kwargs: Any) -> Lexicon:
+    def fromkeys(
+        cls, 
+        keys: Sequence[Hashable], 
+        value: Any, 
+        **kwargs: Any) -> Lexicon:
         """Emulates the 'fromkeys' class method from a python dict.
 
         Args:
@@ -573,7 +686,10 @@ class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: igno
         self.default_factory = value 
         return
                
-    def subset(self, include: Keys = None, exclude: Keys = None) -> Lexicon:
+    def subset(
+        self, 
+        include: Union[Hashable, Sequence[Hashable]] = None, 
+        exclude: Union[Hashable, Sequence[Hashable]] = None) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
         This method applies 'include' before 'exclude' if both are passed. If
@@ -581,8 +697,10 @@ class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: igno
         applied.
         
         Args:
-            include (Keys): key(s) to include in the new Lexicon instance.
-            exclude (Keys): key(s) to exclude in the new Lexicon instance.                
+            include (Union[Hashable, Sequence[Hashable]]): key(s) to include in 
+                the new Lexicon instance.
+            exclude (Union[Hashable, Sequence[Hashable]]): key(s) to exclude in 
+                the new Lexicon instance.                
                 
         Returns:
             Lexicon: with only keys from 'include' and no keys in 'exclude'.
@@ -650,6 +768,15 @@ class Lexicon(denovo.types.Bunch, collections.abc.MutableMapping):  # type: igno
         del self.contents[key]
         return
     
+""" dict that Accepts lists of Keys and Wildcards """
+
+_ALL_KEYS: list[Any] = [
+    'all', 'All', ['all'], ['All']]
+_DEFAULT_KEYS: list[Any] = [
+    'default', 'defaults', 'Default', 'Defaults', ['default'], ['defaults'], 
+    ['Default'], ['Defaults']]
+_NONE_KEYS: list[Any] = ['none', 'None', ['none'], ['None']]
+
 
 @dataclasses.dataclass  # type: ignore
 class Catalog(Lexicon):
@@ -690,7 +817,7 @@ class Catalog(Lexicon):
             Defaults to False.
                      
     """
-    contents: MutableMapping[Hashable, Any] = dataclasses.field(
+    contents: denovo.alias.Dictionary = dataclasses.field(
         default_factory = dict)
     default_factory: Any = None
     default: Iterable[Any] = 'all'
@@ -698,14 +825,16 @@ class Catalog(Lexicon):
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: Keys) -> Union[Any, Sequence[Any]]:
+    def __getitem__(
+        self, 
+        key: Union[Hashable, Sequence[Hashable]]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) for 'key' in 'contents'.
 
         The method searches for 'all', 'default', and 'none' matching wildcard
         options before searching for direct matches in 'contents'.
 
         Args:
-            key (Keys): key(s) in 'contents'.
+            key (Union[Hashable, Sequence[Hashable]]): key(s) in 'contents'.
 
         Returns:
             Union[Any, Sequence[Any]]: value(s) stored in 'contents'.
@@ -737,11 +866,15 @@ class Catalog(Lexicon):
             except KeyError:
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
-    def __setitem__(self, key: Keys, value: Union[Any, Iterable[Any]]) -> None:
+    def __setitem__(
+        self, 
+        key: Union[Hashable, Sequence[Hashable]], 
+        value: Union[Any, Iterable[Any]]) -> None:
         """sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Keys): key(s) to set in 'contents'.
+            key (Union[Hashable, Sequence[Hashable]]): key(s) to set in 
+                'contents'.
             value (Union[Any, Iterable[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
@@ -755,11 +888,11 @@ class Catalog(Lexicon):
                 self.contents.update(dict(zip(key, value))) # type: ignore
         return
 
-    def __delitem__(self, key: Keys) -> None:
+    def __delitem__(self, key: Union[Hashable, Sequence[Hashable]]) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (Keys): name(s) of key(s) in 
+            key (Union[Hashable, Sequence[Hashable]]): name(s) of key(s) in 
                 'contents' to delete the key/value pair.
 
         """
@@ -767,7 +900,8 @@ class Catalog(Lexicon):
                          if i not in more_itertools.always_iterable(key)}
         return
 
- 
+""" Dual dict for Storing Subclasses and Instances """
+
 @dataclasses.dataclass  # type: ignore
 class Library(Lexicon):
     """Stores classes and class instances.
@@ -804,16 +938,17 @@ class Library(Lexicon):
  
         """
         if not isinstance(item, str):
-            item = denovo.check.get_name(item = item)
+            item = denovo.unit.get_name(item = item)
         kinds = []  
         for kind, classes in self.kinds.items():  
             if item in classes:
                 kinds.append(kind)
         return tuple(kinds)
        
-    def deposit(self, 
-                item: Union[Type[Any], object],
-                kind: Optional[Union[str, Sequence[str]]] = None) -> None:
+    def deposit(
+        self, 
+        item: Union[Type[Any], object],
+        kind: Optional[Union[str, Sequence[str]]] = None) -> None:
         """Adds 'item' to 'classes' and, possibly, 'instances'.
 
         If 'item' is a class, it is added to 'classes.' If it is an object, it
@@ -826,14 +961,14 @@ class Library(Lexicon):
                 to. Defaults to None.
                 
         """
-        key = denovo.check.get_name(item = item)
+        key = denovo.unit.get_name(item = item)
         base_key = None
         if inspect.isclass(item):
             self.classes[key] = item
         elif isinstance(item, object):
             self.instances[key] = item
             base = item.__class__
-            base_key = denovo.check.get_name(item = base)
+            base_key = denovo.unit.get_name(item = base)
             self.classes[base_key] = base
         else:
             raise TypeError(f'item must be a class or a class instance')
@@ -866,10 +1001,11 @@ class Library(Lexicon):
                 raise KeyError(f'{name} is not found in the library')
         return    
 
-    def withdraw(self, 
-                 name: Union[str, Sequence[str]], 
-                 kwargs: Optional[MutableMapping[Hashable, Any]] = None) -> (
-                     Union[Type[Any], object]):
+    def withdraw(
+        self, 
+        name: Union[str, Sequence[str]], 
+        kwargs: Optional[denovo.alias.Dictionary] = None) -> (
+            Union[Type[Any], object]):
         """Returns instance or class of first match of 'name' from catalogs.
         
         The method prioritizes the 'instances' catalog over 'classes' and any
