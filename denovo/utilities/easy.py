@@ -140,6 +140,8 @@ class dispatcher(object):
             
         """
         _, annotation = next(iter(get_type_hints(wrapped).items()))
+        print('test annot', annotation)
         key = denovo.framework.identify(item = annotation)
+        print('test key', key)
         self.registry[key] = wrapped
         return

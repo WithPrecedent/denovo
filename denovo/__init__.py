@@ -64,6 +64,7 @@ importables: dict[str, str] = {
     'configuration': 'core.configuration',
     'containers': 'core.containers',
     'filing': 'core.filing',
+    'framework': 'core.framework',
     'quirks': 'core.quirks',
     'structures': 'core.structures',
     'types': 'core.types',
@@ -73,7 +74,7 @@ importables: dict[str, str] = {
     'convert': 'utilities.convert',
     'easy': 'utilities.easy',
     'foundry': 'utilities.foundry',
-    'framework': 'utilities.framework',
+
     'lazy': 'utilities.lazy',
     'memory': 'utilities.memory',
     'modify': 'utilities.modify',

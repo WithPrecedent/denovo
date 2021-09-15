@@ -17,10 +17,6 @@ compatible classes without hassling with inheritance or abstract base class
 registration.
 
 Contents:
-    Type Aliases:
-        denovo.alias.Operation: generic, flexible Callable type alias.
-        denovo.alias.Signatures: dict of denovo.alias.Signatures type.
-        denovo.alias.Wrappable: type for an item that can be wrapped by a decorator.
     Abstract Base Class Types:
         Named (ABC): base class that requires a 'name' attribute and, if
             inherited, automatically provides a value for 'name'.
@@ -278,7 +274,7 @@ class Node(denovo.framework.Kind, Hashable, abc.ABC):
         classes.
         
         """
-        super().__init_subclass__(*args, **kwargs) # type: ignore
+        super().__init_subclass__(*args, **kwargs)
         cls.__hash__ = Node.__hash__ # type: ignore
         cls.__eq__ = Node.__eq__ # type: ignore
         cls.__ne__ = Node.__ne__ # type: ignore
@@ -727,5 +723,35 @@ Pipelines = TypeVar(
     'Pipelines', 
     bound = Collection[Sequence[Node]])
 
-for item in [Adjacency, Connections, Dyad, Edge, Edges, Matrix, Nodes, Pipeline, Pipelines]:
-    denovo.framework.Kind.register(item)
+# """ Aliases"""
+
+# _AdjacencyType = MutableMapping[Node, Union[set[Node], Sequence[Node]]]
+# _ConnectionsType = Collection[Node]
+# _DyadType = tuple[Sequence[Any], Sequence[Any]]
+# _EdgeType = tuple[Node, Node]
+# _EdgesType = Collection[_EdgeType]
+# _MatrixType = tuple[Sequence[Sequence[int]], Sequence[Node]]
+# _NodesType = Union[Node, _ConnectionsType]
+# _PipelineType = Sequence[Node]
+# _PipelinesType = Collection[_PipelineType]
+
+# """ Type Variables """
+
+# Adjacency = TypeVar('Adjacency', bound = _AdjacencyType)
+# Connections = TypeVar('Connections', bound = _ConnectionsType)
+# Dyad = TypeVar('Dyad', bound = _DyadType)
+# Edge = TypeVar('Edge', bound = _EdgeType)
+# Edges = TypeVar('Edges', bound = _EdgesType)
+# Matrix = TypeVar('Matrix', bound = _MatrixType)
+# Nodes = TypeVar('Nodes', bound = _NodesType)
+# Pipeline = TypeVar('Pipeline', bound = _PipelineType)
+# Pipelines = TypeVar('Pipelines', bound = _PipelinesType)
+
+for item in ['Adjacency', 'Connections', 'Dyad', 'Edge', 'Edges', 'Matrix', 
+             'Nodes', 'Pipeline', 'Pipelines']:
+    print(denovo.modify.snakify(item))
+    print(item)
+    name = denovo.modify.snakify(item)
+    # kind = globals()[f'_{item}Type']
+    kind = globals()[item]
+    denovo.framework.Kind.register(item = kind, name = name)
