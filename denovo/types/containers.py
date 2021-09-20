@@ -13,8 +13,6 @@ Contents:
     Proxy (Container): basic wrapper for a stored python object. Dunder methods 
         attempt to intelligently apply access methods to either the wrapper or 
         the wrapped item.
-    Bunch (Collection, ABC): base class for denovo collections that requires
-        subclasses to have 'add' and 'subset' methods. 
     Manifest (Bunch, MutableSequence): denovo drop-in replacement for a python 
         list with additional functionality.
     Hybrid (Manifest): iterable with both dict and list interfaces.
@@ -31,7 +29,7 @@ from __future__ import annotations
 import abc
 import collections
 from collections.abc import (
-    Collection, Container, Hashable, Iterable, Mapping, MutableMapping, 
+    Collection, Container, Hashable, Iterator, Mapping, MutableMapping, 
     MutableSequence, Sequence)
 import copy
 import dataclasses
@@ -41,11 +39,12 @@ from typing import Any, Optional, Type, Union
 import more_itertools
 
 import denovo
- 
+
+
 """ (Mostly) Transparent Wrapper """
 
 @dataclasses.dataclass
-class Proxy(Container):
+class Proxy(Container): # type: ignore
     """Basic wrapper class.
     
     A Proxy differs than an ordinary container in 2 significant ways:
@@ -155,10 +154,11 @@ class Proxy(Container):
             except AttributeError:
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
 
-""" Generic Collection with Kind Typing """
 
+""" Generic Collection """
+   
 @dataclasses.dataclass # type: ignore
-class Bunch(denovo.framework.Kind, Collection, abc.ABC): # type: ignore
+class Bunch(denovo.base.Kind, Collection, abc.ABC): # type: ignore
     """Abstract base class for denovo collections.
   
     A Bunch differs from a general python Collection in 3 ways:
@@ -250,7 +250,7 @@ class Bunch(denovo.framework.Kind, Collection, abc.ABC): # type: ignore
         """Returns iterable of 'contents'.
 
         Returns:
-            Iterable: of 'contents'.
+            Iterator: of 'contents'.
 
         """
         return iter(self.contents)
@@ -263,7 +263,8 @@ class Bunch(denovo.framework.Kind, Collection, abc.ABC): # type: ignore
 
         """
         return len(self.contents)
-                        
+    
+                          
 """ Generic list """
 
 @dataclasses.dataclass # type: ignore
@@ -589,13 +590,13 @@ class Lexicon(Bunch, MutableMapping):  # type: ignore
             as tuples instead of KeysView, ValuesView, and ItemsView.
     
     Args:
-        contents (denovo.alias.Dictionary]): stored dictionary. Defaults 
+        contents (denovo.base.Dictionary]): stored dictionary. Defaults 
             to an empty dict.
         default_factory (Any): default value to return when the 'get' method is 
             used. Defaults to None.
                           
     """
-    contents: denovo.alias.Dictionary = dataclasses.field(
+    contents: denovo.base.Dictionary = dataclasses.field(
         default_factory = dict)
     default_factory: Any = None
 
@@ -817,10 +818,10 @@ class Catalog(Lexicon):
             Defaults to False.
                      
     """
-    contents: denovo.alias.Dictionary = dataclasses.field(
+    contents: denovo.base.Dictionary = dataclasses.field(
         default_factory = dict)
     default_factory: Any = None
-    default: Iterable[Any] = 'all'
+    default: Iterator[Any] = 'all'
     always_return_list: bool = False
 
     """ Dunder Methods """
@@ -869,13 +870,13 @@ class Catalog(Lexicon):
     def __setitem__(
         self, 
         key: Union[Hashable, Sequence[Hashable]], 
-        value: Union[Any, Iterable[Any]]) -> None:
+        value: Union[Any, Iterator[Any]]) -> None:
         """sets 'key' in 'contents' to 'value'.
 
         Args:
             key (Union[Hashable, Sequence[Hashable]]): key(s) to set in 
                 'contents'.
-            value (Union[Any, Iterable[Any]]): value(s) to be paired with 'key' 
+            value (Union[Any, Iterator[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
         """
@@ -1004,7 +1005,7 @@ class Library(Lexicon):
     def withdraw(
         self, 
         name: Union[str, Sequence[str]], 
-        kwargs: Optional[denovo.alias.Dictionary] = None) -> (
+        kwargs: Optional[denovo.base.Dictionary] = None) -> (
             Union[Type[Any], object]):
         """Returns instance or class of first match of 'name' from catalogs.
         

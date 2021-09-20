@@ -5,8 +5,8 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    SummaryKind (object): data for a data type's representation.
-    kinds (Dict): dictionary of different supported types with SummaryKind
+    Representation (object): data for a data type's representation.
+    kinds (Dict): dictionary of different supported types with Representation
         instances as values.
     beautify (Callable): provides a pretty str summary for an object. The
         function uses the 'LINE_BREAK' and 'INDENT' module-level items for
@@ -32,14 +32,15 @@ ToDo:
 from __future__ import annotations
 import dataclasses
 import inspect
-import textwrap
 from types import FunctionType
-from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
-                    MutableMapping, MutableSequence, Optional, Sequence, Type, 
-                    Union)
+from typing import (
+    Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping, 
+    MutableMapping, MutableSequence, Optional, Sequence, Type, 
+    Union)
 
 import denovo
 
+""" Module-Level Variables """
 
 LINE_BREAK: str = '\n'
 WHITESPACE: str = ' '
@@ -50,12 +51,10 @@ MAX_LENGTH: int = 20
 INCOMPLETE: str = '...'
 VERTICAL: bool = True
 
-
 """ Public Classes """
 
-
 @dataclasses.dataclass
-class SummaryKind(object):
+class Representation(denovo.base.Kind):
     """Contains formating information for different data types.
     
     Args:
@@ -76,11 +75,12 @@ class SummaryKind(object):
 
 """ Public Functions"""
     
-def beautify(item: Any, 
-             offsets: int = 1, 
-             package: str = None,
-             exclude: MutableSequence[str] = None,
-             include_private: bool = False) -> str:
+def beautify(
+    item: Any, 
+    offsets: int = 1, 
+    package: Optional[str] = None,
+    exclude: Optional[MutableSequence[str]] = None,
+    include_private: bool = False) -> str:
     """Returns a beautiful string representation of 'item'.
 
     Args:
@@ -109,12 +109,13 @@ def beautify(item: Any,
             kwargs.update({'package': package, 
                         'exclude': exclude,
                         'include_private': include_private})
-        summary = kind.method(**kwargs: Any)
+        summary = kind.method(**kwargs)
     return f'{LINE_BREAK}{summary}'
    
-def beautify_mapping(item: MutableSequence, 
-                     kind: Union[SummaryKind, Type], 
-                     offsets: int) -> str:
+def beautify_mapping(
+    item: denovo.utilities.alias.Dictionary, 
+    kind: Union[Representation, Type[Any]], 
+    offsets: int) -> str:
     """Returns a beautiful string representation of a mapping data type.
 
     Args:
@@ -124,7 +125,7 @@ def beautify_mapping(item: MutableSequence,
     Returns:
         str: [description]
     """
-    if not isinstance(kind, SummaryKind):
+    if not isinstance(kind, Representation):
         kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
     inner = _get_indent(offsets = offsets, extra = TAB)
@@ -143,12 +144,13 @@ def beautify_mapping(item: MutableSequence,
             summary.append(f'{LINE_BREAK}')
     return ''.join(summary)
 
-def beautify_object(item: MutableSequence, 
-                    kind: Union[SummaryKind, Type], 
-                    offsets: int,
-                    package: str = None,
-                    exclude: MutableSequence[str] = None,
-                    include_private: bool = False) -> str:
+def beautify_object(
+    item: MutableSequence[Any], 
+    kind: Union[Representation, Type[Any]], 
+    offsets: int,
+    package: Optional[str] = None,
+    exclude: MutableSequence[str] = None,
+    include_private: bool = False) -> str:
     """[summary]
 
     Args:
@@ -166,7 +168,7 @@ def beautify_object(item: MutableSequence,
         str: [description]
         
     """
-    if not isinstance(kind, SummaryKind):
+    if not isinstance(kind, Representation):
         kind = kinds[kind]
     if package is None:
         module = inspect.getmodule(item)
@@ -202,21 +204,22 @@ def beautify_object(item: MutableSequence,
         summary.append(beautify(item = contents, offsets = inner_offsets))
     return ''.join(summary)
 
-def beautify_sequence(item: Union[MutableSequence, set, tuple], 
-                      kind: Union[SummaryKind, Type], 
-                      offsets: int) -> str:
+def beautify_sequence(
+    item: Union[MutableSequence[Any], set[Any], tuple[Any, ...]], 
+    kind: Union[Representation, Type[Any]], 
+    offsets: int) -> str:
     """Returns a beautiful string representation of a 1-dimensional data type.
 
     Args:
         item (Union[MutableSequence, set, tuple]): the list, set, tuple, or 
             similar object to return a str representation for.
-        kind (Union[SummaryKind, Type]): 
+        kind (Union[Representation, Type]): 
         offsets (int): [description]
 
     Returns:
         str: [description]
     """
-    if not isinstance(kind, SummaryKind):
+    if not isinstance(kind, Representation):
         kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
     inner = _get_indent(offsets = offsets, extra = TAB)
@@ -235,9 +238,10 @@ def beautify_sequence(item: Union[MutableSequence, set, tuple],
             summary.append(f'{LINE_BREAK}')
     return ''.join(summary)
 
-def beautify_string(item: MutableSequence, 
-                    kind: Union[SummaryKind, Type], 
-                    offsets: int) -> str:
+def beautify_string(
+    item: MutableSequence[Any], 
+    kind: Union[Representation, Type[Any]], 
+    offsets: int) -> str:
     """[summary]
 
     Args:
@@ -247,7 +251,7 @@ def beautify_string(item: MutableSequence,
     Returns:
         str: [description]
     """
-    if not isinstance(kind, SummaryKind):
+    if not isinstance(kind, Representation):
         kind = kinds[kind]
     indent = _get_indent(offsets = offsets)
     return f'{indent}{kind.name}: {kind.start}{item}{kind.end}'
@@ -266,7 +270,7 @@ def _get_indent(offsets: int, extra: int = 0) -> str:
     """
     return offsets * INDENT + extra * WHITESPACE
 
-def _classify_kind(item: Any) -> SummaryKind:
+def _classify_kind(item: Any) -> Representation:
     """[summary]
 
     Args:
@@ -299,28 +303,34 @@ def _classify_kind(item: Any) -> SummaryKind:
     
 """ Module Level Attributes """
 
-kinds: Dict[str, SummaryKind] = {}
-kinds[str] = SummaryKind(name = 'string',
-                         method = beautify_string,
-                         start = '',
-                         end = '')
-kinds[MutableMapping] = SummaryKind(name = 'dictionary',
-                                    method = beautify_mapping,
-                                    start = '{',
-                                    end = '}')
-kinds[MutableSequence] = SummaryKind(name = 'list',
-                                     method = beautify_sequence,
-                                     start = '[',
-                                     end = ']')
-kinds[Sequence] = SummaryKind(name = 'tuple',
-                              method = beautify_sequence, 
-                              start = '(',
-                              end = ')')
-kinds[set] = SummaryKind(name = 'set',
-                         method = beautify_sequence,
-                         start = '{',
-                         end = '}')
-kinds[object] = SummaryKind(name = 'object',
-                            method = beautify_object,
-                            start = '',
-                            end = '')
+kinds: Dict[str, Representation] = {}
+kinds[str] = Representation(
+    name = 'string',
+    method = beautify_string,
+    start = '',
+    end = '')
+kinds[MutableMapping] = Representation(
+    name = 'dictionary',
+    method = beautify_mapping,
+    start = '{',
+    end = '}')
+kinds[MutableSequence] = Representation(
+    name = 'list',
+    method = beautify_sequence,
+    start = '[',
+    end = ']')
+kinds[Sequence] = Representation(
+    name = 'tuple',
+    method = beautify_sequence,
+    start = '(',
+    end = ')')
+kinds[set] = Representation(
+    name = 'set',
+    method = beautify_sequence,
+    start = '{',
+    end = '}')
+kinds[object] = Representation(
+    name = 'object', 
+    method = beautify_object,
+    start = '',
+    end = '')

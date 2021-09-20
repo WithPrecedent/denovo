@@ -12,8 +12,12 @@ Contents:
 In general, python files in denovo are over-documented to allow beginning
 programmers to understand basic design choices that were made. If there is any
 area of the documentation that could be made clearer, please don't hesitate to 
-email me - I want to ensure the package is as accessible as possible.
+email me - I want to ensure the package is as accessible and useful as possible.
 
+ToDo:
+    Create stubs for classes to prevent "cannot subclass ... has type Any" 
+        errors.
+        
 """
 __version__ = '0.1.0'
 
@@ -23,13 +27,18 @@ __author__ = 'Corey Rayburn Yung'
 
 
 import importlib
-from typing import Any, Optional
+from typing import Any
 
-from .utilities import alias
-from .utilities import lazy
-from .types import framework
-
-
+# from .files import lazy
+# from .utilities import dynamic
+# from .describe import unit
+# from .utilities import modify
+# from .core import base
+# from . import core
+# from . import describe
+# from . import files
+# from . import types
+# from . import utilities
 
 """ 
 denovo imports are designed to allow key classes and functions to have first or 
@@ -58,28 +67,35 @@ the lazy importation system used throughout denovo.
 
 """
 importables: dict[str, str] = {
+    'core': 'core',
+    'describe': 'describe',
+    'files': 'files',
     'types': 'types',
     'utilities': 'utilities',
     
+    'base': 'core.base',
+    'foundry': 'core.foundry',
+    
+    'module': 'describe.module',
+    'package': 'describe.package',
+    'recap': 'describe.recap',
+    'unit': 'describe.unit',
+    
+    'configuration': 'files.configuration',
+    'filing': 'files.filing',
+    'lazy': 'files.lazy',
+    
     'containers': 'types.containers',
-    'framework': 'types.framework',
+    'convert': 'types.convert',
     'quirks': 'types.quirks',
     'structures': 'types.structures',
              
-    'classes': 'utilities.classes',
     'clock': 'utilities.clock',
-    'convert': 'utilities.convert',
-    'easy': 'utilities.easy',
-    'filing': 'utilities.filing',
-    'foundry': 'utilities.foundry',
-    'lazy': 'utilities.lazy',
-    'memory': 'utilities.memory',
+    'dynamic': 'utilities.dynamic',
     'modify': 'utilities.modify',
-    'module': 'utilities.module',
-    'package': 'utilities.package',
-    'recap': 'utilities.recap',
+    'observe': 'utilities.observe',
     'test': 'utilities.test',
-    'unit': 'utilities.unit'}
+    }
 
            
 def __getattr__(name: str) -> Any:

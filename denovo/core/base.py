@@ -1,5 +1,5 @@
 """
-types: denovo type protocols, aliases, and variables
+framework: denovo type protocols, aliases, and variables
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -18,9 +18,10 @@ registration.
 
 Contents:
     Type Aliases:
-        denovo.alias.Operation: generic, flexible Callable type alias.
-        denovo.alias.Signatures: dict of denovo.alias.Signatures type.
-        denovo.alias.Wrappable: type for an item that can be wrapped by a decorator.
+        Operation: generic, flexible Callable type alias.
+        Signatures: dict of inspect.Signature types.
+        Types: dict of Type[Any] types.
+        Wrappable: type for an item that can be wrapped by a decorator.
     Module Level Variables:
         BUILTINS (dict): mapping with str names of builtin in a types and values
             as the (generic) type to compare against.
@@ -48,14 +49,29 @@ ToDo:
 from __future__ import annotations
 import abc
 from collections.abc import (
+    Callable, Collection, Container, Generator, Hashable, Iterable, Iterator, 
     Mapping, MutableMapping, MutableSequence, Sequence, Set)
 import copy
 import dataclasses
 import datetime
+import functools
 import inspect
-from typing import Any, ClassVar, Optional, Type, Union, get_origin
+import re
+from typing import (
+    Any, ClassVar, Optional, Type, Union, get_origin, get_type_hints)
 
 import denovo
+
+""" Type Aliases """
+
+# Simpler alias for generic callable.
+Operation = Callable[..., Any]
+# Abbreviated alias for a dict of inspect.Signature types.
+Signatures = MutableMapping[str, inspect.Signature]
+# Alias for dict of Type[Any] types.
+Types = MutableMapping[str, Type[Any]]
+# Shorter alias for things that can be wrapped.
+Wrappable = Union[object, Type[Any], Operation]
 
 """ Module Level Variables """
 
@@ -72,20 +88,52 @@ BUILTINS: dict[str, Type[Any]] = {
     'bytes': bytes,
     'datetime': datetime.datetime}
 
+GENERICS: list[Type[Any]] = [
+    Callable, #type: ignore
+    MutableMapping,
+    Mapping,
+    tuple,
+    MutableSequence,
+    Sequence,
+    Set,
+    Iterator,
+    Iterable,
+    Generator,
+    Collection,
+    Container,
+    Hashable]
+
 """ Module Attribute Accessor """
 
 def __getattr__(attribute: str) -> Any:
     """Adds module level access to 'registry' and 'matcher'."""
     if attribute in ['registry']:
-        _get_registry()
+        return get_registry()
     else:
         raise AttributeError(
             f'{attribute} not found in {globals()["__module__"]}')    
 
-def _get_registry() -> MutableMapping[str, Type[Any]]:
+def get_registry() -> Types:
+    """
+    """
     complete = copy.deepcopy(Kind._registry)
     complete.update(BUILTINS)
     return complete 
+
+""" Private Methods """
+
+def _snakify(item: str) -> str:
+    """Converts a capitalized str to snake case.
+
+    Args:
+        item (str): str to convert.
+
+    Returns:
+        str: 'item' converted to snake case.
+
+    """
+    item = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', item)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', item).lower()
     
 """ Simplified Protocol System """
 
@@ -93,27 +141,41 @@ def _get_registry() -> MutableMapping[str, Type[Any]]:
 class Kind(abc.ABC):
     """Base class for easy protocol typing.
     
+    The Kind system allows virtual subclassing based by matching various aspects
+    of a class with those required. 
+    
     Kind must be subclassed either directly or by using the helper function
     'kindify'. All of its attributes are stored as class-level variables and 
     subclasses are not designed to be instanced.
     
     Args:
-        attributes (ClassVar[list[str]]): a list of the str names of attributes
-            that are neither methods nor properties. Defaults to an empty list.
-        methods: ClassVar[list[str]] = a list of str names of methods. Defaults 
-            to an empty list.
-        properties: ClassVar[list[str]] = a list of str names of properties. 
+        attributes (ClassVar[Union[list[str], Types]]): a list of the str names 
+            of attributes that are neither methods nor properties or a dict of 
+            str names of attributes that are neither methods nor properties 
+            with values that are types of those attributes. Defaults to an empty 
+            list.
+        methods (ClassVar[Union[list[str], Signatures]]): a list of str names of 
+            methods or a dict of str names of methods with values that are 
+            inspect.Signature type for the named methods. Defaults to an empty 
+            list.
+        properties (ClassVar[list[str]]): a list of str names of properties. 
             Defaults to an empty list.
-        signatures: ClassVar[denovo.alias.Signatures]  = a dict with keys as 
-            str names of methods and values as inspect.Signature classes. 
-            Defaults to an empty dict.
+        generic (ClassVar[Optional[Type[Any]]]): any generic type (e.g. the
+            base classes in collections.abc) that the Kind must be a subclass
+            of. Defaults to None.
+        contains (ClassVar[Optional[Union[Any, tuple[Any, ...]]]]): if 'generic'
+            is a containers, 'contains' may refer to the allowed types in that
+            container.
+        _registry (ClassVar[Types]): dict which stores registered Kind 
+            subclasses.
     
     """
-    attributes: ClassVar[list[str]] = []
-    methods: ClassVar[list[str]] = []
+    attributes: ClassVar[Union[list[str], Types]] = []
+    methods: ClassVar[Union[list[str], Signatures]] = []
     properties: ClassVar[list[str]] = []
-    signatures: ClassVar[denovo.alias.Signatures] = {}
-    _registry: ClassVar[MutableMapping[str, Type[Any]]] = {}
+    generic: ClassVar[Optional[Type[Any]]] = None
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = None
+    _registry: ClassVar[Types] = {}
     
     """ Initialization Methods """
     
@@ -123,32 +185,68 @@ class Kind(abc.ABC):
             super().__init_subclass__(**kwargs) # type: ignore
         except AttributeError:
             pass
-        key = denovo.modify.snakify(cls.__name__)
+        key = _snakify(cls.__name__)
         cls._registry[key] = cls
 
     """ Properties """
     
     @property
-    def registry(self) -> dict[str, Union[Type[Any], Kind]]:
+    def registry(self) -> Types:
         """Returns internal registry with builtin types added."""
-        return _get_registry() # type: ignore
+        return get_registry()
 
     """ Public Methods """
+    
+    @classmethod
+    def create(
+        cls,     
+        attributes: Optional[Union[list[str], Types]] = None,
+        methods: Optional[Union[list[str], Signatures]] = None,
+        properties: Optional[list[str]] = None,
+        generic: Optional[Type[Any]] = None,
+        contains: Optional[Union[Any, tuple[Any, ...]]] = None) -> Type[Kind]:
+        """[summary]
+
+        Using 'create' will not allow the constructed Kinds to be usable by 
+        mypy because the creation does not occur until runtime.
+        
+        Args:
+            attributes (Optional[Union[list[str], Types]]): [description]. 
+                Defaults to None.
+            methods (Optional[Union[list[str], Signatures]]): [description]. 
+                Defaults to None.
+            properties (Optional[list[str]]): [description]. Defaults to None.
+            generic (Optional[Optional[Type[Any]]]): [description]. 
+                Defaults to None.
+
+        Returns:
+            Kind: [description]
+            
+        """
+        new_kind = copy.deepcopy(cls)
+        for trait in [
+            'attributes', 'methods', 'properties', 'generic', 'contains']:
+            if locals()[trait]:
+                setattr(new_kind, trait, locals()[trait])
+            # Adds required trait data from this class to 'new_kind'.
+            if getattr(cls, trait):
+                if (isinstance(getattr(cls, trait), MutableMapping)
+                    and isinstance(getattr(new_kind, trait), MutableMapping)):
+                    getattr(new_kind, trait).update(getattr(cls, trait))
+                elif (isinstance(getattr(cls, trait), MutableSequence)
+                    and isinstance(getattr(new_kind, trait), MutableSequence)):
+                    getattr(new_kind, trait).extend(getattr(cls, trait))
+                elif (isinstance(getattr(cls, trait), tuple)
+                    and isinstance(getattr(new_kind, trait), tuple)):
+                    value = getattr(new_kind, trait) + getattr(cls, trait)
+                    setattr(new_kind, trait, value)
+        return new_kind
     
     @classmethod
     def register(cls, item: Type[Any], name: Optional[str] = None) -> None:
         """
         """
-        key = name or denovo.modify.snakify(item.__name__)
-        try:
-            item = item.__bound__
-            print('test yes register bound')
-            # item = item.__orig_class__
-            print('test yes register orig_class')
-            item = get_origin(item)
-            print('test item orig', item)
-        except AttributeError:
-            pass
+        key = name or _snakify(item.__name__)
         cls._registry[key] = item
         return
         
@@ -159,41 +257,50 @@ class Kind(abc.ABC):
         """Tests whether 'subclass' has the relevant characteristics."""
         return is_kind(item = subclass, kind = cls) # type: ignore
 
+
 def identify(item: Any) -> str:
     """Determines the kind/type of 'item' and returns its str name."""
     if not inspect.isclass(item):
         item = item.__class__
-    else:
-        try:
-            item = item.__bound__
-            print('test yes identify bound')
-            # item = item.__orig_class__
-            item = get_origin(item)
-        except AttributeError:
-            pass
-    for name, kind in _get_registry().items():
+    for name, kind in get_registry().items():
         try:
             if issubclass(item, kind):
                 return name
         except TypeError:
-            if issubclass(get_origin(item), kind):
+            if issubclass(get_origin(item), kind): # type: ignore
                 return name
     raise KeyError(f'item {str(item)} does not match any recognized type')
+
+def is_generic(
+    item: Union[Type[Any], object], 
+    generic: Optional[Type[Any]],
+    contains: Optional[Union[Any, tuple[Any, ...]]] = None) -> bool:
+    """Tests whether 'item' is a subclass or instance of 'generic'.
     
-def is_kind(item: Union[Type[Any], object], 
-            kind: Kind) -> bool:
+    Returns True if 'item' is a subclass/instance of 'generic' or 'generic' is 
+    None.
+    
+    """
+    if not inspect.isclass(item):
+        item = item.__class__
+    return generic is None or issubclass(item, generic) # type: ignore
+   
+def is_kind(item: Union[Type[Any], object], kind: Kind) -> bool:
      """Returns whether 'item' is an instance of subclass of 'kind'."""   
-     return denovo.unit.has_traits(
-         item = item,
-         attributes = kind.attributes,
-         methods = kind.methods, 
-         properties = kind.properties,
-         signatures = kind.signatures)
+     return (
+         denovo.unit.has_traits( # type: ignore
+            item = item,
+            attributes = kind.attributes,
+            methods = kind.methods, 
+            properties = kind.properties)
+         and is_generic(
+             item = item, 
+             generic = kind.generic,
+             contains = kind.contains))
      
 def kindify(name: str, 
             item: Type[Any], 
-            exclude_private: bool = True,
-            include_signatures: bool = True) -> Type[Kind]:
+            exclude_private: bool = True) -> Type[Kind]:
     """Creates Kind named 'name' from passed 'item'."""
     kind = dataclasses.make_dataclass(
         name,
@@ -208,13 +315,41 @@ def kindify(name: str,
     kind.properties = denovo.unit.name_properties( # type: ignore
         item = item,
         exclude_private = exclude_private)
-    if include_signatures:
-        kind.signatures = denovo.unit.get_signatures( # type: ignore
-            item = item,
-            exclude_private = exclude_private)
+    for generic in GENERICS:
+        if issubclass(item, generic):
+            kind.generic = generic # type: ignore
+            break
     return kind
 
+""" Base denovo Kinds """
 
+@dataclasses.dataclass
+class Dictionary(Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = MutableMapping
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (
+        Hashable, Any)
+
+
+@dataclasses.dataclass
+class Dyad(Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = tuple
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (
+        Sequence, Sequence)
+  
+
+@dataclasses.dataclass
+class Group(Kind):
+    
+    methods: ClassVar[Union[list[str], Signatures]] = ['add', 'subset']
+    generic: ClassVar[Optional[Type[Any]]] = Collection
+  
+
+@dataclasses.dataclass
+class Named(Kind):
+    
+    attributes: ClassVar[Union[list[str], Types]] = {'name': str}
 
 
 # @dataclasses.dataclass
@@ -267,66 +402,6 @@ def kindify(name: str,
 #     else:
 #         raise TypeError('keystone must be a str or Keystone type')
 #     return dataclasses.dataclass(type(name, tuple(bases), **kwargs))
-
-
-# @dataclasses.dataclass
-# class Workshop(denovo.Lexicon):
-    
-#     contents: dict[str, Kind] = dataclasses.field(default_factory = dict)
-    
-#     """ Properties """
-    
-#     @property
-#     def matches(self) -> dict[tuple[Type, ...], str]:
-#         return {tuple(k.origins): k.name for k in self.values()}
-    
-#     @property
-#     def types(self) -> dict[str, Type]:
-#         return {k.name: k.comparison for k in self.values()}
-    
-#     """Public Methods"""
-    
-#     def categorize(self, item: Any) -> str:
-#         """[summary]
-
-#         Args:
-#             item (Any): [description]
-
-#         Raises:
-#             KeyError: [description]
-
-#         Returns:
-#             str: [description]
-            
-#         """
-#         if inspect.isclass(item):
-#             method = issubclass
-#         else:
-#             method = isinstance
-#         for key, value in self.kinds.items():
-#             if method(item, key):
-#                 return value
-#         raise KeyError(f'item does not match any recognized type')
-       
-#     def convert(self, item: Any, output: Union[Type, str], **kwargs: Any) -> Any:
-#         """[summary]
-
-#         Args:
-#             item (Any): [description]
-#             output (str): [description]
-
-#         Returns:
-#             Any: [description]
-            
-#         """
-#         start = self.categorize(item = item)
-#         if not isinstance(output, str):
-#             stop = self.categorize(item = output)
-#         else:
-#             stop = output
-#             output = self.kinds[output].name
-#         method = getattr(self.kinds[output], f'from_{start}')
-#         return method(item = item, **kwargs)
 
 
 # @dataclasses.dataclass

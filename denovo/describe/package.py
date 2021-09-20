@@ -15,7 +15,7 @@ from __future__ import annotations
 import dataclasses
 import pathlib
 import types
-from typing import Any, Optional, Type, Union
+from typing import Union
 
 import denovo
 

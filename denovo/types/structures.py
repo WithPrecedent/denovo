@@ -27,7 +27,18 @@ Classes:
     System (Graph): a lightweight directed acyclic graph (DAG). Internally, the 
         graph is stored as an adjacency list. As a result, it should primarily 
         be used for workflows or other uses that do require large graphs.
-
+    Type Variables:
+        Adjacency (TypeVar): defines a raw adjacency list type.
+        Connections (TypeVar): defines set of network connections type.
+        Dyad (TypeVar): defines a double sequence type.
+        Edge (TypeVar): defines a composite edge.
+        Edges (TypeVar): defines a collection of Edges.
+        Matrix (TypeVar): defines a raw adjacency matrix type.
+        Nodes (TypeVar): defines a type for a single Node or a collection of 
+            Nodes.
+        Pipeline (TypeVar): defines a sequence of Nodes.
+        Pipelines (TypeVar): defines a collection of Pipelines.
+        
 To Do:
     Add an Edge class and seamless support for it in Graph to allow for weights,
         direction, and other edge attributes.
@@ -37,25 +48,136 @@ To Do:
 from __future__ import annotations
 import abc
 import collections
-from collections.abc import Hashable, MutableMapping, Sequence
+from collections.abc import Collection, Hashable, MutableMapping, Sequence
 import collections.abc
 import copy
 import dataclasses
 import itertools
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, ClassVar, Optional, Type, Union
 
 import more_itertools
 
 import denovo
-from denovo.utilities.alias import (
-    Adjacency, Composite, Connections, Directed, Edge, Edges, Matrix, Node, 
-    Nodes, Pipeline, Pipelines)
+
+""" Composite-Related Kinds """
+
+@dataclasses.dataclass
+class Node(denovo.base.Kind):
+    
+    methods: ClassVar[Union[list[str], denovo.base.Signatures]] = [
+        '__hash__', '__eq__', '__ne__']
+    generic: ClassVar[Optional[Type[Any]]] = Hashable
+
+
+@dataclasses.dataclass
+class Composite(denovo.base.Kind):
+    
+    methods: ClassVar[Union[list[str], denovo.base.Signatures]] = [
+        'add', 'delete', 'merge', 'subset', 'walk', '__add__']
+    properties: ClassVar[list[str]] = ['nodes']
+
+
+@dataclasses.dataclass
+class Connections(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = Collection
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = Node
+
+
+@dataclasses.dataclass
+class Network(Composite):
+    
+    methods: ClassVar[Union[list[str], denovo.base.Signatures]] = [
+        'connect', 'disconnect']
+    properties: ClassVar[list[str]] = ['edges']
+
+
+@dataclasses.dataclass
+class Directed(Network):
+    
+    methods: ClassVar[Union[list[str], denovo.base.Signatures]] = [
+        'prepend', 'append']
+    properties: ClassVar[list[str]] = ['endpoints', 'paths', 'roots']
+
+
+@dataclasses.dataclass
+class Graph(Directed):
+    
+    methods: ClassVar[Union[list[str], denovo.base.Signatures]] = [
+        'create']
+    properties: ClassVar[list[str]] = ['adjacency', 'matrix']
+
+
+@dataclasses.dataclass
+class Adjacency(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = MutableMapping
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (
+        str, Connections)
+
+
+@dataclasses.dataclass
+class Edge(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = tuple
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (Node, Node)
+
+
+@dataclasses.dataclass
+class Edges(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = tuple
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (Edge)
+    
+
+@dataclasses.dataclass
+class Labels(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = Sequence
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = str
+
+
+@dataclasses.dataclass
+class RowColumn(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = Sequence
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = int
+    
+    
+@dataclasses.dataclass
+class RawMatrix(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = tuple
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (
+        RowColumn, RowColumn)
+    
+    
+@dataclasses.dataclass
+class Matrix(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = tuple
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = (
+        RawMatrix, Labels)
+
+
+@dataclasses.dataclass
+class Pipeline(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = Sequence
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = Node
+
+
+@dataclasses.dataclass
+class Pipelines(denovo.base.Kind):
+    
+    generic: ClassVar[Optional[Type[Any]]] = Collection
+    contains: ClassVar[Optional[Union[Any, tuple[Any, ...]]]] = Pipeline
 
 
 """ Node Base Class and Kind Type """
 
 @dataclasses.dataclass
-class Node(denovo.framework.Kind, Hashable, abc.ABC):
+class Nodifier(Hashable, abc.ABC):
     """Vertex wrapper to provide hashability to any object.
     
     Node acts a basic wrapper for any item stored in a denovo Structure. An
@@ -74,7 +196,6 @@ class Node(denovo.framework.Kind, Hashable, abc.ABC):
             match the appropriate section name in a settings instance. 
             Defaults to None. 
         
-
     """
     contents: Optional[Any] = None
     name: Optional[str] = None
@@ -89,7 +210,10 @@ class Node(denovo.framework.Kind, Hashable, abc.ABC):
         classes.
         
         """
-        super().__init_subclass__(*args, **kwargs)
+        try:
+            super().__init_subclass__(*args, **kwargs) # type: ignore
+        except AttributeError:
+            pass
         cls.__hash__ = Node.__hash__ # type: ignore
         cls.__eq__ = Node.__eq__ # type: ignore
         cls.__ne__ = Node.__ne__ # type: ignore
@@ -101,22 +225,6 @@ class Node(denovo.framework.Kind, Hashable, abc.ABC):
                 
     """ Dunder Methods """
 
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Returns whether 'subclass' is a virtual or real subclass.
-
-        Args:
-            subclass (Type[Any]): item to test as a subclass.
-
-        Returns:
-            bool: whether 'subclass' is a real or virtual subclass.
-            
-        """
-        return (subclass in cls.__subclasses__() 
-                or denovo.unit.has_methods(
-                    item = subclass,
-                    methods = ['__hash__', '__eq__', '__ne__']))
-        
     def __hash__(self) -> int:
         """Makes Node hashable so that it can be used as a key in a dict.
 
@@ -238,282 +346,10 @@ class Node(denovo.framework.Kind, Hashable, abc.ABC):
             except AttributeError:
                 raise AttributeError(f'{attribute} is not in {self.__name__}') 
         
-""" Composite Data Structure Base Class and Kind Type """        
-    
-@dataclasses.dataclass # type: ignore
-class Composite(denovo.containers.Bunch, abc.ABC):
-
-    """ Required Properties """
-
-    @abc.abstractproperty
-    def nodes(self) -> set[Node]:
-        """Returns all stored nodes as a set."""
-        pass
-
-    """ Required Methods """
-    
-    @abc.abstractclassmethod
-    def create(cls, source: Any) -> Composite:
-        """Creates an instance of a Composite from 'source'.
-        
-        Args:
-            source (Any): supported data structure.
-                
-        Returns:
-            Composite: a Composite instance created based on 'source'.
-                
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def add(
-        self, 
-        node: Node,
-        ancestors: Optional[Nodes] = None,
-        descendants: Optional[Nodes] = None) -> None:
-        """Adds 'node' to the stored Composite.
-        
-        Args:
-            node (Node): a node to add to the stored Composite.
-            ancestors (Nodes): node(s) from which 'node' should be connected to
-                'node'.
-            descendants (Nodes): node(s) to which 'node' should be connected to
-                'node'.
-
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def delete(self, node: Node) -> None:
-        """Deletes node from Composite.
-        
-        Args:
-            node (Node): node to delete from 'contents'.
-  
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def merge(self, item: Any) -> None:
-        """Adds 'item' to this Composite.
-
-        This method is roughly equivalent to a dict.update, adding nodes to the 
-        existing Composite. 
-        
-        Args:
-            item (Any): another Composite or supported data structure.
-            
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def subset(
-        self, 
-        include: Optional[Nodes] = None,
-        exclude: Optional[Nodes] = None) -> Composite:
-        """Returns a Composite with some items removed from 'contents'.
-        
-        Args:
-            include (Optional[Nodes]): nodes to include in the new Composite. 
-                Defaults to None.
-            exclude (Optional[Nodes]): nodes to exclude in the new Composite. 
-                Defaults to None.
-                  
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def walk(
-        self, 
-        start: Node, 
-        stop: Node, 
-        path: Optional[Pipelines] = None) -> Pipelines:
-        """Returns all paths in graph from 'start' to 'stop'.
-        
-        Args:
-            start (Node): node to start paths from.
-            stop (Node): node to stop paths.
-            path (Pipelines): paths from 'start' to 'stop'. Defaults to None. 
-
-        Returns:
-            Pipelines: all paths from 'start' to 'stop'.
-            
-        """
-        pass
- 
-    """ Dunder Methods """
- 
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Returns whether 'subclass' is a virtual or real subclass.
-
-        Args:
-            subclass (Type[Any]): item to test as a subclass.
-
-        Returns:
-            bool: whether 'subclass' is a real or virtual subclass.
-            
-        """
-        return (
-            subclass in cls.__subclasses__() 
-            or (denovo.unit.has_methods(
-                item = subclass,
-                methods = ['add', 'delete', 'merge', 'subset', 'walk', 
-                           '__add__'])
-                and denovo.unit.has_properties(
-                    item = subclass, 
-                    attributes = 'nodes')))
-  
-    def __add__(self, other: Any) -> None:
-        """Adds 'other' to the stored graph using the 'merge' method.
-
-        Args:
-            other (Any): another Composite or supported data structure.
-            
-        """
-        self.merge(item = other)        
-        return     
-    
-
-""" Base Class for Composites with Edges """
-
+""" """
 
 @dataclasses.dataclass # type: ignore
-class Network(Composite, abc.ABC):
-
-
-    """ Required Properties """
-    
-    @abc.abstractproperty
-    def edges(self) -> Edges:
-        """Returns instance as an edge list."""
-        pass
-       
-    """ Required Methods """
-    
-    @abc.abstractmethod     
-    def connect(self, start: Node, stop: Node) -> None:
-        """Adds an edge from 'start' to 'stop'.
-
-        Args:
-            start (Node): name of node for edge to start.
-            stop (Node): name of node for edge to stop.
-
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def disconnect(self, start: Node, stop: Node) -> None:
-        """Deletes edge from Composite.
-
-        Args:
-            start (Node): starting node for the edge to delete.
-            stop (Node): ending node for the edge to delete.
-
-        """
-        pass
-
-    """ Dunder Methods """
-
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Returns whether 'subclass' is a virtual or real subclass.
-
-        Args:
-            subclass (Type[Any]): item to test as a subclass.
-
-        Returns:
-            bool: whether 'subclass' is a real or virtual subclass.
-            
-        """
-        return (
-            subclass in cls.__subclasses__() 
-            or (super().__subclasshook__(subclass = subclass) 
-                and denovo.unit.has_methods(
-                    item = subclass,
-                    attributes = ['add', 'delete', 'merge', 'walk', 'subset'])
-                    and denovo.unit.has_properties(
-                        item = subclass,
-                        attributes = 'edges')))
-
-
-@dataclasses.dataclass # type: ignore
-class Directed(Network, abc.ABC):
-
-    """ Required Properties """
-
-    @abc.abstractproperty
-    def endpoints(self) -> set[Node]:
-        """Returns endpoint nodes as a set."""
-        pass
-
-    @abc.abstractproperty
-    def paths(self) -> Pipelines:
-        """Returns all paths as Pipelines."""
-        pass
-       
-    @abc.abstractproperty
-    def roots(self) -> set[Node]:
-        """Returns root nodes as a set."""
-        pass
-    
-    """ Required Methods """
-    
-    @abc.abstractmethod     
-    def append(self, item: Any) -> None:
-        """Appends 'item' to the endpoints.
-
-        Appending creates an edge between every endpoint of this instance
-        and the every root of 'item'.
-
-        Args:
-            item (Any): any supported data type which can be added.
-      
-        Raises:
-            TypeError: if 'item' is not of a supported data type.  
-               
-        """
-        pass
-    
-    @abc.abstractmethod 
-    def prepend(self, item: Any) -> None:
-        """Prepends 'item' to the roots.
-
-        Prepending creates an edge between every endpoint of 'item' and every
-        root of this instance.
-
-        Args:
-            item (Any): any supported data type which can be added.
-            
-        Raises:
-            TypeError: if 'item' is not of a supported data type.
-                
-        """
-        pass
-
-    @classmethod
-    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
-        """Returns whether 'subclass' is a virtual or real subclass.
-
-        Args:
-            subclass (Type[Any]): item to test as a subclass.
-
-        Returns:
-            bool: whether 'subclass' is a real or virtual subclass.
-            
-        """
-        return (
-            subclass in cls.__subclasses__() 
-            or (super().__subclasshook__(subclass = subclass) 
-                and denovo.unit.has_methods(
-                    item = subclass,
-                    methods = ['add', 'delete', 'merge', 'subset', 'walk'])
-                and denovo.unit.has_properties(
-                    item = subclass,
-                    attributes = ['endpoints', 'paths', 'roots'])))
-
-@dataclasses.dataclass # type: ignore
-class Graph(Directed, abc.ABC):
+class Graph(object):
     """Base class for denovo graph data structures.
     
     Args:
@@ -630,7 +466,7 @@ class System(denovo.containers.Lexicon):
 
                   
     """  
-    contents: denovo.alias.Dictionary = dataclasses.field(
+    contents: denovo.base.Dictionary = dataclasses.field(
         default_factory = dict)
     default_factory: Any = set
     
@@ -1679,3 +1515,68 @@ class System(denovo.containers.Lexicon):
 #         return new_line.join(summary) 
 
 
+   
+""" Type Variables """
+
+# Adjacency = TypeVar(
+#     'Adjacency', 
+#     bound = MutableMapping[Node, Union[set[Node], Sequence[Node]]])
+# Connections = TypeVar(
+#     'Connections', 
+#     bound = Collection[Node])
+# Dyad = TypeVar(
+#     'Dyad', 
+#     bound = tuple[Sequence[Any], Sequence[Any]])
+# Edge = TypeVar(
+#     'Edge', 
+#     bound = tuple[Node, Node])
+# Edges = TypeVar(
+#     'Edges', 
+#     bound = Collection[tuple[Node, Node]])
+# Matrix = TypeVar(
+#     'Matrix', 
+#     bound = tuple[Sequence[Sequence[int]], Sequence[Node]])
+# Nodes = TypeVar(
+#     'Nodes', 
+#     bound = Union[Node, Collection[Node]])
+# Pipeline = TypeVar(
+#     'Pipeline', 
+#     bound = Sequence[Node])
+# Pipelines = TypeVar(
+#     'Pipelines', 
+#     bound = Collection[Sequence[Node]])
+
+
+
+# """ Aliases"""
+
+# _AdjacencyType = MutableMapping[Node, Union[set[Node], Sequence[Node]]]
+# _ConnectionsType = Collection[Node]
+# _DyadType = tuple[Sequence[Any], Sequence[Any]]
+# _EdgeType = tuple[Node, Node]
+# _EdgesType = Collection[_EdgeType]
+# _MatrixType = tuple[Sequence[Sequence[int]], Sequence[Node]]
+# _NodesType = Union[Node, _ConnectionsType]
+# _PipelineType = Sequence[Node]
+# _PipelinesType = Collection[_PipelineType]
+
+# """ Type Variables """
+
+# Adjacency = TypeVar('Adjacency', bound = _AdjacencyType)
+# Connections = TypeVar('Connections', bound = _ConnectionsType)
+# Dyad = TypeVar('Dyad', bound = _DyadType)
+# Edge = TypeVar('Edge', bound = _EdgeType)
+# Edges = TypeVar('Edges', bound = _EdgesType)
+# Matrix = TypeVar('Matrix', bound = _MatrixType)
+# Nodes = TypeVar('Nodes', bound = _NodesType)
+# Pipeline = TypeVar('Pipeline', bound = _PipelineType)
+# Pipelines = TypeVar('Pipelines', bound = _PipelinesType)
+
+# for item in ['Adjacency', 'Connections', 'Dyad', 'Edge', 'Edges', 'Matrix', 
+#              'Nodes', 'Pipeline', 'Pipelines']:
+#     print(denovo.modify.snakify(item))
+#     print(item)
+#     name = denovo.modify.snakify(item)
+#     # kind = globals()[f'_{item}Type']
+#     kind = globals()[item]
+#     denovo.base.Kind.register(item = kind, name = name)

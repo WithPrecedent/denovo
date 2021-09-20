@@ -36,7 +36,7 @@ import denovo
 
 """ Adders """
 
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def add_prefix(item: Any, prefix: str, divider: str = '') -> Any:
     """Adds 'prefix' to 'item' with 'divider' in between.
     
@@ -200,7 +200,7 @@ def add_slots(item: Type[Any]) -> Type[Any]:
             item.__qualname__ = qualname
     return item
 
-@denovo.easy.dispatcher # type: ignore 
+@denovo.dynamic.dispatcher # type: ignore 
 def add_suffix(item: Any, suffix: str, divider: str = '') -> Any:
     """Adds 'suffix' to 'item' with 'divider' in between.
     
@@ -332,7 +332,7 @@ def add_suffix_to_tuple(
 
 """ Dividers """
 
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def cleave(
     item: Any, 
     divider: Any,
@@ -394,7 +394,7 @@ def cleave_str(
         prefix = suffix = item
     return prefix, suffix
 
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def separate(
     item: Any, 
     divider: Any,
@@ -447,7 +447,7 @@ def separate_str(
  
 """ Subtractors """
 
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def deduplicate(item: Any) -> Any:
     """Deduplicates contents of 'item.
     
@@ -494,7 +494,7 @@ def deduplicate_tuple(item: tuple[Any, ...]) -> tuple[Any, ...]:
     """
     return tuple(list(dict.fromkeys(item)))
     
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def drop_prefix(item: Any, prefix: str, divider: str = '') -> Any:
     """Drops 'prefix' from 'item' with 'divider' in between.
     
@@ -644,7 +644,7 @@ def drop_privates(item: list[Any]) -> list[Any]:
     else:
         return [i for i in item if not i.startswith('_')]
        
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def drop_substring(item: Any, substring: str) -> Any:
     """Drops 'substring' from 'item' with a possible 'divider' in between.
     
@@ -757,7 +757,7 @@ def drop_substring_from_tuple(
     return tuple([drop_substring(item = i, substring = substring) 
                   for i in item])    
      
-@denovo.easy.dispatcher # type: ignore
+@denovo.dynamic.dispatcher # type: ignore
 def drop_suffix(item: Any, suffix: str, divider: str = '') -> Any:
     """Drops 'suffix' from 'item' with 'divider' in between.
     

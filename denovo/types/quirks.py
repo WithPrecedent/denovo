@@ -69,12 +69,12 @@ class Quirk(abc.ABC):
             except ValueError:
                 pass
             # Stores 'cls' in 'quirks'.
-            denovo.framework.quirks[key] = cls
+            denovo.base.quirks[key] = cls
 
 """ Naming Mixin """
 
 @dataclasses.dataclass
-class Named(Quirk, denovo.framework.Kind, abc.ABC):
+class Namer(Quirk, abc.ABC):
     """Automatically creates a sensible 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 

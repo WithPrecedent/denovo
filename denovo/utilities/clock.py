@@ -42,11 +42,11 @@ def how_soon_is_now(
 
 """ Decorators """
 
-def timer(process: denovo.alias.Operation) -> denovo.alias.Operation:
+def timer(process: denovo.base.Operation) -> denovo.base.Operation:
     """Decorator for computing the length of time a process takes.
 
     Args:
-        process (denovo.alias.Operation): wrapped callable to compute the time 
+        process (denovo.base.Operation): wrapped callable to compute the time 
             it takes to complete its execution.
 
     """
@@ -55,8 +55,8 @@ def timer(process: denovo.alias.Operation) -> denovo.alias.Operation:
     except AttributeError:
         name = process.__class__.__name__
     def shell_timer(
-        operation: denovo.alias.Operation) -> denovo.alias.Operation:
-        def decorated(*args: Any, **kwargs: Any) -> denovo.alias.Operation:
+        operation: denovo.base.Operation) -> denovo.base.Operation:
+        def decorated(*args: Any, **kwargs: Any) -> denovo.base.Operation:
             def convert_time(
                 seconds: Union[int, float]) -> tuple[int, int, int]:
                 minutes, seconds = divmod(seconds, 60)

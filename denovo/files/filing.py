@@ -10,7 +10,7 @@ Contents:
     formats (Dict[str, FileFormat]): a dictionary of the default supported file
         formats.
     Clerk (object): interface for denovo file management classes and methods.
-    Distributor (object): base class for loading or saving items.
+    
     FileLoader (Distributor): handles file input.
     FileSaver (Distributor): handles file output.
      
@@ -28,34 +28,221 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, Mapping,
 import denovo
 
 
+
+""" File Related Base Classes """
+
+@dataclasses.dataclass # type: ignore
+class FileDistributor(abc.ABC):
+    """Base class for loading, saving or moving items.
+
+    Args:
+        formats (MutableMapping[str, FileFormat]): dict with keys of names of
+            file formats and values of File Format instances. Defaults to an
+            empty dict.
+
+    """
+    formats: MutableMapping[str, FileFormat] = dataclasses.field(
+        default_factory = dict)
+    shared: MutableMapping[str, FileFormat] = dataclasses.field(
+        default_factory = dict)
+
+    """ Required Subclass Methods """
+    
+    @abc.abstractmethod
+    def transfer(self,
+                 item: Any,
+                 file_path: Optional[Union[str, pathlib.Path]] = None,
+                 folder: Optional[Union[str, pathlib.Path]] = None,
+                 file_name: Optional[str] = None,
+                 file_format: Optional[Union[str, FileFormat]] = None,
+                 **kwargs: Any) -> None:
+        pass
+    
+    """ Private Methods """
+
+    def _get_file_format(
+        self,
+        file_format: Union[str, FileFormat]) -> FileFormat:
+        """Selects 'file_format' or returns FileFormat instance intact.
+
+        Args:
+            file_format (Union[str, FileFormat]): name of file format or a
+                FileFormat instance.
+
+        Raises:
+            TypeError: if 'file_format' is neither a str nor FileFormat type.
+
+        Returns:
+            FileFormat: appropriate instance.
+
+        """
+        if isinstance(file_format, FileFormat):
+            return file_format
+        elif isinstance(file_format, str):
+            return self.formats[file_format]
+        else:
+            raise TypeError('file_format must be a str or FileFormat type')
+    
+    def _combine(
+        self, 
+        folder: str,
+        file_name: Optional[str] = None,
+        extension: Optional[str] = None) -> pathlib.Path:
+        """Converts strings to pathlib Path object.
+
+        If 'folder' matches an attribute, the value stored in that attribute
+        is substituted for 'folder'.
+
+        If 'name' and 'extension' are passed, a file path is created. Otherwise,
+        a folder path is created.
+
+        Args:
+            folder (str): folder for file location.
+            name (str): the name of the file.
+            extension (str): the extension of the file.
+
+        Returns:
+            Path: formed from string arguments.
+
+        """
+        try:
+            folder = getattr(self, folder)
+        except (AttributeError, TypeError):
+            pass
+        if file_name and extension:
+            return pathlib.Path(folder).joinpath(f'{file_name}.{extension}')
+        else:
+            return pathlib.Path(folder)
+    
+    def _get_parameters(
+        self, 
+        file_format: FileFormat, 
+        **kwargs: Any) -> Dictionary:
+        """Creates complete parameters for a file input/output method.
+
+        Args:
+            file_format (FileFormat): an instance with information about the
+                needed and optional parameters.
+            kwargs: additional parameters to pass to an input/output method.
+
+        Returns:
+            Dictionary: parameters to be passed to an input/output 
+                method.
+
+        """
+        if file_format.parameters:
+            for specific, common in file_format.parameters.items():
+                if specific not in kwargs:
+                    kwargs[specific] = self.shared[common]
+        return kwargs # type: ignore
+
+    def _prepare_transfer(
+        self, 
+        file_path: Union[str, pathlib.Path],
+        folder: Union[str, pathlib.Path],
+        file_name: str,
+        file_format: Union[str, FileFormat]) -> (
+            tuple[pathlib.Path, FileFormat]):
+        """Prepares file path related arguments for loading or saving a file.
+
+        Args:
+            file_path (Union[str, Path]): a complete file path.
+            folder (Union[str, Path]): a complete folder path or the name of a
+                folder stored in 'clerk'.
+            file_name (str): file name without extension.
+            file_format (Union[str, FileFormat]): object with information about
+                how the file should be loaded or the key to such an object
+                stored in 'clerk'.
+            **kwargs: can be passed if additional options are desired specific
+                to the pandas or python method used internally.
+
+        Returns:
+            tuple: of a completed Path instance and FileFormat instance.
+
+        """
+        if file_path:
+            file_path = denovo.tools.pathlibify(item = file_path)
+            if not file_format:
+                file_format = [f for f in self.formats.values()
+                               if f.extension == file_path.suffix[1:]][0]
+        file_format = self._get_file_format(file_format = file_format)
+        extension = file_format.extension
+        if not file_path:
+            file_path = self._combine(folder = folder, 
+                                      file_name = file_name,
+                                      extension = extension)
+        return file_path, file_format
+
+    """ Dunder Methods """
+    
+    @classmethod
+    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a virtual or real subclass.
+
+        Args:
+            subclass (Type[Any]): item to test as a subclass.
+
+        Returns:
+            bool: whether 'subclass' is a real or virtual subclass.
+            
+        """
+        return (subclass in cls.__subclasses__() 
+                or denovo.unit.has_methods(
+                    item = subclass,
+                    methods = ['transfer']))      
+        
 @dataclasses.dataclass
-class FileFormat(object):
+class FileFormat(denovo.base.Kind):
     """File format information.
 
     Args:
-        name (str): the format name which should match the key when a FileFormat
-            instance is stored.
-        module (str): name of module where object to incorporate is, which can 
-            either be a denovo or non-denovo module. Defaults to 'denovo'.
-        extension (str): actual file extension to use. Defaults to None.
-        load_method (str): name of import method in 'module' to use. If module 
-            is None, the Distributor looks for the method as a local attribute. 
-            Defaults to None.
-        save_method (str): name of export method in 'module' to use. If module 
-            is None, the Distributor looks for the method as a local attribute. 
-            Defaults to None.
-        parameters (Mapping[Any, Any]]): shared parameters that may be passed to 
-            the import or export methods with a common name structure. Defaults 
-            to None.
+        name (Optional[str]): the format name which should match the key when a 
+            FileFormat instance is stored.
+        module (Optional[str]): name of module where object to incorporate is, 
+            which can either be a denovo or non-denovo module. Defaults to 
+            'denovo'.
+        extension (Optional[str]): str file extension to use. Defaults to None.
+        load_method (Optional[Union[str, types.FunctionType]]): if a str, it is
+            the name of import method in 'module' to use. Otherwise, it should
+            be a function for loading. Defaults to None.
+        save_method (Optional[Union[str, types.FunctionType]]): if a str, it is
+            the name of import method in 'module' to use. Otherwise, it should
+            be a function for saved. Defaults to None.
+        parameters (Mapping[str, str]]): shared parameters to use from 
+            configuration settings where the key is the parameter name that the 
+            load or save method should use and the value is the key for the 
+            argument in the shared parameters. Defaults to an empty dict. 
 
     """
-    name: str = None
-    module: str = 'denovo'
-    extension: str = None
-    load_method: str = None
-    save_method: str = None
+    name: Optional[str] = None
+    module: Optional[str] = 'denovo'
+    extension: Optional[str] = None
+    load_method: Optional[Union[str, types.FunctionType]] = None
+    save_method: Optional[Union[str, types.FunctionType]] = None
     parameters: Mapping[str, str] = dataclasses.field(default_factory = dict)
     
+    """ Dunder Methods """
+    
+    @classmethod
+    def __subclasshook__(cls, subclass: Type[Any]) -> bool:
+        """Returns whether 'subclass' is a virtual or real subclass.
+
+        Args:
+            subclass (Type[Any]): item to test as a subclass.
+
+        Returns:
+            bool: whether 'subclass' is a real or virtual subclass.
+            
+        """
+        return (subclass in cls.__subclasses__() 
+                or denovo.unit.has_attributes(
+                    item = subclass,
+                    methods = [
+                        'name', 'module', 'extension', 'load_method',
+                        'save_method', 'parameters']))
+
+
+""" Included File Formats """
 
 formats: Dict[str, FileFormat] = {
     'csv': FileFormat(
@@ -179,7 +366,7 @@ class Clerk(object):
 
     """
     settings: denovo.settings = None
-    root_folder: Union[str, pathlib.Path] = None
+    root_folder: Union[str, pathlib.Path] = pathlib.Path('..')
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
     formats: MutableMapping[str, FileFormat] = dataclasses.field(
@@ -192,7 +379,6 @@ class Clerk(object):
     def __post_init__(self) -> None:
         """Initializes class instance attributes."""
         # Validates core folder paths and writes them to disk.
-        self.root_folder = self.root_folder or pathlib.Path('..')
         self.root_folder = self.validate(path = self.root_folder)
         self.input_folder = self._validate_io_folder(path = self.input_folder)
         self.output_folder = self._validate_io_folder(path = self.output_folder)
@@ -212,10 +398,10 @@ class Clerk(object):
     """ Public Methods """
   
     def load(self,
-             file_path: Union[str, pathlib.Path] = None,
-             folder: Union[str, pathlib.Path] = None,
-             file_name: str = None,
-             file_format: Union[str, FileFormat] = None,
+             file_path: Optional[Union[str, pathlib.Path]] = None,
+             folder: Optional[Union[str, pathlib.Path]] = None,
+             file_name: Optional[str] = None,
+             file_format: Optional[Union[str, FileFormat]] = None,
              **kwargs: Any) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
@@ -244,14 +430,14 @@ class Clerk(object):
                                     folder = folder,
                                     file_name = file_name,
                                     file_format = file_format,
-                                    **kwargs: Any)
+                                    **kwargs)
 
     def save(self,
              item: Any,
-             file_path: Union[str, pathlib.Path] = None,
-             folder: Union[str, pathlib.Path] = None,
-             file_name: str = None,
-             file_format: Union[str, FileFormat] = None,
+             file_path: Optional[Union[str, pathlib.Path]] = None,
+             folder: Optional[Union[str, pathlib.Path]] = None,
+             file_name: Optional[str] = None,
+             file_format: Optional[Union[str, FileFormat]] = None,
              **kwargs: Any) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -278,7 +464,7 @@ class Clerk(object):
                             folder = folder,
                             file_name = file_name,
                             file_format = file_format,
-                            **kwargs: Any)
+                            **kwargs)
         return
 
     def validate(self, path: Union[str, pathlib.Path],
@@ -384,128 +570,6 @@ class Clerk(object):
 
 
 @dataclasses.dataclass
-class Distributor(abc.ABC):
-    """Base class for loading and saving classes.
-
-    Args:
-        clerk (Clerk): a related Clerk instance.
-
-    """
-    clerk: Clerk
-
-    """ Private Methods """
-
-    def _check_file_format(self,
-                           file_format: Union[str, FileFormat]) -> FileFormat:
-        """Selects 'file_format' or returns FileFormat instance intact.
-
-        Args:
-            file_format (Union[str, FileFormat]): name of file format or a
-                FileFormat instance.
-
-        Raises:
-            TypeError: if 'file_format' is neither a str nor FileFormat type.
-
-        Returns:
-            FileFormat: appropriate instance.
-
-        """
-        if isinstance(file_format, FileFormat):
-            return file_format
-        elif isinstance(file_format, str):
-            return self.clerk.formats[file_format]
-        else:
-            raise TypeError('file_format must be a str or FileFormat type')
-    
-    def _combine(self, 
-                 folder: str,
-                 file_name: str = None,
-                 extension: str = None) -> pathlib.Path:
-        """Converts strings to pathlib Path object.
-
-        If 'folder' matches an attribute, the value stored in that attribute
-        is substituted for 'folder'.
-
-        If 'name' and 'extension' are passed, a file path is created. Otherwise,
-        a folder path is created.
-
-        Args:
-            folder (str): folder for file location.
-            name (str): the name of the file.
-            extension (str): the extension of the file.
-
-        Returns:
-            Path: formed from string arguments.
-
-        """
-        try:
-            folder = getattr(self, folder)
-        except (AttributeError, TypeError):
-            pass
-        if file_name and extension:
-            return pathlib.Path(folder).joinpath(f'{file_name}.{extension}')
-        else:
-            return pathlib.Path(folder)
-    
-    def _get_parameters(self,
-                        file_format: FileFormat,
-                        **kwargs: Any) -> Mapping[Any, Any]:
-        """Creates complete parameters for a file input/output method.
-
-        Args:
-            file_format (FileFormat): an instance with information about the
-                needed and optional parameters.
-            kwargs: additional parameters to pass to an input/output method.
-
-        Returns:
-            Mapping[Any, Any]: parameters to be passed to an input/output 
-                method.
-
-        """
-        if file_format.parameters:
-            for key, value in file_format.parameters:
-                if value not in kwargs:
-                    kwargs[key] = self.parameters[value]
-        return kwargs
-
-    def _prepare_transfer(self, 
-                          file_path: Union[str, pathlib.Path],
-                          folder: Union[str, pathlib.Path],
-                          file_name: str,
-                          file_format: Union[str, FileFormat]) -> (
-                              Sequence[Union[pathlib.Path, FileFormat]]):
-        """Prepares file path related arguments for loading or saving a file.
-
-        Args:
-            file_path (Union[str, Path]): a complete file path.
-            folder (Union[str, Path]): a complete folder path or the name of a
-                folder stored in 'clerk'.
-            file_name (str): file name without extension.
-            file_format (Union[str, FileFormat]): object with information about
-                how the file should be loaded or the key to such an object
-                stored in 'clerk'.
-            **kwargs: can be passed if additional options are desired specific
-                to the pandas or python method used internally.
-
-        Returns:
-            Sequence: of a completed Path instance and FileFormat instance.
-
-        """
-        if file_path:
-            file_path = denovo.tools.pathlibify(item = file_path)
-            if not file_format:
-                file_format = [f for f in self.clerk.formats.values()
-                               if f.extension == file_path.suffix[1:]][0]
-        file_format = self._check_file_format(file_format = file_format)
-        extension = file_format.extension
-        if not file_path:
-            file_path = self.combine(folder = folder, 
-                                     file_name = file_name,
-                                     extension = extension)
-        return file_path, file_format
-
-
-@dataclasses.dataclass
 class FileLoader(Distributor):
     """Manages file importing for denovo.
 
@@ -517,14 +581,14 @@ class FileLoader(Distributor):
 
     """ Public Methods """
 
-    def load(self, **kwargs: Any):
+    def load(self, **kwargs: Any) -> Any:
         """Calls 'transfer' method with **kwargs."""
-        return self.transfer(**kwargs: Any)
+        return self.transfer(**kwargs)
 
     def transfer(self,
                  file_path: Union[str, pathlib.Path] = None,
                  folder: Union[str, pathlib.Path] = None,
-                 file_name: str = None,
+                 file_name: Optional[str] = None,
                  file_format: Union[str, FileFormat] = None,
                  **kwargs: Any) -> Any:
         """Imports file by calling appropriate method based on file_format.
@@ -555,7 +619,7 @@ class FileLoader(Distributor):
             folder = folder,
             file_name = file_name,
             file_format = file_format)
-        parameters = self._get_parameters(file_format = file_format, **kwargs: Any)
+        parameters = self._get_parameters(file_format = file_format, **kwargs)
         if file_format.module:
             tool = file_format.load('import_method')
         else:
@@ -577,14 +641,14 @@ class FileSaver(Distributor):
 
     def save(self, **kwargs: Any):
         """Calls 'transfer' method with **kwargs."""
-        return self.transfer(**kwargs: Any)
+        return self.transfer(**kwargs)
 
     def transfer(self,
                  item: Any,
-                 file_path: Union[str, pathlib.Path] = None,
-                 folder: Union[str, pathlib.Path] = None,
-                 file_name: str = None,
-                 file_format: Union[str, FileFormat] = None,
+                 file_path: Optional[Union[str, pathlib.Path]] = None,
+                 folder: Optional[Union[str, pathlib.Path]] = None,
+                 file_name: Optional[str] = None,
+                 file_format: Optional[Union[str, FileFormat]] = None,
                  **kwargs: Any) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -611,7 +675,7 @@ class FileSaver(Distributor):
             folder = folder,
             file_name = file_name,
             file_format = file_format)
-        parameters = self._get_parameters(file_format = file_format, **kwargs: Any)
+        parameters = self._get_parameters(file_format = file_format, **kwargs)
         if file_format.module:
             getattr(item, file_format.export_method)(item, **parameters)
         else:
