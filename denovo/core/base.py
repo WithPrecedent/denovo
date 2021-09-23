@@ -288,7 +288,7 @@ def is_generic(
 def is_kind(item: Union[Type[Any], object], kind: Kind) -> bool:
      """Returns whether 'item' is an instance of subclass of 'kind'."""   
      return (
-         denovo.unit.has_traits( # type: ignore
+         denovo.unit.has_traits(
             item = item,
             attributes = kind.attributes,
             methods = kind.methods, 
